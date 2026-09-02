@@ -1604,42 +1604,25 @@ break;
     }
 case 'schedule':
 case 'remind': {
-    if (!isOwner) {
-        return await socket.sendMessage(sender, {
-            text: "❌ *Only the bot owner can use this command.*"
-        }, { quoted: msg });
-    }
-
-    // Usage: .schedule 94768069800|10s|Hello Message  හෝ  group JID එකක්
-    const input = args.join(' ');
-    const parts = input.split('|');
-
-    if (parts.length < 3) {
-        let helpText = `🎀 *𝗦𝗖𝗛𝗘𝗗𝗨𝗟𝗘𝗥  𝗠𝗔𝗡𝗔𝗚𝗘𝗥*\n\n` +
-            `📝 *𝖴𝗌𝖺𝗀𝖾 :* \`.schedule TARGET | TIME | MESSAGE\`\n` +
-            `✨ *𝖤𝗑𝖺𝗆𝗉𝗅𝖾 :* \`.schedule 94768069800 | 10s | Hello Bro\`\n` +
-            `🫧 *𝖦𝗋𝗈𝗎𝗉 𝖤𝗑 :* \`.schedule 1203630...g.us | 5m | Meeting start!\`\n\n` +
-            `🐞 *Time Units :* \`s\` (seconds), \`m\` (minutes), \`h\` (hours)\n` +
-            `⚠️ *Note :* Use \`|\` (pipe) to separate parts.`;
+    if (!args.length || args.length < 2) {
+        let helpText = `🎀 *𝗦𝗖𝗛𝗘𝗗𝗨𝗟𝗘  /  𝗥𝗘𝗠𝗜𝗡𝗗𝗘𝗥*\n\n` +
+            `📝 *𝖴𝗌𝖺𝗀𝖾 :* \`.schedule [TIME] [MESSAGE]\`\n` +
+            `✨ *𝖤𝗑𝖺𝗆𝗉𝗅𝖾 :* \`.schedule 10s Hello World\`\n` +
+            `🫧 *𝖤𝗑𝖺𝗆𝗉𝗅𝖾 2 :* \`.schedule 5m Meeting starts now!\`\n\n` +
+            `🐞 *Time Units :* \`s\` (seconds), \`m\` (minutes), \`h\` (hours)`;
 
         return await socket.sendMessage(sender, {
             image: { url: config.BOT_IMAGE || config.ERROR },
             caption: formatMessage(
-                `⏰ 𝗦𝗖𝗛𝗘𝗗𝗨𝗟𝗘  𝗖𝗢𝗠𝗠𝗔𝗡𝗗`,
+                `⏰ 𝗦𝗖𝗛ЕД𝗨𝗟𝗘𝗥  𝗠𝗔𝗡𝗔𝗚𝗘𝗥`,
                 helpText,
                 `${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
             )
         }, { quoted: msg });
     }
 
-    let target = parts[0].trim();
-    let timeArg = parts[1].trim();
-    let reminderMsg = parts[2].trim();
-
-    // Number එකක් නම් JID එකකට හරවා ගැනීම (94768... -> 94768...@s.whatsapp.net)
-    if (!target.includes('@s.whatsapp.net') && !target.includes('@g.us')) {
-        target = target.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
-    }
+    const timeArg = args[0];
+    const reminderMsg = args.slice(1).join(' ');
 
     // Time එක convert කරගැනීම (s, m, h)
     const unit = timeArg.slice(-1).toLowerCase();
@@ -1651,10 +1634,11 @@ case 'remind': {
         }, { quoted: msg });
     }
 
-    let delayMs = value * 1000;
-    if (unit === 'm') delayMs = value * 60 * 1000;
-    if (unit === 'h') delayMs = value * 60 * 60 * 1000;
+    let delayMs = value * 1000; // seconds
+    if (unit === 'm') delayMs = value * 60 * 1000; // minutes
+    if (unit === 'h') delayMs = value * 60 * 60 * 1000; // hours
 
+    // Max limit එක පැය 24කට සීමා කිරීම
     if (delayMs > 24 * 60 * 60 * 1000) {
         return await socket.sendMessage(sender, {
             text: `❌ *Time limit exceeded!* Maximum schedule time is 24 hours.`
@@ -1662,21 +1646,65 @@ case 'remind': {
     }
 
     await socket.sendMessage(sender, {
-        text: `⏳ *Scheduled successfully!*\nTarget: \`${target}\`\nTime: *${timeArg}*`
+        text: `⏳ *Reminder set successfully!*\nI will remind you in *${timeArg}*.`
     }, { quoted: msg });
 
-    // නියමිත වෙලාව ආවම අදාළ target එකට මැසේජ් එක යැවීම
+    // නියමිත වෙලාව ආවම වෙනත් අමතර වැකි නැතුව අදාළ මැසේජ් එක විතරක් යැවීම
     setTimeout(async () => {
         try {
-            await socket.sendMessage(target, {
-                text: `🔔 *⏰ SCHEDULED MESSAGE*\n\n> ${reminderMsg}`
+            await socket.sendMessage(sender, {
+                text: reminderMsg
             });
         } catch (err) {
-            console.error("Schedule Send Error:", err);
+            console.error("Reminder Error:", err);
         }
     }, delayMs);
 }
 break;
+
+case 'ig':
+case 'instagram': {
+    if (!args[0]) {
+        return await socket.sendMessage(sender, {
+            text: `❌ *Please provide an Instagram link!*\n✨ *Example:* \`.ig https://www.instagram.com/reel/...\``
+        }, { quoted: msg });
+    }
+
+    const igUrl = args[0];
+    try {
+        await socket.sendMessage(sender, { react: { text: "⬇️", key: msg.key } });
+        
+        // Public API එකක් හරහා IG video/image download කරගැනීම
+        const apiResponse = await fetch(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(igUrl)}`);
+        const resData = await apiResponse.json();
+
+        if (!resData.status || !resData.data || resData.data.length === 0) {
+            return await socket.sendMessage(sender, { text: `❌ *Failed to fetch media. Please check the link!*` }, { quoted: msg });
+        }
+
+        const mediaUrl = resData.data[0].url;
+        const isVideo = resData.data[0].type === 'video';
+
+        if (isVideo) {
+            await socket.sendMessage(sender, {
+                video: { url: mediaUrl },
+                caption: `📥 *Instagram Video Downloaded*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+            }, { quoted: msg });
+        } else {
+            await socket.sendMessage(sender, {
+                image: { url: mediaUrl },
+                caption: `📥 *Instagram Image Downloaded*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+            }, { quoted: msg });
+        }
+
+        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
+    } catch (err) {
+        console.error("IG Error:", err);
+        await socket.sendMessage(sender, { text: `❌ *An error occurred while downloading.*` }, { quoted: msg });
+    }
+}
+break;
+
 
 case 'set':
 case 'setting': {
