@@ -1602,190 +1602,114 @@ break;
         }
         break;
     }
-const mongoose = require('mongoose');
-
-// 1. MongoDB Connection එක සහ Model එක එකම තැනක හදාගැනීම (Already connect කරලා නැත්නම් මෙන්න මේ විදිහට connect කරගන්න පුළුවන්)
-if (mongoose.connection.readyState === 0) {
-    mongoose.connect(process.env.MONGO_URL, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true
-    }).catch(err => console.log("DB Connection Error:", err));
-}
-
-const settingSchema = new mongoose.Schema({
-    botId: { type: String, default: 'main_bot', unique: true },
-    autoViewStatus: { type: Boolean, default: true },
-    autoLikeStatus: { type: Boolean, default: false },
-    botStatusText: { type: String, default: 'Active & Online' }
-});
-
-const Setting = mongoose.models.BotSetting || mongoose.model('BotSetting', settingSchema);
-
-// 2. Settings Command එක සහ Logic එක (මෙය ඔයාගේ command listener එක ඇතුළට දාන්න)
-if (command === 'settings') {
-    // Get settings from MongoDB (නැත්නම් default එකක් create වෙයි)
-    let settings = await Setting.findOne({ botId: 'main_bot' });
-    if (!settings) {
-        settings = await Setting.create({ botId: 'main_bot' });
+case 'set':
+case 'setting': {
+    if (!isOwner) {
+        return await socket.sendMessage(sender, {
+            text: "❌ *Only the bot owner can use this command.*"
+        }, { quoted: msg });
     }
 
-    const args = text.split(' ').slice(1);
+    if (!args.length) {
+        let helpText = `🎀 *𝗦𝗬𝗦𝗧𝗘𝗠  𝗖𝗢𝗡𝗙𝗜𝗚𝗨𝗥𝗔𝗧𝗜𝗢𝗡  𝗣𝗔𝗡𝗘𝗟*\n\n` +
+            `📝 *𝖴𝗌𝖺𝗀𝖾 :* \`.set KEY:VALUE\`\n` +
+            `✨ *𝖤𝗑𝖺𝗆𝗉𝗅𝖾 :* \`.set ALWAYS_ONLINE:true\`\n` +
+            `🫧 *𝖬𝗎𝗅𝗍𝗂 :* \`.set ALWAYS_ONLINE:true,AUTO_RECORDING:true\`\n\n` +
+            `🐞 *𝖠𝗏𝖺𝗂𝗅𝖺𝖻𝗅𝖾  𝖲𝗒𝗌𝗍𝖾𝗆  𝖪𝖾𝗒𝗌 :*\n` +
+            `🐞 \`ALWAYS_ONLINE\` (true/false)\n` +
+            `🐞 \`ALWAYS_MSG_SEEN\` (true/false)\n` +
+            `🐞 \`AUTO_RECORDING\` (true/false)\n` +
+            `🐞 \`AUTO_TYPING\` (true/false)\n` +
+            `🐞 \`STATUS_VIEW\` (true/false)\n` +
+            `🐞 \`AUTO_LIKE\` (true/false)\n` +
+            `🐞 \`PREFIX\`\n` +
+            `🐞 \`MODE\` (public/private)\n`;
 
-    if (args.length === 0) {
-        return await sock.sendMessage(from, { 
-            text: `⚙️ *Bot Settings Configuration*\n\n` +
-                  `📌 *Status Text:* ${settings.botStatusText}\n` +
-                  `👁️ *Auto View Status:* ${settings.autoViewStatus ? 'Enabled' : 'Disabled'}\n` +
-                  `❤️ *Auto Like Status:* ${settings.autoLikeStatus ? 'Enabled' : 'Disabled'}\n\n` +
-                  `*Usage:*\n` +
-                  `• .settings autoview true/false\n` +
-                  `• .settings autolike true/false\n` +
-                  `• .settings status Your_New_Status`
-        }, { quoted: mek });
+        return await socket.sendMessage(sender, {
+            image: { url: config.BOT_IMAGE || config.ERROR },
+            caption: formatMessage(
+                `𝗖𝗢𝗡𝗙𝗜𝗚  𝗠𝗔𝗡𝗔𝗚𝗘𝗥  ⚙️`,
+                helpText,
+                `${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+            )
+        }, { quoted: msg });
     }
 
-    const option = args[0].toLowerCase();
-    const value = args[1];
+    const input = args.join(' ');
+    const updates = {};
+    const validKeys = [
+        'PREFIX', 'AUTO_RECORDING', 'AUTO_TYPING', 'MODE', 'JID',
+        'ALWAYS_ONLINE', 'ALWAYS_MSG_SEEN', 'STATUS_VIEW', 'AUTO_LIKE'
+    ];
 
-    if (!value && option !== 'status') {
-        return await sock.sendMessage(from, { text: `❌ Please provide a value! Example: \`.settings autoview true\`` }, { quoted: mek });
+    const pairs = input.split(',');
+    let hasInvalidKey = false;
+    let invalidKeyName = '';
+
+    pairs.forEach(pair => {
+        let [key, ...valueParts] = pair.split(':');
+        if (!key || valueParts.length === 0) return;
+
+        key = key.trim().toUpperCase();
+        let value = valueParts.join(':').trim();
+
+        if (validKeys.includes(key)) {
+            if (value.toLowerCase() === 'true') {
+                updates[key] = 'true';
+            } else if (value.toLowerCase() === 'false') {
+                updates[key] = 'false';
+            } else {
+                updates[key] = value;
+            }
+        } else {
+            hasInvalidKey = true;
+            invalidKeyName = key;
+        }
+    });
+
+    if (hasInvalidKey) {
+        return await socket.sendMessage(sender, {
+            text: `Invalid system key: \`${invalidKeyName}\`\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+        }, { quoted: msg });
+    }
+
+    if (Object.keys(updates).length === 0) {
+        return await socket.sendMessage(sender, { text: "🎀 *𝗙𝗢𝗥𝗠𝗔𝗧  𝗘𝗥𝗥𝗢𝗥:* Please use `Key:Value` structure." });
     }
 
     try {
-        if (option === 'autoview') {
-            const boolVal = value.toLowerCase() === 'true';
-            await Setting.updateOne({ botId: 'main_bot' }, { autoViewStatus: boolVal }, { upsert: true });
-            return await sock.sendMessage(from, { text: `✅ Auto View Status updated to: *${boolVal}*` }, { quoted: mek });
-        } 
-        else if (option === 'autolike') {
-            const boolVal = value.toLowerCase() === 'true';
-            await Setting.updateOne({ botId: 'main_bot' }, { autoLikeStatus: boolVal }, { upsert: true });
-            return await sock.sendMessage(from, { text: `✅ Auto Like Status updated to: *${boolVal}*` }, { quoted: mek });
-        } 
-        else if (option === 'status') {
-            const statusText = args.slice(1).join(' ');
-            if (!statusText) return await sock.sendMessage(from, { text: `❌ Please provide status text!` }, { quoted: mek });
-            await Setting.updateOne({ botId: 'main_bot' }, { botStatusText: statusText }, { upsert: true });
-            return await sock.sendMessage(from, { text: `✅ Bot Status Text updated to: *${statusText}*` }, { quoted: mek });
-        } 
-        else {
-            return await sock.sendMessage(from, { text: `❌ Invalid option! Use: \`autoview\`, \`autolike\`, or \`status\`` }, { quoted: mek });
-        }
-    } catch (err) {
-        console.error(err);
-        return await sock.sendMessage(from, { text: `❌ Error updating settings in MongoDB.` }, { quoted: mek });
+        await socket.sendMessage(sender, { react: { text: "⚙️", key: msg.key } });
+
+        sessionConfig = { ...sessionConfig, ...updates };
+        await updateUserConfig(sanitizedNumber, sessionConfig);
+        activeSockets.set(sanitizedNumber, { socket, config: sessionConfig });
+
+        let updateSummary = Object.entries(updates).map(([k, v]) => {
+            let displayVal = Array.isArray(v) ? v.join(' ') : v;
+            return `🎀 *${k}* ──❯ \`${displayVal}\``;
+        }).join('\n');
+
+        const successMsg = `🎀 *𝗖𝗢𝗡𝗙𝗜𝗚𝗨𝗥𝗔𝗧𝗜𝗢𝗡  𝗨𝗣𝗗𝗔𝗧𝗘𝗗*\n\n` +
+            `${updateSummary}\n\n` +
+            `🫧 _System cloud changes applied successfully._`;
+
+        await socket.sendMessage(sender, {
+            image: { url: config.BOT_IMAGE || config.ERROR },
+            caption: formatMessage(
+                `✅ 𝗨𝗣𝗗𝗔𝗧𝗘  𝗦𝗨𝗖𝗖𝗘𝗦𝗦  ✅`,
+                successMsg,
+                `${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+            )
+        }, { quoted: msg });
+
+        await socket.sendMessage(sender, { react: { text: "✨", key: msg.key } });
+
+    } catch (error) {
+        console.error("Update Error:", error);
+        await socket.sendMessage(sender, { text: "🎀 " + error.message });
     }
 }
-                case 'set':
-                case 'setting': {
-                    if (!isOwner) {
-                        return await socket.sendMessage(sender, {
-                            text: "❌ *Only the bot owner can use this command.*"
-                        }, { quoted: msg });
-                    }
-
-                    if (!args.length) {
-                        let helpText = `🎀 *𝗦𝗬𝗦𝗧𝗘𝗠  𝗖𝗢𝗡𝗙𝗜𝗚𝗨𝗥𝗔𝗧𝗜𝗢𝗡  𝗣𝗔𝗡𝗘𝗟*\n\n` +
-                            `📝 *𝖴𝗌𝖺𝗀𝖾 :* \`.set KEY:VALUE\`\n` +
-                            `✨ *𝖤𝗑𝖺𝗆𝗉𝗅𝖾 :* \`.set MODE:public\`\n` +
-                            `🫧 *𝖬𝗎𝗅𝗍𝗂 :* \`.set PREFIX:!\`\n\n` +
-                            `🐞 *𝖠𝗏𝖺𝗂𝗅𝖺𝖻𝗅𝖾  \𝖲𝗒𝗌𝗍𝖾𝗆  𝖪𝖾𝗒𝗌 :*\n` +
-                            `🐞 \`AUTO_RECORDING\`\n` +
-                            `🐞 \`AUTO_TYPING\`\n` +
-                            `🐞 \`PREFIX\`\n` +
-                            `🐞 \`MODE\` (public/private)\n` +
-                            `🐞 \`BOT_IMAGE\`\n` +
-                            `🐞 \`AIR_FOOTER\`\n` +
-                            `🐞 \`BOT_NAME\`\n`;
-
-                        return await socket.sendMessage(sender, {
-                            image: { url: config.BOT_IMAGE || config.ERROR },
-                            caption: formatMessage(
-                                `𝗖𝗢𝗡𝗙𝗜𝗚  𝗠𝗔𝗡𝗔𝗚𝗘𝗥  ⚙️`,
-                                helpText,
-                                `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
-                            )
-                        }, { quoted: msg });
-                    }
-
-                    const input = args.join(' ');
-                    const updates = {};
-                    const validKeys = [
-                        'PREFIX', 'AUTO_RECORDING', 'AUTO_TYPING',
-                        'BOT_NAME', 'AIR_FOOTER', 'JID', 'MODE'
-                    ];
-
-                    const pairs = input.split(',');
-                    let hasInvalidKey = false;
-                    let invalidKeyName = '';
-
-                    pairs.forEach(pair => {
-                        let [key, ...valueParts] = pair.split(':');
-                        if (!key || valueParts.length === 0) return;
-
-                        key = key.trim().toUpperCase();
-                        let value = valueParts.join(':').trim();
-
-                        if (validKeys.includes(key)) {
-                            if (value.toLowerCase() === 'true') {
-                                updates[key] = 'true';
-                            } else if (value.toLowerCase() === 'false') {
-                                updates[key] = 'false';
-                            } else {
-                                updates[key] = value;
-                            }
-                        } else {
-                            hasInvalidKey = true;
-                            invalidKeyName = key;
-                        }
-                    });
-
-                    if (hasInvalidKey) {
-                        return await socket.sendMessage(sender, {
-                            text: `Invalid system key: \`${invalidKeyName}\`\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
-                        }, { quoted: msg });
-                    }
-
-                    if (Object.keys(updates).length === 0) {
-                        return await socket.sendMessage(sender, { text: "🎀 *𝗙𝗢𝗥𝗠𝗔𝗧  𝗘𝗥𝗥𝗢𝗥:* Please use `Key:Value` structure." });
-                    }
-
-                    try {
-                        await socket.sendMessage(sender, { react: { text: "⚙️", key: msg.key } });
-
-                        sessionConfig = { ...sessionConfig, ...updates };
-                        await updateUserConfig(sanitizedNumber, sessionConfig);
-                        activeSockets.set(sanitizedNumber, { socket, config: sessionConfig });
-
-                        let updateSummary = Object.entries(updates).map(([k, v]) => {
-                            let displayVal = Array.isArray(v) ? v.join(' ') : v;
-                            return `🎀 *${k}* ──❯ \`${displayVal}\``;
-                        }).join('\n');
-
-                        const successMsg = `🎀 *𝗖𝗢𝗡𝗙𝗜𝗚𝗨𝗥𝗔𝗧𝗜𝗢𝗡  𝗨𝗣𝗗𝗔𝗧𝗘𝗗*\n\n` +
-                            `${updateSummary}\n\n` +
-                            `🫧 _System cloud changes applied successfully._`;
-
-                        await socket.sendMessage(sender, {
-                            image: { url: config.BOT_IMAGE },
-                            caption: formatMessage(
-                                `✅ 𝗨𝗣𝗗𝗔𝗧𝗘  𝗦𝗨𝗖𝗖𝗘𝗦𝗦  ✅`,
-                                successMsg,
-                                `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
-                            )
-                        }, { quoted: msg });
-
-                        await socket.sendMessage(sender, { react: { text: "✨", key: msg.key } });
-
-                    } catch (error) {
-                        console.error("Update Error:", error);
-                        await socket.sendMessage(sender, { text: "🎀 " + error.message });
-                    }
-                }
-                break;
-
-                
-            }
+break;
         } catch (error) {
             console.error('Command handler error:', error);
             await socket.sendMessage(sender, {
