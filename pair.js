@@ -39,10 +39,10 @@ const config = {
     API_MOVIE_URL: 'https://api-siteh-22e22e4cb068.herokuapp.com',
     API_KEY:'lakiya_2f3b6c382d1236ad7a08d56331fb679935d51dfc846df2c254093fd1fff9494e',
     BOT_IMAGE:'https://cdn.phototourl.com/free/2026-09-01-c9fad274-7d07-49ea-9ed1-34832687d820.jpg',
-    BOT_FOOTER:"Fʟɪxᴏʀᴀ ✘ 〽️ᴏᴠɪᴇ Bᴏᴛ ᴠ1.1",
+    BOT_FOOTER:"SHAGGY XMD 〽️ᴏᴠɪᴇ Bᴏᴛ ᴠ1.1",
      MGROUP_LINK: 'https://chat.whatsapp.com/JpFSNrnqtnQIqdM0WlNds1',
-    MOVIE_FOOTER:"​⏤͟͟͞͞★❮ LAKIYA 〽️OVIE ⏤͟͟͞͞★",
-     MOVIE_CAPTION:"LAKIYA MOVIE",
+    MOVIE_FOOTER:"​⏤͟͟͞͞★❮ SHAGGY XMD 〽️OVIE ⏤͟͟͞͞★",
+     MOVIE_CAPTION:"SHAGGY-XMD MOVIE",
     PREFIX: '.',
     OWNER_NUMBERS: ['94703830GGGG990'],
     BOT_NAME: "TEST-BOT",
@@ -257,8 +257,8 @@ async function setupCommandHandlers(socket, number) {
 * 🎤 𝗖ʜᴀɴɴᴇʟ* ➟ _${data.author?.name || 'N/A'}_
 *🔢 𝗥ᴇᴘʟʏ ᴡɪᴛʜ ᴀ 𝗡ᴜᴍʙᴇʀ 👇*
 
-*01 ᴅᴏᴡɴʟᴏᴀᴅ ᴀᴜᴅɪᴏ*
-*02 ᴅᴏᴡɴʟᴏᴀᴅ ᴅᴏᴄᴜᴍᴇɴᴛ*
+*01 ᴅᴏᴡɴʟᴏᴀᴅ ᴀᴜᴅɪᴏ 🌐*
+*02 ᴅᴏᴡɴʟᴏᴀᴅ ᴅᴏᴄᴜᴍᴇɴᴛ 🌐*
 `;
 
         const sentMsg = await socket.sendMessage(sender, {
@@ -1475,6 +1475,12 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 │ 🎡 .menu
 │ 🎡 .alive
 │ 🎡 .sinhalasub
+│ 🎡 .ig
+│ 🎡 .schedule
+│ 🎡 .ai
+│ 🎡 .set
+│ 🎡 .rexporn
+│ 🎡 .animeclub
 *╰────────●●►*   
 > ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 
@@ -1489,10 +1495,10 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
         console.error(e);
     }
 }
-break;  
+break;    
 
-                    // AnimeClub TV Episode Download Command
-    case 'animeclub':
+
+        case 'animeclub':
     case 'animedl': {
         if (!text) return reply('කරුණාකර ඇනිමේ කථා මාලාවේ ලින්ක් එක දෙන්න!\nඋදා: `.animedl https://animeclub2.com/episodes/chainsaw-man-1x1/`');
         
@@ -1524,6 +1530,7 @@ break;
         }
         break;
     }
+
 // 1. XNXX Video Search Command (.xnxxsearch <query>)
     case 'xnxxsearch':
     case 'xnxx': {
@@ -1601,7 +1608,6 @@ break;
         }
         break;
     }
-
 case 'schedule':
 case 'remind': {
     if (!isOwner) {
@@ -1677,7 +1683,7 @@ case 'remind': {
 }
 break;
 
-     case 'ig':
+   case 'ig':
 case 'instagram': {
     if (!args[0]) {
         return await socket.sendMessage(sender, {
@@ -1689,20 +1695,29 @@ case 'instagram': {
     try {
         await socket.sendMessage(sender, { react: { text: "⬇️", key: msg.key } });
         
-        // වෙනත් ස්ථාවර API එකක් හරහා IG media download කරගැනීම
-        const apiResponse = await fetch(`https://api.vkrtechnologies.com/api/dl/ig?url=${encodeURIComponent(igUrl)}`);
+        // වෙනත් ස්ථාවර සහ වැඩ කරන Instagram downloader API එකක්
+        const apiResponse = await fetch(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(igUrl)}`);
         const resData = await apiResponse.json();
 
-        if (!resData.status || (!resData.data && !resData.url)) {
-            return await socket.sendMessage(sender, { text: `❌ *Failed to fetch media. API is currently down or link is invalid!*` }, { quoted: msg });
+        if (!resData.status || !resData.data || resData.data.length === 0) {
+            return await socket.sendMessage(sender, { text: `❌ *Failed to fetch media. Check if the link is correct or public!*` }, { quoted: msg });
         }
 
-        const mediaUrl = resData.data || resData.url;
+        const mediaItem = resData.data[0];
+        const mediaUrl = mediaItem.url;
+        const isVideo = mediaItem.type === 'video';
 
-        await socket.sendMessage(sender, {
-            video: { url: mediaUrl },
-            caption: `📥 *Instagram Media Downloaded*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
-        }, { quoted: msg });
+        if (isVideo) {
+            await socket.sendMessage(sender, {
+                video: { url: mediaUrl },
+                caption: `📥 *Instagram Video Downloaded*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+            }, { quoted: msg });
+        } else {
+            await socket.sendMessage(sender, {
+                image: { url: mediaUrl },
+                caption: `📥 *Instagram Image Downloaded*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+            }, { quoted: msg });
+        }
 
         await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
     } catch (err) {
@@ -1775,8 +1790,9 @@ case 'codex': {
     }
 }
 break;
-                    
-          case 'set':
+
+
+case 'set':
 case 'setting': {
     if (!isOwner) {
         return await socket.sendMessage(sender, {
@@ -1885,6 +1901,7 @@ case 'setting': {
 }
 break;
 }
+
         } catch (error) {
             console.error('Command handler error:', error);
             await socket.sendMessage(sender, {
