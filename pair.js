@@ -1601,6 +1601,82 @@ break;
         }
         break;
     }
+
+           const mongoose = require('mongoose');
+
+// 1. MongoDB Connection එක සහ Model එක එකම තැනක හදාගැනීම (Already connect කරලා නැත්නම් මෙන්න මේ විදිහට connect කරගන්න පුළුවන්)
+if (mongoose.connection.readyState === 0) {
+    mongoose.connect(process.env.MONGO_URL, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true
+    }).catch(err => console.log("DB Connection Error:", err));
+}
+
+const settingSchema = new mongoose.Schema({
+    botId: { type: String, default: 'main_bot', unique: true },
+    autoViewStatus: { type: Boolean, default: true },
+    autoLikeStatus: { type: Boolean, default: false },
+    botStatusText: { type: String, default: 'Active & Online' }
+});
+
+const Setting = mongoose.models.BotSetting || mongoose.model('BotSetting', settingSchema);
+
+// 2. Settings Command එක සහ Logic එක (මෙය ඔයාගේ command listener එක ඇතුළට දාන්න)
+if (command === 'settings') {
+    // Get settings from MongoDB (නැත්නම් default එකක් create වෙයි)
+    let settings = await Setting.findOne({ botId: 'main_bot' });
+    if (!settings) {
+        settings = await Setting.create({ botId: 'main_bot' });
+    }
+
+    const args = text.split(' ').slice(1);
+
+    if (args.length === 0) {
+        return await sock.sendMessage(from, { 
+            text: `⚙️ *Bot Settings Configuration*\n\n` +
+                  `📌 *Status Text:* ${settings.botStatusText}\n` +
+                  `👁️ *Auto View Status:* ${settings.autoViewStatus ? 'Enabled' : 'Disabled'}\n` +
+                  `❤️ *Auto Like Status:* ${settings.autoLikeStatus ? 'Enabled' : 'Disabled'}\n\n` +
+                  `*Usage:*\n` +
+                  `• .settings autoview true/false\n` +
+                  `• .settings autolike true/false\n` +
+                  `• .settings status Your_New_Status`
+        }, { quoted: mek });
+    }
+
+    const option = args[0].toLowerCase();
+    const value = args[1];
+
+    if (!value && option !== 'status') {
+        return await sock.sendMessage(from, { text: `❌ Please provide a value! Example: \`.settings autoview true\`` }, { quoted: mek });
+    }
+
+    try {
+        if (option === 'autoview') {
+            const boolVal = value.toLowerCase() === 'true';
+            await Setting.updateOne({ botId: 'main_bot' }, { autoViewStatus: boolVal }, { upsert: true });
+            return await sock.sendMessage(from, { text: `✅ Auto View Status updated to: *${boolVal}*` }, { quoted: mek });
+        } 
+        else if (option === 'autolike') {
+            const boolVal = value.toLowerCase() === 'true';
+            await Setting.updateOne({ botId: 'main_bot' }, { autoLikeStatus: boolVal }, { upsert: true });
+            return await sock.sendMessage(from, { text: `✅ Auto Like Status updated to: *${boolVal}*` }, { quoted: mek });
+        } 
+        else if (option === 'status') {
+            const statusText = args.slice(1).join(' ');
+            if (!statusText) return await sock.sendMessage(from, { text: `❌ Please provide status text!` }, { quoted: mek });
+            await Setting.updateOne({ botId: 'main_bot' }, { botStatusText: statusText }, { upsert: true });
+            return await sock.sendMessage(from, { text: `✅ Bot Status Text updated to: *${statusText}*` }, { quoted: mek });
+        } 
+        else {
+            return await sock.sendMessage(from, { text: `❌ Invalid option! Use: \`autoview\`, \`autolike\`, or \`status\`` }, { quoted: mek });
+        }
+    } catch (err) {
+        console.error(err);
+        return await sock.sendMessage(from, { text: `❌ Error updating settings in MongoDB.` }, { quoted: mek });
+    }
+}
+                    
                 case 'set':
                 case 'setting': {
                     if (!isOwner) {
