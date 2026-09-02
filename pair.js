@@ -1691,38 +1691,53 @@ case 'instagram': {
         }, { quoted: msg });
     }
 
-    const igUrl = args[0];
+    let igUrl = args[0].split("?")[0]; // URL එකේ තියෙන extra query parameters අයින් කරගැනීම
     try {
         await socket.sendMessage(sender, { react: { text: "⬇️", key: msg.key } });
-        
-        // වෙනත් ස්ථාවර සහ වැඩ කරන Instagram downloader API එකක්
+
+        // Instagram Embed API එක හරහා media info ලබා ගැනීම (Very Stable)
         const apiResponse = await fetch(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(igUrl)}`);
         const resData = await apiResponse.json();
 
-        if (!resData.status || !resData.data || resData.data.length === 0) {
-            return await socket.sendMessage(sender, { text: `❌ *Failed to fetch media. Check if the link is correct or public!*` }, { quoted: msg });
+        // 2nd API fallback එකක් විදිහට වෙනත් එකක් පාවිච්චි කිරීම
+        let mediaUrl = null;
+        let isVideo = true;
+
+        if (resData.status && resData.data && resData.data.length > 0) {
+            mediaUrl = resData.data[0].url;
+            isVideo = resData.data[0].type === 'video';
+        } else {
+            // Fallback API if primary fails
+            const fallbackRes = await fetch(`https://itzpire.com/download/instagram?url=${encodeURIComponent(igUrl)}`);
+            const fallbackData = await fallbackRes.json();
+            if (fallbackData.status && fallbackData.data) {
+                mediaUrl = fallbackData.data.url || fallbackData.data[0]?.url;
+                isVideo = fallbackData.data.type === 'video' || fallbackData.data[0]?.type === 'video';
+            }
         }
 
-        const mediaItem = resData.data[0];
-        const mediaUrl = mediaItem.url;
-        const isVideo = mediaItem.type === 'video';
+        if (!mediaUrl) {
+            return await socket.sendMessage(sender, { 
+                text: `❌ *Failed to fetch media. Make sure the Instagram account / post is Public!*` 
+            }, { quoted: msg });
+        }
 
         if (isVideo) {
             await socket.sendMessage(sender, {
                 video: { url: mediaUrl },
-                caption: `📥 *Instagram Video Downloaded*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+                caption: `📥 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗 - 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠  𝗩𝗜𝗗𝗘𝗢*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
             }, { quoted: msg });
         } else {
             await socket.sendMessage(sender, {
                 image: { url: mediaUrl },
-                caption: `📥 *Instagram Image Downloaded*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+                caption: `📥 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠ဒ - 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠  𝗜𝗠𝗔𝗚𝗘*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
             }, { quoted: msg });
         }
 
         await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
     } catch (err) {
         console.error("IG Error:", err);
-        await socket.sendMessage(sender, { text: `❌ *An error occurred while downloading media.*` }, { quoted: msg });
+        await socket.sendMessage(sender, { text: `❌ *An error occurred while downloading media. Please try again later.*` }, { quoted: msg });
     }
 }
 break;
