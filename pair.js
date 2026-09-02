@@ -1602,7 +1602,7 @@ break;
         break;
     }
 
-           cocase 'set':
+          case 'set':
 case 'setting': {
     if (!isOwner) {
         return await socket.sendMessage(sender, {
