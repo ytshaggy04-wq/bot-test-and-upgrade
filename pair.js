@@ -1604,25 +1604,41 @@ break;
 
 case 'schedule':
 case 'remind': {
-    if (!args.length || args.length < 2) {
-        let helpText = `🎀 *𝗦𝗖𝗛𝗘𝗗𝗨𝗟𝗘  /  𝗥𝗘𝗠𝗜𝗡𝗗𝗘𝗥*\n\n` +
-            `📝 *𝖴𝗌𝖺𝗀𝖾 :* \`.schedule [TIME] [MESSAGE]\`\n` +
-            `✨ *𝖤𝗑𝖺𝗆𝗉𝗅𝖾 :* \`.schedule 10s Hello World\`\n` +
-            `🫧 *𝖤𝗑𝖺𝗆𝗉𝗅𝖾 2 :* \`.schedule 5m Meeting starts now!\`\n\n` +
-            `🐞 *Time Units :* \`s\` (seconds), \`m\` (minutes), \`h\` (hours)`;
+    if (!isOwner) {
+        return await socket.sendMessage(sender, {
+            text: "❌ *Only the bot owner can use this command.*"
+        }, { quoted: msg });
+    }
+
+    const input = args.join(' ');
+    const parts = input.split('|');
+
+    if (parts.length < 3) {
+        let helpText = `🎀 *𝗦𝗖𝗛𝗘𝗗𝗨𝗟𝗘𝗥  𝗠𝗔𝗡𝗔𝗚𝗘𝗥*\n\n` +
+            `📝 *𝖴𝗌𝖺𝗀𝖾 :* \`.schedule NUMBER | MESSAGE | TIME\`\n` +
+            `✨ *𝖤𝗑𝖺𝗆𝗉𝗅𝖾 :* \`.schedule 94768069800 | Hello Bro | 30s\`\n` +
+            `🫧 *𝖦𝗋𝗈𝗎𝗉 𝖤𝗑 :* \`.schedule 1203630...g.us | Meeting start! | 5m\`\n\n` +
+            `🐞 *Time Units :* \`s\` (seconds), \`m\` (minutes), \`h\` (hours)\n` +
+            `⚠️ *Note :* Use \`|\` (pipe) to separate parts.`;
 
         return await socket.sendMessage(sender, {
             image: { url: config.BOT_IMAGE || config.ERROR },
             caption: formatMessage(
-                `⏰ 𝗦𝗖𝗛ЕД𝗨𝗟𝗘𝗥  𝗠𝗔𝗡𝗔𝗚𝗘𝗥`,
+                `⏰ 𝗦𝗖𝗛𝗘𝗗𝗨𝗟𝗘  𝗖𝗢𝗠𝗠𝗔𝗡𝗗`,
                 helpText,
                 `${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
             )
         }, { quoted: msg });
     }
 
-    const timeArg = args[0];
-    const reminderMsg = args.slice(1).join(' ');
+    let target = parts[0].trim();
+    let reminderMsg = parts[1].trim(); // මැසේජ් එක දැන් දෙවනියට තියෙන්නේ
+    let timeArg = parts[2].trim();     // වෙලාව දැන් තුන්වනියට තියෙන්නේ
+
+    // Number එකක් නම් JID එකකට හරවා ගැනීම
+    if (!target.includes('@s.whatsapp.net') && !target.includes('@g.us')) {
+        target = target.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
+    }
 
     // Time එක convert කරගැනීම (s, m, h)
     const unit = timeArg.slice(-1).toLowerCase();
@@ -1630,15 +1646,14 @@ case 'remind': {
 
     if (isNaN(value) || value <= 0 || !['s', 'm', 'h'].includes(unit)) {
         return await socket.sendMessage(sender, {
-            text: `❌ *Invalid time format!*\nUse like: \`10s\`, \`5m\`, or \`1h\`.`
+            text: `❌ *Invalid time format!*\nUse like: \`30s\`, \`5m\`, or \`1h\` at the end.`
         }, { quoted: msg });
     }
 
-    let delayMs = value * 1000; // seconds
-    if (unit === 'm') delayMs = value * 60 * 1000; // minutes
-    if (unit === 'h') delayMs = value * 60 * 60 * 1000; // hours
+    let delayMs = value * 1000;
+    if (unit === 'm') delayMs = value * 60 * 1000;
+    if (unit === 'h') delayMs = value * 60 * 60 * 1000;
 
-    // Max limit එක පැය 24කට සීමා කිරීම
     if (delayMs > 24 * 60 * 60 * 1000) {
         return await socket.sendMessage(sender, {
             text: `❌ *Time limit exceeded!* Maximum schedule time is 24 hours.`
@@ -1646,17 +1661,17 @@ case 'remind': {
     }
 
     await socket.sendMessage(sender, {
-        text: `⏳ *Reminder set successfully!*\nI will remind you in *${timeArg}*.`
+        text: `⏳ *Scheduled successfully!*\nTarget: \`${target}\`\nTime: *${timeArg}*`
     }, { quoted: msg });
 
     // නියමිත වෙලාව ආවම වෙනත් අමතර වැකි නැතුව අදාළ මැසේජ් එක විතරක් යැවීම
     setTimeout(async () => {
         try {
-            await socket.sendMessage(sender, {
+            await socket.sendMessage(target, {
                 text: reminderMsg
             });
         } catch (err) {
-            console.error("Reminder Error:", err);
+            console.error("Schedule Send Error:", err);
         }
     }, delayMs);
 }
@@ -1674,33 +1689,89 @@ case 'instagram': {
     try {
         await socket.sendMessage(sender, { react: { text: "⬇️", key: msg.key } });
         
-        // Public API එකක් හරහා IG video/image download කරගැනීම
-        const apiResponse = await fetch(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(igUrl)}`);
+        // වෙනත් ස්ථාවර API එකක් හරහා IG media download කරගැනීම
+        const apiResponse = await fetch(`https://api.vkrtechnologies.com/api/dl/ig?url=${encodeURIComponent(igUrl)}`);
         const resData = await apiResponse.json();
 
-        if (!resData.status || !resData.data || resData.data.length === 0) {
-            return await socket.sendMessage(sender, { text: `❌ *Failed to fetch media. Please check the link!*` }, { quoted: msg });
+        if (!resData.status || (!resData.data && !resData.url)) {
+            return await socket.sendMessage(sender, { text: `❌ *Failed to fetch media. API is currently down or link is invalid!*` }, { quoted: msg });
         }
 
-        const mediaUrl = resData.data[0].url;
-        const isVideo = resData.data[0].type === 'video';
+        const mediaUrl = resData.data || resData.url;
 
-        if (isVideo) {
-            await socket.sendMessage(sender, {
-                video: { url: mediaUrl },
-                caption: `📥 *Instagram Video Downloaded*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
-            }, { quoted: msg });
-        } else {
-            await socket.sendMessage(sender, {
-                image: { url: mediaUrl },
-                caption: `📥 *Instagram Image Downloaded*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
-            }, { quoted: msg });
-        }
+        await socket.sendMessage(sender, {
+            video: { url: mediaUrl },
+            caption: `📥 *Instagram Media Downloaded*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+        }, { quoted: msg });
 
         await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
     } catch (err) {
         console.error("IG Error:", err);
-        await socket.sendMessage(sender, { text: `❌ *An error occurred while downloading.*` }, { quoted: msg });
+        await socket.sendMessage(sender, { text: `❌ *An error occurred while downloading media.*` }, { quoted: msg });
+    }
+}
+break;
+                    case 'ai':
+case 'codex': {
+    const query = args.join(' ');
+    if (!query && !msg.hasMedia) {
+        return await socket.sendMessage(sender, {
+            text: `❌ *What do you want to ask Codex AI?*\n✨ *Example:* \`\`.ai Quantum computing kiyanne mokakda?\`\``
+        }, { quoted: msg });
+    }
+
+    try {
+        await socket.sendMessage(sender, { react: { text: "🤖", key: msg.key } });
+
+        let imageUrl = null;
+        let videoUrl = null;
+
+        // Image / Media support (කොටස් වලට photo එකක් හෝ caption එකක් එක්ක photo එකක් එව්වොත් handle කරන්න)
+        const quotedMessage = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+        const isQuotedImage = quotedMessage?.imageMessage;
+        const isDirectImage = msg.message?.imageMessage;
+
+        if (isDirectImage || isQuotedImage) {
+            // Media download කිරීම සඳහා Baileys වල downloadMediaMessage පාවිච්චි කරයි
+            const stream = await downloadMediaMessage(
+                isDirectImage ? msg : { message: quotedMessage },
+                'buffer',
+                {},
+                { logger: console }
+            );
+            
+            const mimeType = isDirectImage ? msg.message.imageMessage.mimetype : quotedMessage.imageMessage.mimetype;
+            imageUrl = `data:${mimeType};base64,${stream.toString('base64')}`;
+        }
+
+        const CODEX_API_KEY = "cx_live_555l2y4l5a5t0y5z1x5a1i4j221o5h3j";
+        const CODEX_URL = "https://code-x-ai.lovable.app/api/public/v1/chat";
+
+        const apiResponse = await fetch(CODEX_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${CODEX_API_KEY}`
+            },
+            body: JSON.stringify({
+                message: query || "Meke thiyenne mokakda?",
+                session: sender,          // chat id එකම session එක විදිහට දීලා long-term memory active කිරීම
+                image_url: imageUrl       // Vision / Photo support එක
+            })
+        });
+
+        const resData = await apiResponse.json();
+        const aiReply = resData.reply || resData.error || "Sorry, I couldn't process that.";
+
+        await socket.sendMessage(sender, {
+            text: `${aiReply}\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+        }, { quoted: msg });
+
+        await socket.sendMessage(sender, { react: { text: "✨", key: msg.key } });
+
+    } catch (err) {
+        console.error("Codex AI Error:", err);
+        await socket.sendMessage(sender, { text: `❌ *Codex AI service is currently busy.*` }, { quoted: msg });
     }
 }
 break;
