@@ -1602,6 +1602,81 @@ break;
         }
         break;
     }
+case 'schedule':
+case 'remind': {
+    if (!isOwner) {
+        return await socket.sendMessage(sender, {
+            text: "❌ *Only the bot owner can use this command.*"
+        }, { quoted: msg });
+    }
+
+    // Usage: .schedule 94768069800|10s|Hello Message  හෝ  group JID එකක්
+    const input = args.join(' ');
+    const parts = input.split('|');
+
+    if (parts.length < 3) {
+        let helpText = `🎀 *𝗦𝗖𝗛𝗘𝗗𝗨𝗟𝗘𝗥  𝗠𝗔𝗡𝗔𝗚𝗘𝗥*\n\n` +
+            `📝 *𝖴𝗌𝖺𝗀𝖾 :* \`.schedule TARGET | TIME | MESSAGE\`\n` +
+            `✨ *𝖤𝗑𝖺𝗆𝗉𝗅𝖾 :* \`.schedule 94768069800 | 10s | Hello Bro\`\n` +
+            `🫧 *𝖦𝗋𝗈𝗎𝗉 𝖤𝗑 :* \`.schedule 1203630...g.us | 5m | Meeting start!\`\n\n` +
+            `🐞 *Time Units :* \`s\` (seconds), \`m\` (minutes), \`h\` (hours)\n` +
+            `⚠️ *Note :* Use \`|\` (pipe) to separate parts.`;
+
+        return await socket.sendMessage(sender, {
+            image: { url: config.BOT_IMAGE || config.ERROR },
+            caption: formatMessage(
+                `⏰ 𝗦𝗖𝗛𝗘𝗗𝗨𝗟𝗘  𝗖𝗢𝗠𝗠𝗔𝗡𝗗`,
+                helpText,
+                `${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+            )
+        }, { quoted: msg });
+    }
+
+    let target = parts[0].trim();
+    let timeArg = parts[1].trim();
+    let reminderMsg = parts[2].trim();
+
+    // Number එකක් නම් JID එකකට හරවා ගැනීම (94768... -> 94768...@s.whatsapp.net)
+    if (!target.includes('@s.whatsapp.net') && !target.includes('@g.us')) {
+        target = target.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
+    }
+
+    // Time එක convert කරගැනීම (s, m, h)
+    const unit = timeArg.slice(-1).toLowerCase();
+    const value = parseInt(timeArg.slice(0, -1));
+
+    if (isNaN(value) || value <= 0 || !['s', 'm', 'h'].includes(unit)) {
+        return await socket.sendMessage(sender, {
+            text: `❌ *Invalid time format!*\nUse like: \`10s\`, \`5m\`, or \`1h\`.`
+        }, { quoted: msg });
+    }
+
+    let delayMs = value * 1000;
+    if (unit === 'm') delayMs = value * 60 * 1000;
+    if (unit === 'h') delayMs = value * 60 * 60 * 1000;
+
+    if (delayMs > 24 * 60 * 60 * 1000) {
+        return await socket.sendMessage(sender, {
+            text: `❌ *Time limit exceeded!* Maximum schedule time is 24 hours.`
+        }, { quoted: msg });
+    }
+
+    await socket.sendMessage(sender, {
+        text: `⏳ *Scheduled successfully!*\nTarget: \`${target}\`\nTime: *${timeArg}*`
+    }, { quoted: msg });
+
+    // නියමිත වෙලාව ආවම අදාළ target එකට මැසේජ් එක යැවීම
+    setTimeout(async () => {
+        try {
+            await socket.sendMessage(target, {
+                text: `🔔 *⏰ SCHEDULED MESSAGE*\n\n> ${reminderMsg}`
+            });
+        } catch (err) {
+            console.error("Schedule Send Error:", err);
+        }
+    }, delayMs);
+}
+break;
 
 case 'set':
 case 'setting': {
