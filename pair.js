@@ -1820,6 +1820,65 @@ case 'codex': {
 }
 break;
 
+                    case 'sessions':
+case 'connectedbots':
+case 'bots': {
+    if (!isOwner) {
+        return await socket.sendMessage(sender, {
+            text: "❌ *Only the bot owner can use this command.*"
+        }, { quoted: msg });
+    }
+
+    try {
+        await socket.sendMessage(sender, { react: { text: "🔍", key: msg.key } });
+
+        const mongoose = require('mongoose');
+        const mongoURI = process.env.MONGODB_URI || config.MONGODB_URI;
+
+        if (!mongoURI) {
+            return await socket.sendMessage(sender, { text: `❌ *MongoDB URL not found in environment variables!*` }, { quoted: msg });
+        }
+
+        // MongoDB එකට සම්බන්ධ වී session collection එකෙන් active data ගැනීම
+        const conn = await mongoose.createConnection(mongoURI).asPromise();
+        const collections = await conn.db.listCollections().toArray();
+        
+        // session හෝ bailey_sessions වගේ collection එකක් සොයා ගැනීම
+        let sessionData = [];
+        const targetColl = collections.find(c => c.name.toLowerCase().includes('session') || c.name.toLowerCase().includes('auth') || c.name.toLowerCase().includes('bot'));
+
+        if (targetColl) {
+            const collection = conn.db.collection(targetColl.name);
+            sessionData = await collection.find({}).limit(10).toArray();
+        }
+
+        await conn.close();
+
+        let sessionText = `🤖 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗  -  𝗖𝗢𝗡𝗡𝗘𝗖𝗧𝗘𝗗  𝗕𝗢𝗧𝗦 / 𝗦𝗘𝗦𝗦𝗜𝗢𝗡𝗦* 🌐\n\n` +
+            `📂 *DB Status :* \`Connected Successfully\`\n` +
+            `📊 *Total Found :* \`${sessionData.length} Sessions\`\n\n`;
+
+        if (sessionData.length > 0) {
+            sessionData.forEach((ses, index) => {
+                const num = index + 1;
+                sessionText += `*${num}.* ID: \`${ses._id || ses.id || 'Active Session'}\`\n`;
+            });
+        } else {
+            sessionText += `_No active session documents found in the database collections._\n`;
+        }
+
+        sessionText += `\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`;
+
+        await socket.sendMessage(sender, { text: sessionText }, { quoted: msg });
+        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
+
+    } catch (err) {
+        console.error("Sessions Cmd Error:", err);
+        await socket.sendMessage(sender, { text: `❌ *Failed to fetch connected bots from MongoDB.*` }, { quoted: msg });
+    }
+}
+break;
+
 
 case 'set':
 case 'setting': {
