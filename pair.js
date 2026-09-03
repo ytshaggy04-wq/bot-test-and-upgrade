@@ -1691,34 +1691,48 @@ case 'instagram': {
         }, { quoted: msg });
     }
 
-    let igUrl = args[0].split("?")[0]; // URL එකේ තියෙන extra query parameters අයින් කරගැනීම
+    let igUrl = args[0].split("?")[0];
     try {
         await socket.sendMessage(sender, { react: { text: "⬇️", key: msg.key } });
 
-        // Instagram Embed API එක හරහා media info ලබා ගැනීම (Very Stable)
-        const apiResponse = await fetch(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(igUrl)}`);
-        const resData = await apiResponse.json();
-
-        // 2nd API fallback එකක් විදිහට වෙනත් එකක් පාවිච්චි කිරීම
         let mediaUrl = null;
         let isVideo = true;
 
-        if (resData.status && resData.data && resData.data.length > 0) {
-            mediaUrl = resData.data[0].url;
-            isVideo = resData.data[0].type === 'video';
-        } else {
-            // Fallback API if primary fails
-            const fallbackRes = await fetch(`https://itzpire.com/download/instagram?url=${encodeURIComponent(igUrl)}`);
-            const fallbackData = await fallbackRes.json();
-            if (fallbackData.status && fallbackData.data) {
-                mediaUrl = fallbackData.data.url || fallbackData.data[0]?.url;
-                isVideo = fallbackData.data.type === 'video' || fallbackData.data[0]?.type === 'video';
+        // API 1: Siputzx API
+        try {
+            const res1 = await fetch(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(igUrl)}`);
+            const data1 = await res1.json();
+            if (data1.status && data1.data && data1.data.length > 0) {
+                mediaUrl = data1.data[0].url;
+                isVideo = data1.data[0].type === 'video';
             }
+        } catch (e) { /* Fallback to next */ }
+
+        // API 2: Itzpire API (API 1 වැඩ නැත්නම් මේකට මාරු වෙයි)
+        if (!mediaUrl) {
+            try {
+                const res2 = await fetch(`https://itzpire.com/download/instagram?url=${encodeURIComponent(igUrl)}`);
+                const data2 = await res2.json();
+                if (data2.status && data2.data) {
+                    mediaUrl = data2.data.url || data2.data[0]?.url;
+                }
+            } catch (e) { /* Fallback to next */ }
+        }
+
+        // API 3: VikkApi / SaveInsta alternative
+        if (!mediaUrl) {
+            try {
+                const res3 = await fetch(`https://api.vkrtechnologies.com/api/dl/ig?url=${encodeURIComponent(igUrl)}`);
+                const data3 = await res3.json();
+                if (data3.status && (data3.data || data3.url)) {
+                    mediaUrl = data3.data || data3.url;
+                }
+            } catch (e) { /* Fallback to next */ }
         }
 
         if (!mediaUrl) {
             return await socket.sendMessage(sender, { 
-                text: `❌ *Failed to fetch media. Make sure the Instagram account / post is Public!*` 
+                text: `❌ *All Instagram downloaders are currently blocked by Instagram security. Please try a different link or try again later!*` 
             }, { quoted: msg });
         }
 
@@ -1730,7 +1744,7 @@ case 'instagram': {
         } else {
             await socket.sendMessage(sender, {
                 image: { url: mediaUrl },
-                caption: `📥 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠ဒ - 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠  𝗜𝗠𝗔𝗚𝗘*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+                caption: `📥 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗 - 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠  𝗜𝗠𝗔𝗚𝗘*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
             }, { quoted: msg });
         }
 
