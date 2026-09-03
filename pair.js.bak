@@ -2034,7 +2034,7 @@ case 's': {
 break;
 
 // ==========================================
-// 4. IMAGE / PINTEREST SEARCH (.image)
+// 1. IMAGE / PINTEREST SEARCH (.image)
 // ==========================================
 case 'image':
 case 'img':
@@ -2049,15 +2049,9 @@ case 'pinterest': {
     try {
         await socket.sendMessage(sender, { react: { text: "🔍", key: msg.key } });
 
+        // Pinterest direct search API
         const response = await fetch(`https://itzpire.com/search/pinterest?query=${encodeURIComponent(query)}`);
-        const textRes = await response.text();
-        
-        let result;
-        try {
-            result = JSON.parse(textRes);
-        } catch (e) {
-            return await socket.sendMessage(sender, { text: `❌ *Image API is currently down or returned invalid data. Try again!*` }, { quoted: msg });
-        }
+        const result = await response.json();
 
         if (!result.status || !result.result || result.result.length === 0) {
             return await socket.sendMessage(sender, { text: `❌ *No images found for your query!*` }, { quoted: msg });
@@ -2079,7 +2073,7 @@ case 'pinterest': {
 break;
 
 // ==========================================
-// 5. REXPORN SEARCH (.rexporn)
+// 2. REXPORN COMMAND (.rexporn)
 // ==========================================
 case 'rexporn':
 case 'pornsearch':
@@ -2087,29 +2081,24 @@ case 'xvideos': {
     const query = args.join(' ');
     if (!query) {
         return await socket.sendMessage(sender, {
-            text: `❌ *Please provide a search query!*\n✨ *Example:* \`.rexporn japanese\``
+            text: `❌ *Please provide a search query or keyword!*\n✨ *Example:* \`.rexporn japanese\``
         }, { quoted: msg });
     }
 
     try {
         await socket.sendMessage(sender, { react: { text: "🔥", key: msg.key } });
 
+        // Rexporn / adult scraping endpoint හරහා ඩේටා ලබා ගැනීම
         const response = await fetch(`https://itzpire.com/search/xnxx?query=${encodeURIComponent(query)}`);
-        const textRes = await response.text();
-        
-        let result;
-        try {
-            result = JSON.parse(textRes);
-        } catch (e) {
-            return await socket.sendMessage(sender, { text: `❌ *API returned invalid response (Not valid JSON). Try later!*` }, { quoted: msg });
-        }
+        const result = await response.json();
 
         if (!result.status || !result.result || result.result.length === 0) {
-            return await socket.sendMessage(sender, { text: `❌ *No results found for your query!*` }, { quoted: msg });
+            return await socket.sendMessage(sender, { text: `❌ *No results found on Rexporn/Video network!*` }, { quoted: msg });
         }
 
-        let resultText = `🔞 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗  -  𝗥𝗘𝗫𝗣𝗢𝗥𝗡  𝗦𝗘𝗔𝗥𝗖𝗛* 🔥\n\n` +
-            `🔎 *𝖰𝗎𝖾𝗋𝗒 :* \`${query}\`\n\n`;
+        let resultText = `🔞 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗  -  𝗥𝗘𝗫𝗣𝗢𝗥𝗡  𝗡𝗘𝗧𝗪𝗢𝗥𝗞* 🔥\n\n` +
+            `🔎 *𝖰𝗎𝖾𝗋𝗒 :* \`${query}\`\n` +
+            `🌐 *Source:* \`rexporn.sex / network\`\n\n`;
 
         const limit = Math.min(result.result.length, 5);
         for (let i = 0; i < limit; i++) {
@@ -2126,7 +2115,7 @@ case 'xvideos': {
         await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
     } catch (err) {
         console.error("Rexporn Error:", err);
-        await socket.sendMessage(sender, { text: `❌ *Failed to fetch search results.*` }, { quoted: msg });
+        await socket.sendMessage(sender, { text: `❌ *Failed to fetch from Rexporn network.*` }, { quoted: msg });
     }
 }
 break;
