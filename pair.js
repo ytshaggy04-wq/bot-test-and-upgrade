@@ -2300,13 +2300,13 @@ case 'setting': {
     }
 }
 break;
-        } catch (error) {
+     } catch (error) {
             console.error('Command handler error:', error);
             await socket.sendMessage(sender, {
                 text: `❌ ERROR\nAn error occurred: ${error.message}`,
             });
         }
-    });
+    }
 }
 async function setupMessageHandlers(socket) {
     const messageHandler = async ({ messages }) => {
