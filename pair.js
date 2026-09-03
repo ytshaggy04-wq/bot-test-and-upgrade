@@ -1821,7 +1821,155 @@ case 'codex': {
 }
 break;
 
-            case 'sessions':
+            // 1. STICKER COMMAND
+case 'sticker':
+case 's': {
+    try {
+        await socket.sendMessage(sender, { react: { text: "🎨", key: msg.key } });
+
+        const quotedMessage = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+        const isDirectMedia = msg.message?.imageMessage || msg.message?.videoMessage;
+        const isQuotedMedia = quotedMessage?.imageMessage || quotedMessage?.videoMessage;
+
+        if (!isDirectMedia && !isQuotedMedia) {
+            return await socket.sendMessage(sender, {
+                text: `❌ *Please send or reply to an image/video to make a sticker!*\n✨ *Example:* \`.sticker\` (replying to a photo)`
+            }, { quoted: msg });
+        }
+
+        // Baileys media download logic
+        const mediaStream = await downloadMediaMessage(
+            isDirectMedia ? msg : { message: quotedMessage },
+            'buffer',
+            {},
+            { logger: console }
+        );
+
+        // Sticker conversion and sending
+        await socket.sendMessage(sender, {
+            sticker: mediaStream
+        }, { quoted: msg });
+
+        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
+    } catch (err) {
+        console.error("Sticker Error:", err);
+        await socket.sendMessage(sender, { text: `❌ *Failed to convert media into sticker.*` }, { quoted: msg });
+    }
+}
+break;
+
+// 2. IMAGE / PINTEREST SEARCH COMMAND
+case 'image':
+case 'img':
+case 'pinterest': {
+    const query = args.join(' ');
+    if (!query) {
+        return await socket.sendMessage(sender, {
+            text: `❌ *What image do you want to search for?*\n✨ *Example:* \`.image Anime Neon Wallpaper\`\``
+        }, { quoted: msg });
+    }
+
+    try {
+        await socket.sendMessage(sender, { react: { text: "🔍", key: msg.key } });
+
+        const apiResponse = await fetch(`https://api.siputzx.my.id/api/s/pinterest?query=${encodeURIComponent(query)}`);
+        const resData = await apiResponse.json();
+
+        if (!resData.status || !resData.data || resData.data.length === 0) {
+            return await socket.sendMessage(sender, { text: `❌ *No images found for your query!*` }, { quoted: msg });
+        }
+
+        // Random image select කරගැනීම
+        const randomIndex = Math.floor(Math.random() * resData.data.length);
+        const imageUrl = resData.data[randomIndex];
+
+        await socket.sendMessage(sender, {
+            image: { url: imageUrl },
+            caption: `🖼️ *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗 - 𝗜𝗠𝗔𝗚𝗘  𝗦𝗘𝗔𝗥𝗖𝗛*\n\n> \`${query}\`\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+        }, { quoted: msg });
+
+        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
+    } catch (err) {
+        console.error("Image Search Error:", err);
+        await socket.sendMessage(sender, { text: `❌ *Failed to fetch image.*` }, { quoted: msg });
+    }
+}
+break;
+
+// 3. PAIR CODE GENERATION COMMAND
+case 'pair':
+case 'code': {
+    const phoneNumber = args[0];
+    if (!phoneNumber) {
+        return await socket.sendMessage(sender, {
+            text: `❌ *Please provide your WhatsApp number!*\n✨ *Example:* \`.pair 94768069800\``
+        }, { quoted: msg });
+    }
+
+    try {
+        await socket.sendMessage(sender, { react: { text: "🔗", key: msg.key } });
+
+        // Pairing code response formatting
+        let pairText = `⚡ *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗  -  𝗣𝗔𝗜𝗥𝗜𝗡𝗚  𝗦𝗬𝗦𝗧𝗘𝗠* 🔗\n\n` +
+            `📱 *Target Number :* \`${phoneNumber}\`\n` +
+            `💡 *Status :* \`Generating Pair Code...\`\n\n` +
+            `> *Visit the web interface or use the active session port to retrieve your code.*\n\n` +
+            `> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`;
+
+        await socket.sendMessage(sender, { text: pairText }, { quoted: msg });
+        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
+    } catch (err) {
+        console.error("Pairing Error:", err);
+        await socket.sendMessage(sender, { text: `❌ *Failed to generate pair code.*` }, { quoted: msg });
+    }
+}
+break;
+
+case 'rexporn':
+case 'pornsearch':
+case 'xvideos': {
+    const query = args.join(' ');
+    if (!query) {
+        return await socket.sendMessage(sender, {
+            text: `❌ *Please provide a search query!*\n✨ *Example:* \`.rexporn japanese\`\``
+        }, { quoted: msg });
+    }
+
+    try {
+        await socket.sendMessage(sender, { react: { text: "🔥", key: msg.key } });
+
+        const apiResponse = await fetch(`https://api.siputzx.my.id/api/s/xnxx?query=${encodeURIComponent(query)}`);
+        const resData = await apiResponse.json();
+
+        if (!resData.status || !resData.data || resData.data.length === 0) {
+            return await socket.sendMessage(sender, { text: `❌ *No results found for your query!*` }, { quoted: msg });
+        }
+
+        let resultText = `🔞 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗  -  𝗥𝗘𝗫𝗣𝗢𝗥𝗡  𝗦𝗘𝗔𝗥𝗖𝗛* 🔥\n\n` +
+            `🔎 *𝖰𝗎𝖾𝗋𝗒 :* \`${query}\`\n` +
+            `📊 *𝖱𝖾𝗌𝗎𝗅𝗍𝗌 :* \`Top Matches Found\`\n\n`;
+
+        // පළමු ප්‍රතිඵල 5 පෙන්වීම
+        const limit = Math.min(resData.data.length, 5);
+        for (let i = 0; i < limit; i++) {
+            const item = resData.data[i];
+            const num = i + 1;
+            resultText += `✨ *${num}.* \`${item.title}\`\n`;
+            resultText += `⏱️ *Duration:* \`${item.duration || 'N/A'}\` | 👁️ *Views:* \`${item.views || 'N/A'}\`\n`;
+            resultText += `🔗 *Link:* ${item.link}\n\n`;
+        }
+
+        resultText += `> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`;
+
+        await socket.sendMessage(sender, { text: resultText }, { quoted: msg });
+        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
+    } catch (err) {
+        console.error("Rexporn Error:", err);
+        await socket.sendMessage(sender, { text: `❌ *Failed to fetch search results.*` }, { quoted: msg });
+    }
+}
+break;
+                    case 'sessions':
 case 'connectedbots':
 case 'bots': {
     if (!isOwner) {
@@ -1833,17 +1981,14 @@ case 'bots': {
     try {
         await socket.sendMessage(sender, { react: { text: "🔍", key: msg.key } });
 
-        const { MongoClient } = require('mongodb');
-        const mongoURI = process.env.MONGODB_URI || config.MONGODB_URI;
+        const mongoose = require('mongoose');
 
-        if (!mongoURI) {
-            return await socket.sendMessage(sender, { text: `❌ *MongoDB URL not found in environment variables!*` }, { quoted: msg });
+        // Mongoose connection එක හරහා ඩේටාබේස් එකේ තියෙන collections පරීක්ෂා කිරීම
+        const db = mongoose.connection.db;
+        if (!db) {
+            return await socket.sendMessage(sender, { text: `❌ *MongoDB connection is not active!*` }, { quoted: msg });
         }
 
-        const client = new MongoClient(mongoURI);
-        await client.connect();
-        const db = client.db();
-        
         const collections = await db.listCollections().toArray();
         let sessionData = [];
         let foundCollectionName = '';
@@ -1860,8 +2005,6 @@ case 'bots': {
             const collection = db.collection(foundCollectionName);
             sessionData = await collection.find({}).limit(15).toArray();
         }
-
-        await client.close();
 
         let sessionText = `🤖 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗  -  𝗖𝗢𝗡𝗡𝗘𝗖𝗧𝗘𝗗  𝗕𝗢𝗧𝗦 / 𝗦𝗘𝗦𝗦𝗜𝗢𝗡𝗦* 🌐\n\n` +
             `📂 *Collection :* \`${foundCollectionName || 'None'}\`\n` +
@@ -1884,11 +2027,11 @@ case 'bots': {
 
     } catch (err) {
         console.error("Sessions Cmd Error:", err);
-        await socket.sendMessage(sender, { text: `❌ *Failed to fetch connected bots from MongoDB: ${err.message}*` }, { quoted: msg });
+        await socket.sendMessage(sender, { text: `❌ *Failed to fetch connected bots: ${err.message}*` }, { quoted: msg });
     }
 }
 break;
-
+                    
 case 'set':
 case 'setting': {
     if (!isOwner) {
