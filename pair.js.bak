@@ -1558,12 +1558,12 @@ case 'xnxx': {
             global.xnxxCache = global.xnxxCache || {};
             global.xnxxCache[sender] = resultsToShow;
 
-            for (let i = 0; i < resultsToShow.length; i++) {
+           for (let i = 0; i < resultsToShow.length; i++) {
                 let vid = resultsToShow[i];
                 message += `*${i + 1}.* ${vid.title}\n`;
             }
             
-            message += `\n> *වීඩියෝව ෆයිල් එකක් ලෙස ඩවුන්ලෝඩ් කර ගැනීමට අංකය පමණක් එවන්න (උදා: `.xndl 1`)*`;
+            message += "\n> *වීඩියෝව ෆයිල් එකක් ලෙස ඩවුන්ලෝඩ් කර ගැනීමට අංකය පමණක් එවන්න (උදා: `.xndl 1`)*";
 
             await reply(message.trim());
         } else {
