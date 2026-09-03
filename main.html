@@ -12,13 +12,13 @@
         }
 
         :root {
-            --bg: #030705;
-            --card: rgba(6, 15, 11, 0.94);
-            --green: #00ff9d;
-            --green2: #00c878;
-            --text: #f1fff8;
-            --muted: #789087;
-            --border: rgba(0, 255, 157, 0.25);
+            --bg: #03050d;
+            --card: rgba(6, 9, 20, 0.94);
+            --blue: #00aaff;
+            --blue2: #0077ff;
+            --text: #f1f5ff;
+            --muted: #788599;
+            --border: rgba(0, 170, 255, 0.25);
         }
 
         html, body {
@@ -28,7 +28,7 @@
             min-height: 100vh;
             font-family: Arial, sans-serif;
             color: var(--text);
-            background: #010302;
+            background: #010207;
             overflow-x: hidden;
         }
 
@@ -42,14 +42,24 @@
             z-index: 0;
         }
 
-        /* Modern Spinner Loading Screen */
+        #sakuraCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 999;
+            display: none;
+        }
+
         #introScreen {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: radial-gradient(circle at center, #071c12 0%, #010302 100%);
+            background: radial-gradient(circle at center, #071224 0%, #010207 100%);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -61,6 +71,1048 @@
         .spinner-box {
             position: relative;
             width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .spinner-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 3px solid rgba(0, 170, 255, 0.1);
+            border-top: 3px solid var(--blue);
+            border-radius: 50%;
+            animation: spinRing 1s linear infinite;
+            box-shadow: 0 0 20px rgba(0, 170, 255, 0.3);
+        }
+
+        .spinner-icon {
+            color: var(--blue);
+            font-size: 28px;
+            animation: pulseIcon 1.2s ease-in-out infinite alternate;
+        }
+
+        .intro-title {
+            margin-top: 25px;
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 3px;
+            color: #ffffff;
+            text-shadow: 0 0 20px var(--blue);
+        }
+
+        .intro-sub {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--muted);
+            letter-spacing: 1px;
+        }
+
+        @keyframes spinRing {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulseIcon {
+            0% { opacity: 0.4; transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1.1); }
+        }
+
+        .wrapper {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 0 50px 0;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 1s ease;
+        }
+
+        .wrapper.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .hero-section {
+            position: relative;
+            width: 100%;
+            max-width: 520px;
+            min-height: 340px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 30px 20px;
+            background-image: url('https://cdn.phototourl.com/free/2026-09-03-d66a750c-2912-4ad2-b380-ddaac7b57351.jpg');
+            background-size: 100% 100%;
+            background-position: center;
+            background-repeat: no-repeat;
+            border-bottom: 1.5px solid var(--border);
+        }
+
+        .hero-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(3, 5, 13, 0.75);
+            z-index: 1;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 170, 255, 0.15);
+            border: 1px solid var(--border);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: var(--blue);
+            margin-bottom: 15px;
+            backdrop-filter: blur(5px);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--blue);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--blue);
+            animation: pulseDot 1.5s infinite;
+        }
+
+        @keyframes pulseDot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        .logo-box {
+            width: 85px;
+            height: 85px;
+            border-radius: 50%;
+            border: 2.5px solid var(--blue);
+            background: #000;
+            overflow: hidden;
+            box-shadow: 0 0 25px rgba(0,170,255,0.5);
+            margin-bottom: 12px;
+            position: relative;
+            animation: floatLogo 3s ease-in-out infinite;
+        }
+
+        @keyframes floatLogo {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+
+        .logo-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .online-badge {
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            width: 12px;
+            height: 12px;
+            background: var(--blue);
+            border: 2px solid #03050d;
+            border-radius: 50%;
+        }
+
+        .hero-content h1 {
+            margin: 0 0 8px 0;
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: #ffffff;
+            text-shadow: 0 0 15px rgba(0,170,255,0.6);
+        }
+
+        .hero-content h1 span {
+            color: var(--blue);
+        }
+
+        .verified-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0, 170, 255, 0.2);
+            border: 1px solid var(--blue);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--blue);
+            margin-bottom: 10px;
+        }
+
+        .hero-desc {
+            margin: 0 0 15px 0;
+            font-size: 12px;
+            color: #d0e4ff;
+            line-height: 1.4;
+            max-width: 380px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10px;
+            color: #c0d7df;
+            font-weight: 700;
+            background: rgba(0,0,0,0.4);
+            padding: 4px 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(0,170,255,0.2);
+        }
+
+        .stat-item i {
+            color: var(--blue);
+        }
+
+        .form-card-container {
+            width: 100%;
+            max-width: 520px;
+            padding: 0 16px;
+            margin-top: -15px;
+            position: relative;
+            z-index: 5;
+        }
+
+        @keyframes borderGlow {
+            0% { border-color: rgba(0, 170, 255, 0.3); box-shadow: 0 25px 60px rgba(0,0,0,0.8), 0 0 15px rgba(0,170,255,0.15); }
+            50% { border-color: rgba(0, 170, 255, 0.9); box-shadow: 0 25px 60px rgba(0,0,0,0.8), 0 0 35px rgba(0,170,255,0.4); }
+            100% { border-color: rgba(0, 170, 255, 0.3); box-shadow: 0 25px 60px rgba(0,0,0,0.8), 0 0 15px rgba(0,170,255,0.15); }
+        }
+
+        .card-box {
+            background: var(--card);
+            border: 1.5px solid var(--border);
+            border-radius: 22px;
+            padding: 24px;
+            backdrop-filter: blur(20px);
+            animation: borderGlow 4s infinite;
+        }
+
+        .tab-switcher {
+            display: flex;
+            background: rgba(0,0,0,0.5);
+            border-radius: 14px;
+            padding: 4px;
+            margin-bottom: 22px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            background: transparent;
+            border: none;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 700;
+            border-radius: 11px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.3s;
+        }
+
+        .tab-btn.active {
+            background: rgba(0, 170, 255, 0.15);
+            color: var(--blue);
+            border: 1px solid var(--border);
+            box-shadow: 0 0 15px rgba(0,170,255,0.2);
+        }
+
+        .input-group {
+            margin-bottom: 18px;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: #8fa8bc;
+            text-transform: uppercase;
+        }
+
+        .phone-input-box {
+            display: flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1.5px solid rgba(0, 170, 255, 0.3);
+            border-radius: 14px;
+            padding: 4px 6px 4px 14px;
+            transition: 0.3s;
+        }
+
+        .phone-input-box:focus-within {
+            border-color: var(--blue);
+            box-shadow: 0 0 20px rgba(0,170,255,0.25);
+        }
+
+        .phone-input-box span {
+            color: var(--blue);
+            font-weight: 800;
+            font-size: 15px;
+            padding-right: 10px;
+            border-right: 1px solid rgba(255,255,255,0.15);
+        }
+
+        #phoneInput {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            padding: 12px 10px;
+        }
+
+        #phoneInput::placeholder {
+            color: #4a5c73;
+        }
+
+        #clearBtn {
+            background: rgba(255,255,255,0.06);
+            border: none;
+            color: #8fa8bc;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .terms-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 20px;
+            text-align: left;
+            font-size: 12px;
+            color: #9cb5cb;
+            cursor: pointer;
+        }
+
+        .terms-row input[type="checkbox"] {
+            accent-color: var(--blue);
+            width: 16px;
+            height: 16px;
+            margin-top: 1px;
+            cursor: pointer;
+        }
+
+        .terms-row a {
+            color: var(--blue);
+            text-decoration: none;
+        }
+
+        #pairBtn {
+            width: 100%;
+            min-height: 52px;
+            background: linear-gradient(135deg, #00bfff, #0066ff);
+            border: 1px solid rgba(0,170,255,0.6);
+            border-radius: 14px;
+            color: #001122;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(0,170,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: 0.3s;
+        }
+
+        #pairBtn:hover {
+            background: linear-gradient(135deg, #18ccff, #0052cc);
+            box-shadow: 0 14px 30px rgba(0,170,255,0.45);
+            transform: translateY(-2px);
+        }
+
+        #pairBtn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #responseBox {
+            display: none;
+            margin-top: 18px;
+            padding: 16px;
+            background: rgba(0,170,255,0.06);
+            border: 1.5px solid var(--blue);
+            border-radius: 14px;
+            text-align: left;
+        }
+
+        #rCode {
+            font-family: 'Courier New', monospace;
+            font-size: 24px;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: 2px;
+            word-break: break-all;
+            cursor: pointer;
+        }
+
+        #copyBtn {
+            background: rgba(0,170,255,0.2);
+            border: 1px solid var(--blue);
+            color: var(--blue);
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .live-speed-box {
+            width: 100%;
+            max-width: 520px;
+            padding: 0 16px;
+            margin-top: 15px;
+            position: relative;
+            z-index: 5;
+        }
+
+        .speed-card {
+            background: var(--card);
+            border: 1.5px solid var(--border);
+            border-radius: 18px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            backdrop-filter: blur(15px);
+        }
+
+        .speed-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .speed-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(0,170,255,0.1);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--blue);
+            font-size: 18px;
+        }
+
+        .speed-details .title {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        .speed-details .value {
+            font-size: 15px;
+            font-weight: 800;
+            color: #fff;
+            margin-top: 2px;
+        }
+
+        .ping-badge {
+            background: rgba(0,170,255,0.15);
+            border: 1px solid var(--blue);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--blue);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .ping-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--blue);
+            border-radius: 50%;
+            animation: pulseDot 1s infinite;
+        }
+
+        .info-container {
+            width: 100%;
+            max-width: 520px;
+            padding: 0 16px;
+            margin-top: 20px;
+        }
+
+        .info-card {
+            background: var(--card);
+            border: 1.5px solid var(--border);
+            border-radius: 20px;
+            padding: 22px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(20px);
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: var(--blue);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .step-num {
+            font-family: monospace;
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--blue);
+            background: rgba(0,170,255,0.1);
+            padding: 3px 6px;
+            border-radius: 6px;
+            border: 1px solid rgba(0,170,255,0.3);
+        }
+
+        .step-text {
+            font-size: 12px;
+            color: #b5c8db;
+            line-height: 1.4;
+        }
+
+        .step-text strong {
+            display: block;
+            color: #fff;
+            font-size: 13px;
+            margin-bottom: 2px;
+        }
+
+        .features-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .feature-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #d0e4ff;
+        }
+
+        .feature-row i {
+            color: var(--blue);
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .whatsapp-float {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 55px;
+            height: 55px;
+            background: #25d366;
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 5px 20px rgba(37,211,102,0.5);
+            z-index: 999;
+            text-decoration: none;
+            transition: 0.3s;
+        }
+
+        .whatsapp-float:hover {
+            transform: scale(1.1);
+        }
+
+        .wa-badge {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            background: #ff3b3b;
+            color: #fff;
+            font-size: 10px;
+            font-weight: 800;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #03050d;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="bgCanvas"></canvas>
+    <canvas id="sakuraCanvas"></canvas>
+
+    <div id="introScreen">
+        <div class="spinner-box">
+            <div class="spinner-ring"></div>
+            <i class="fas fa-bolt spinner-icon"></i>
+        </div>
+        <div class="intro-title">SHAGGY XMD</div>
+        <div class="intro-sub">Loading Secure System...</div>
+    </div>
+
+    <div class="wrapper" id="mainWrapper">
+        
+        <div class="hero-section">
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <div class="status-pill">
+                    <span class="status-dot"></span> LIVE • FREE • NO ACCOUNT NEEDED
+                </div>
+
+                <div class="logo-box">
+                    <img src="https://cdn.phototourl.com/free/2026-09-01-46a05f97-db49-4c9c-99ef-bc7d9f649769.png" alt="Logo">
+                    <div class="online-badge"></div>
+                </div>
+
+                <h1>Deploy <span>SHAGGY XMD</span> WhatsApp Bot</h1>
+
+                <div class="verified-pill">
+                    <i class="fas fa-shield-check"></i> SHAGGY XMD BETA VERIFIED
+                </div>
+
+                <p class="hero-desc">
+                    Connect your WhatsApp in 30 seconds. Pair code or QR scan — 100% free with fast download support.
+                </p>
+
+                <div class="stats-row">
+                    <div class="stat-item"><i class="fas fa-bolt"></i> 127+ APIs</div>
+                    <div class="stat-item"><i class="fas fa-robot"></i> AI Powered</div>
+                    <div class="stat-item"><i class="fas fa-wifi"></i> Always Online</div>
+                    <div class="stat-item"><i class="fas fa-shield-alt"></i> 100% Free</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-card-container">
+            <div class="card-box">
+                <div class="tab-switcher">
+                    <button class="tab-btn active" onclick="switchTab('pair')">
+                        <i class="fas fa-mobile-alt"></i> Pair Code
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('qr')">
+                        <i class="fas fa-qrcode"></i> QR Scan
+                    </button>
+                </div>
+
+                <div id="pairSection">
+                    <div class="input-group">
+                        <label><i class="fas fa-phone"></i> WhatsApp Number</label>
+                        <div class="phone-input-box">
+                            <span>+94</span>
+                            <input type="tel" id="phoneInput" placeholder="768069800 (no + sign)" maxlength="10" />
+                            <button id="clearBtn" onclick="clearInput()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <label class="terms-row">
+                        <input type="checkbox" id="termsCheck" checked />
+                        <span>I understand this is for a secondary WhatsApp number only. I accept the <a href="#" onclick="alert('Terms: Free to use for bot linking.')">Terms of Service</a></span>
+                    </label>
+
+                    <button id="pairBtn" onclick="getPairCode()">
+                        <span id="loader" style="display:none; border:2px solid rgba(0,17,34,0.3); border-top:2px solid #001122; border-radius:50%; width:20px; height:20px; animation:spin .8s linear infinite;"></span>
+                        <span id="btnText"><i class="fas fa-link"></i> Get Pair Code</span>
+                    </button>
+
+                    <div id="responseBox">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                            <div>
+                                <div style="font-size:10px; font-weight:800; color:var(--blue); letter-spacing:1px; text-transform:uppercase;">Pairing Code Ready</div>
+                                <div id="rCode" onclick="copyCode()" title="Click to copy">——</div>
+                            </div>
+                            <button id="copyBtn" onclick="copyCode()"><i class="fas fa-copy"></i> Copy</button>
+                        </div>
+                        <div id="rMessage" style="font-size:11px; color:#8fa8bc; margin-top:6px;">Tap code to copy instantly</div>
+                    </div>
+                </div>
+
+                <div id="qrSection" style="display:none; text-align:center; padding:10px 0;">
+                    <div style="background:rgba(0,0,0,0.4); border:1px dashed var(--blue); padding:20px; border-radius:14px; margin-bottom:15px;">
+                        <i class="fas fa-qrcode" style="font-size:60px; color:var(--blue); margin-bottom:10px;"></i>
+                        <div style="font-size:13px; font-weight:700; color:#fff;">QR Code Scanning</div>
+                        <div style="font-size:11px; color:var(--muted); margin-top:4px;">Coming soon / Use Pair Code for instant connection.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="live-speed-box">
+            <div class="speed-card">
+                <div class="speed-info">
+                    <div class="speed-icon">
+                        <i class="fas fa-gauge-high"></i>
+                    </div>
+                    <div class="speed-details">
+                        <div class="title">Bot Speed & Performance</div>
+                        <div class="value" id="speedStatusText">Optimal (99.9% Uptime)</div>
+                    </div>
+                </div>
+                <div class="ping-badge">
+                    <span class="ping-dot"></span> <span id="pingValue">18ms</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-container">
+            <div class="info-card">
+                <div class="section-title">
+                    <i class="fas fa-terminal"></i> HOW TO CONNECT
+                </div>
+                <div class="step-item">
+                    <div class="step-num">01</div>
+                    <div class="step-text">
+                        <strong>Enter your WhatsApp number</strong>
+                        Include country code, no spaces or plus sign.
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-num">02</div>
+                    <div class="step-text">
+                        <strong>Generate and copy code</strong>
+                        Get your 8-letter unique pairing code instantly.
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-num">03</div>
+                    <div class="step-text">
+                        <strong>Open WhatsApp → Linked Devices</strong>
+                        Go to WhatsApp on your phone and tap Link a Device.
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-num">04</div>
+                    <div class="step-text">
+                        <strong>Enter the code</strong>
+                        Your bot connects instantly without any app install!
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div class="section-title">
+                    <i class="fas fa-star"></i> BOT FEATURES
+                </div>
+                <div class="features-list">
+                    <div class="feature-row"><i class="fas fa-film"></i> .movie</div>
+                    <div class="feature-row"><i class="fab fa-tiktok"></i> .tiktok</div>
+                    <div class="feature-row"><i class="fas fa-music"></i> .song</div>
+                    <div class="feature-row"><i class="fas fa-heart-broken"></i> .xnxx</div>
+                </div>
+            </div>
+
+            <div style="text-align: center; font-size: 11px; color: var(--muted); margin-top: 15px; letter-spacing: 1px;">
+                POWERED BY <span style="color: var(--blue); font-weight: bold;">SHAGGY TECH</span>
+            </div>
+        </div>
+    </div>
+
+    <a href="https://whatsapp.com" target="_blank" class="whatsapp-float">
+        <i class="fab fa-whatsapp"></i>
+        <span class="wa-badge">2</span>
+    </a>
+
+    <script>
+        const canvas = document.getElementById('bgCanvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+
+        const bubbles = [];
+        for (let i = 0; i < Math.floor(width/30); i++) {
+            bubbles.push({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                radius: Math.random() * 5 + 2,
+                color: Math.random() > 0.4 ? '#00aaff' : '#0077ff',
+                vx: (Math.random() - 0.5) * 0.5,
+                vy: -Math.random() * 1 - 0.3,
+                alpha: Math.random() * 0.4 + 0.1
+            });
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            bubbles.forEach(b => {
+                b.x += b.vx;
+                b.y += b.vy;
+                if (b.y < -10) { b.y = height + 10; b.x = Math.random() * width; }
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                ctx.fillStyle = b.color;
+                ctx.globalAlpha = b.alpha;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = b.color;
+                ctx.fill();
+                ctx.restore();
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        const sakuraCanvas = document.getElementById('sakuraCanvas');
+        const sCtx = sakuraCanvas.getContext('2d');
+        let sWidth = sakuraCanvas.width = window.innerWidth;
+        let sHeight = sakuraCanvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            sWidth = sakuraCanvas.width = window.innerWidth;
+            sHeight = sakuraCanvas.height = window.innerHeight;
+        });
+
+        let petals = [];
+        let isSakuraActive = false;
+
+        function startSakuraShower() {
+            sakuraCanvas.style.display = 'block';
+            petals = [];
+            for (let i = 0; i < 70; i++) {
+                petals.push({
+                    x: Math.random() * sWidth,
+                    y: Math.random() * sHeight - sHeight,
+                    r: Math.random() * 6 + 4,
+                    d: Math.random() * 50,
+                    color: Math.random() > 0.3 ? '#00aaff' : '#0077ff',
+                    tilt: Math.random() * 10 - 10,
+                    tiltAngleIncremental: Math.random() * 0.07 + 0.05,
+                    tiltAngle: 0
+                });
+            }
+            isSakuraActive = true;
+            renderSakura();
+
+            setTimeout(() => {
+                isSakuraActive = false;
+                sakuraCanvas.style.display = 'none';
+                sCtx.clearRect(0, 0, sWidth, sHeight);
+            }, 6000);
+        }
+
+        function renderSakura() {
+            if (!isSakuraActive) return;
+            sCtx.clearRect(0, 0, sWidth, sHeight);
+            petals.forEach(p => {
+                p.tiltAngle += p.tiltAngleIncremental;
+                p.y += (Math.cos(p.d) + 2 + p.r / 2) / 2;
+                p.x += Math.sin(p.tiltAngle) * 2;
+
+                if (p.y > sHeight) {
+                    p.y = -20;
+                    p.x = Math.random() * sWidth;
+                }
+
+                sCtx.beginPath();
+                sCtx.lineWidth = p.r / 2;
+                sCtx.strokeStyle = p.color;
+                sCtx.fillStyle = p.color;
+                sCtx.save();
+                sCtx.translate(p.x, p.y);
+                sCtx.rotate(p.tiltAngle);
+                sCtx.globalAlpha = 0.8;
+                sCtx.shadowBlur = 8;
+                sCtx.shadowColor = p.color;
+                sCtx.fillRect(0, 0, p.r, p.r * 1.5);
+                sCtx.restore();
+            });
+            requestAnimationFrame(renderSakura);
+        }
+
+        function playWelcomeVoice() {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance("Welcome to Shaggy XMD WhatsApp bot project");
+                utterance.rate = 0.95;
+                utterance.pitch = 1.4;
+                utterance.volume = 1.0;
+
+                const voices = window.speechSynthesis.getVoices();
+                const femaleVoice = voices.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('susan') || v.name.toLowerCase().includes('google uk english female') || v.name.toLowerCase().includes('google en-us'));
+                if (femaleVoice) {
+                    utterance.voice = femaleVoice;
+                }
+
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = () => {
+                window.speechSynthesis.getVoices();
+            };
+        }
+
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const intro = document.getElementById('introScreen');
+                const wrapper = document.getElementById('mainWrapper');
+                
+                playWelcomeVoice();
+
+                intro.style.opacity = '0';
+                setTimeout(() => {
+                    intro.style.display = 'none';
+                    wrapper.classList.add('show');
+                }, 800);
+            }, 1800);
+        });
+
+        function switchTab(tab) {
+            const btns = document.querySelectorAll('.tab-btn');
+            btns.forEach(b => b.classList.remove('active'));
+            if (tab === 'pair') {
+                btns[0].classList.add('active');
+                document.getElementById('pairSection').style.display = 'block';
+                document.getElementById('qrSection').style.display = 'none';
+            } else {
+                btns[1].classList.add('active');
+                document.getElementById('pairSection').style.display = 'none';
+                document.getElementById('qrSection').style.display = 'block';
+            }
+        }
+
+        const phoneInput = document.getElementById('phoneInput');
+        const clearBtn = document.getElementById('clearBtn');
+        const pairBtn = document.getElementById('pairBtn');
+        const loader = document.getElementById('loader');
+        const btnText = document.getElementById('btnText');
+        const responseBox = document.getElementById('responseBox');
+        const rCode = document.getElementById('rCode');
+        const termsCheck = document.getElementById('termsCheck');
+
+        phoneInput.addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g, '');
+            clearBtn.style.display = this.value.length > 0 ? 'flex' : 'none';
+        });
+
+        function clearInput() {
+            phoneInput.value = '';
+            clearBtn.style.display = 'none';
+            phoneInput.focus();
+        }
+
+        function copyCode() {
+            const code = rCode.textContent.trim();
+            if (!code || code === '——') return;
+            navigator.clipboard.writeText(code).then(() => {
+                rCode.innerHTML = '<span style="color:#00aaff;">COPIED!</span>';
+                setTimeout(() => { rCode.textContent = code; }, 1500);
+            });
+        }
+
+        async function getPairCode() {
+            const phone = phoneInput.value.trim();
+            if (!termsCheck.checked) {
+                alert('Please accept the Terms of Service checkbox first.');
+                return;
+            }
+            if (!phone || phone.length < 9) {
+                alert('Please enter a valid phone number (at least 9 digits).');
+                phoneInput.focus();
+                return;
+            }
+
+            const fullNumber = `94${phone}`;
+            pairBtn.disabled = true;
+            loader.style.display = 'block';
+            btnText.innerHTML = '<span>Requesting Code...</span>';
+            responseBox.style.display = 'block';
+            rCode.textContent = 'Generating...';
+
+            try {
+                const response = await fetch(`/code?number=${fullNumber}`, { method: 'GET' });
+                const data = await response.json();
+                if (response.ok && data.code) {
+                    rCode.textContent = data.code;
+                    copyCode();
+                    startSakuraShower();
+                } else {
+                    rCode.textContent = data.error || 'Failed to get code';
+                }
+            } catch (err) {
+                rCode.textContent = 'Connection Error!';
+            } finally {
+                pairBtn.disabled = false;
+                loader.style.display = 'none';
+                btnText.innerHTML = '<i class="fas fa-link"></i> Get Pair Code';
+            }
+        }
+    </script>
+</body>
+</html>            width: 80px;
             height: 80px;
             display: flex;
             align-items: center;
