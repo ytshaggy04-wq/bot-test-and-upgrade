@@ -1498,116 +1498,142 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 break;    
 
 
-        case 'animeclub':
-    case 'animedl': {
-        if (!text) return reply('කරුණාකර ඇනිමේ කථා මාලාවේ ලින්ක් එක දෙන්න!\nඋදා: `.animedl https://animeclub2.com/episodes/chainsaw-man-1x1/`');
+     // ==========================================
+// 1. ANIME SEARCH & DOWNLOAD COMMAND (.anime)
+// ==========================================
+case 'anime':
+case 'animedl': {
+    if (!text) return reply('❌ කරුණාකර ඇනිමේ නම දෙන්න!\n✨ උදා: `.anime naruto`');
+    
+    reply('🍥 ඇනිමේ විස්තර සහ ඩවුන්ලෝඩ් ලින්ක් සොයමින් පවතී, රැඳී සිටින්න...');
+
+    try {
+        const apiKey = 'chama_api_11230a80e5eed3c1b80bfcc5d1773ec9';
+        const apiUrl = `https://api.chamindu.site/api/v1/cartoons/animeclub/tv/dl?q=${encodeURIComponent(text)}&api_key=${apiKey}`;
         
-        reply('🍥 ඇනිමේ ඩවුන්ලෝඩ් ලින්ක් එක සූදානම් කරමින් පවතී, රැඳී සිටින්න...');
+        const response = await fetch(apiUrl);
+        const data = await response.json();
 
-        try {
-            const apiKey = 'chama_api_11230a80e5eed3c1b80bfcc5d1773ec9';
-            const apiUrl = `https://api.chamindu.site/api/v1/cartoons/animeclub/tv/dl?q=${encodeURIComponent(text)}&api_key=${apiKey}`;
+        if (data && data.status && data.downloads && data.downloads.length > 0) {
+            let message = `📥 *AnimeClub TV Downloads Found!*\n\n`;
             
-            const response = await fetch(apiUrl);
-            const data = await response.json();
-
-            if (data && data.status && data.downloads && data.downloads.length > 0) {
-                let message = `📥 *AnimeClub TV Episode Found!*\n\n`;
-                
-                for (let dl of data.downloads) {
-                    let quality = dl.quality || 'HD';
-                    let link = dl.link || dl.direct_link;
-                    message += `*Quality/Source:* ${quality}\n*Download Link:* ${link}\n\n`;
-                }
-
-                await reply(message.trim());
-            } else {
-                reply('❌ කණගාටුයි, අදාළ ලින්ක් එකෙන් ඩවුන්ලෝඩ් ලින්ක් එක ලබා ගැනීමට නොහැකි විය.');
+            for (let dl of data.downloads) {
+                let quality = dl.quality || 'HD';
+                let link = dl.link || dl.direct_link;
+                message += `*Quality/Source:* ${quality}\n*Download Link:* ${link}\n\n`;
             }
-        } catch (err) {
-            console.error('AnimeClub DL Error:', err);
-            reply('❌ දෝෂයක් සිදු විය! කරුණාකර නැවත උත්සාහ කරන්න.');
+
+            await reply(message.trim());
+        } else {
+            reply('❌ කණගාටුයි, අදාළ නම සඳහා ඩවුන්ලෝඩ් ලින්ක් ලබා ගැනීමට නොහැකි විය.');
         }
-        break;
+    } catch (err) {
+        console.error('Anime DL Error:', err);
+        reply('❌ දෝෂයක් සිදු විය! කරුණාකර නැවත උත්සාහ කරන්න.');
+    }
+    break;
+}
+
+// ==========================================
+// 2. XNXX SEARCH COMMAND (.xnxxsearch)
+// ==========================================
+case 'xnxxsearch':
+case 'xnxx': {
+    if (!text) return reply('❌ කරුණාකර සෙවිය යුතු නම හෝ වචනය දෙන්න!\n✨ උදා: `.xnxx small`');
+    
+    reply('🔍 XNXX වීඩියෝ සොයමින් පවතී, කරුණාකර මොහොතක් රැඳී සිටින්න...');
+
+    try {
+        const apiKey = 'chama_api_11230a80e5eed3c1b80bfcc5d1773ec9';
+        const searchUrl = `https://api.chamindu.site/api/adult/xnxx/search?q=${encodeURIComponent(text)}&page=1&api_key=${apiKey}`;
+        
+        const searchRes = await fetch(searchUrl);
+        const searchData = await searchRes.json();
+
+        if (searchData && searchData.success && searchData.results && searchData.results.length > 0) {
+            let message = `🔞 *XNXX Search Results for: "${text}"*\n\n`;
+            
+            let resultsToShow = searchData.results.slice(0, 10);
+            
+            global.xnxxCache = global.xnxxCache || {};
+            global.xnxxCache[sender] = resultsToShow;
+
+            for (let i = 0; i < resultsToShow.length; i++) {
+                let vid = resultsToShow[i];
+                message += `*${i + 1}.* ${vid.title}\n`;
+            }
+            
+            message += `\n> *වීඩියෝව ෆයිල් එකක් ලෙස ඩවුන්ලෝඩ් කර ගැනීමට අංකය පමණක් එවන්න (උදා: `.xndl 1`)*`;
+
+            await reply(message.trim());
+        } else {
+            reply('❌ කණගාටුයි, අදාළ සෙවුමට ප්‍රතිඵල හමු නොවීය.');
+        }
+    } catch (err) {
+        console.error('XNXX Search Error:', err);
+        reply('❌ දෝෂයක් සිදු විය! කරුණාකර නැවත උත්සාහ කරන්න.');
+    }
+    break;
+}
+
+// ==========================================
+// 3. XNXX VIDEO DIRECT FILE SENDER (.xndl)
+// ==========================================
+case 'xndl':
+case 'xnxxindl': {
+    if (!text) return reply('❌ කරුණාකර XNXX වීඩියෝ අංකය හෝ ලින්ක් එක දෙන්න!\n✨ උදා: `.xndl 1`');
+    
+    let targetUrl = text.trim();
+
+    if (/^\d+$/.test(targetUrl)) {
+        global.xnxxCache = global.xnxxCache || {};
+        const userCache = global.xnxxCache[sender];
+        
+        if (!userCache || userCache.length === 0) {
+            return reply('❌ කරුණාකර මුලින්ම `.xnxx <query>` මඟින් සෙවුමක් සිදු කරන්න!');
+        }
+
+        const index = parseInt(targetUrl) - 1;
+        if (index < 0 || index >= userCache.length) {
+            return reply(`❌ කරුණාකර 1 සහ ${userCache.length} අතර නිවැරදි අංකයක් ලබා දෙන්න!`);
+        }
+
+        targetUrl = userCache[index].url;
     }
 
-// 1. XNXX Video Search Command (.xnxxsearch <query>)
-    case 'xnxxsearch':
-    case 'xnxx': {
-        if (!text) return reply('කරුණාකර සෙවිය යුතු නම හෝ වචනය දෙන්න!\nඋදා: `.xnxx teen`');
+    let cleanUrl = targetUrl.replace(/[<>]/g, '').trim();
+    
+    reply('📥 වීඩියෝව ඩවුන්ලෝඩ් කරමින් පවතී, ටිකක් ඉඳපන්...');
+
+    try {
+        const apiKey = 'chama_api_11230a80e5eed3c1b80bfcc5d1773ec9';
+        const dlApiUrl = `https://api.chamindu.site/api/adult/xnxx/dl?url=${encodeURIComponent(cleanUrl)}&api_key=${apiKey}`;
         
-        reply('🔍 XNXX වීඩියෝව සොයමින් පවතී, කරුණාකර මොහොතක් රැඳී සිටින්න...');
+        const dlRes = await fetch(dlApiUrl);
+        const dlData = await dlRes.json();
 
-        try {
-            const apiKey = 'chama_api_11230a80e5eed3c1b80bfcc5d1773ec9';
-            const searchUrl = `https://api.chamindu.site/api/adult/xnxx/search?q=${encodeURIComponent(text)}&page=1&api_key=${apiKey}`;
-            
-            const searchRes = await fetch(searchUrl);
-            const searchData = await searchRes.json();
+        if (dlData && dlData.success) {
+            let videoFileUrl = dlData.download_url || dlData.direct_link;
 
-            if (searchData && searchData.success && searchData.results && searchData.results.length > 0) {
-                let message = `🔞 *XNXX Search Results for: "${text}"*\n\n`;
-                
-                // මුල් වීඩියෝ 5 පෙන්වීමට
-                let resultsToShow = searchData.results.slice(0, 5);
-                
-                for (let i = 0; i < resultsToShow.length; i++) {
-                    let vid = resultsToShow[i];
-                    message += `${i + 1}. *${vid.title}*\n🔗 *URL:* ${vid.url}\n\n`;
-                }
-                
-                message += `_ඩවුන්ලෝඩ් කර ගැනීමට:_\n\`.xndl <video_url>\``;
-
-                await reply(message.trim());
-            } else {
-                reply('❌ කණගාටුයි, අදාළ සෙවුමට ප්‍රතිඵල හමු නොවීය.');
+            if (!videoFileUrl) {
+                return reply('❌ වීඩියෝ ෆයිල් ලින්ක් එක ලබා ගැනීමට නොහැකි විය.');
             }
-        } catch (err) {
-            console.error('XNXX Search Error:', err);
-            reply('❌ දෝෂයක් සිදු විය! කරුණාකර නැවත උත්සාහ කරන්න.');
+
+            // ලින්ක් එක එවනවා වෙනුවට කෙලින්ම වීඩියෝ ෆයිල් එක යැවීම
+            await conn.sendMessage(sender, {
+                video: { url: videoFileUrl },
+                caption: `🔞 *SHAGGY XMD - XNXX DOWNLOADER*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+            }, { quoted: msg });
+
+        } else {
+            reply('❌ කණගාටුයි, අදාළ වීඩියෝව ඩවුන්ලෝඩ් කිරීමට නොහැකි විය.');
         }
-        break;
+    } catch (err) {
+        console.error('XNXX DL Error:', err);
+        reply('❌ දෝෂයක් සිදු විය! ෆයිල් සයිස් එක වැඩි වෙන්න පුළුවන් හෝ සර්වර් එක බිඳ වැටී ඇත.');
     }
-
-    // 2. XNXX Video Stream & DL Command (.xndl <url>)
-    case 'xndl':
-    case 'xnxxindl': {
-        if (!text) return reply('කරුණාකර XNXX වීඩියෝ ලින්ක් එක දෙන්න!\nඋදා: `.xndl https://www.xnxx.com/video-...`');
-        
-        let cleanUrl = text.replace(/[<>]/g, '').trim();
-        
-        reply('📥 XNXX ඩවුන්ලෝඩ් සහ ස්ට්‍රීම් ලින්ක් සූදානම් කරමින් පවතී...');
-
-        try {
-            const apiKey = 'chama_api_11230a80e5eed3c1b80bfcc5d1773ec9';
-            const dlApiUrl = `https://api.chamindu.site/api/adult/xnxx/dl?url=${encodeURIComponent(cleanUrl)}&api_key=${apiKey}`;
-            
-            const dlRes = await fetch(dlApiUrl);
-            const dlData = await dlRes.json();
-
-            if (dlData && dlData.success) {
-                let message = `📥 *XNXX Video Links Found!*\n\n`;
-                
-                if (dlData.direct_link) {
-                    message += `🔗 *Direct Stream Link:* ${dlData.direct_link}\n\n`;
-                }
-                if (dlData.download_url) {
-                    message += `💾 *Download Link:* ${dlData.download_url}\n\n`;
-                }
-                if (dlData.note) {
-                    message += `ℹ️ _${dlData.note}_`;
-                }
-
-                await reply(message.trim());
-            } else {
-                reply('❌ කණගාටුයි, අදාළ වීඩියෝව සඳහා ලින්ක් ලබා ගැනීමට නොහැකි විය.');
-            }
-        } catch (err) {
-            console.error('XNXX DL Error:', err);
-            reply('❌ දෝෂයක් සිදු විය! කරුණාකර නැවත උත්සාහ කරන්න.');
-        }
-        break;
-    }
+    break;
+}
 case 'schedule':
 case 'remind': {
     if (!isOwner) {
@@ -2000,7 +2026,7 @@ case 'instagram': {
 break;
 
 // ==========================================
-// 3. STICKER COMMAND (.sticker / .s)
+// 1. STICKER COMMAND (.sticker)
 // ==========================================
 case 'sticker':
 case 's': {
@@ -2021,20 +2047,20 @@ case 's': {
             msg.message?.extendedTextMessage?.contextInfo?.quotedMessage ? { message: msg.message.extendedTextMessage.contextInfo.quotedMessage } : msg,
             'buffer',
             {},
-            { logger: console, reuploadRequest: socket.updateMediaMessage }
+            { logger: console }
         );
 
         await socket.sendMessage(sender, { sticker: mediaStream }, { quoted: msg });
         await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
     } catch (err) {
         console.error("Sticker Error:", err);
-        await socket.sendMessage(sender, { text: `❌ *Sticker Error: Failed to process media.*` }, { quoted: msg });
+        await socket.sendMessage(sender, { text: `❌ *Sticker Error: Could not process media.*` }, { quoted: msg });
     }
 }
 break;
 
 // ==========================================
-// 1. IMAGE / PINTEREST SEARCH (.image)
+// 2. IMAGE / PINTEREST SEARCH (.image)
 // ==========================================
 case 'image':
 case 'img':
@@ -2049,9 +2075,22 @@ case 'pinterest': {
     try {
         await socket.sendMessage(sender, { react: { text: "🔍", key: msg.key } });
 
-        // Pinterest direct search API
-        const response = await fetch(`https://itzpire.com/search/pinterest?query=${encodeURIComponent(query)}`);
-        const result = await response.json();
+        // Fetch with timeout safety
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // තත්පර 5 කින් cancel වේ
+
+        const response = await fetch(`https://itzpire.com/search/pinterest?query=${encodeURIComponent(query)}`, {
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        const text = await response.text();
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch (e) {
+            return await socket.sendMessage(sender, { text: `❌ *Image servers are temporarily offline (HTML/Cloudflare response).*` }, { quoted: msg });
+        }
 
         if (!result.status || !result.result || result.result.length === 0) {
             return await socket.sendMessage(sender, { text: `❌ *No images found for your query!*` }, { quoted: msg });
@@ -2066,14 +2105,13 @@ case 'pinterest': {
 
         await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
     } catch (err) {
-        console.error("Image Search Error:", err);
-        await socket.sendMessage(sender, { text: `❌ *Failed to fetch image. Please try again!*` }, { quoted: msg });
+        console.error("Image Fetch Failed:", err.message);
+        await socket.sendMessage(sender, { text: `❌ *Fetch failed: External image API is blocked or offline.*` }, { quoted: msg });
     }
 }
 break;
-
 // ==========================================
-// 2. REXPORN COMMAND (.rexporn)
+// REXPORN SEARCH COMMAND (.rexporn)
 // ==========================================
 case 'rexporn':
 case 'pornsearch':
@@ -2081,28 +2119,43 @@ case 'xvideos': {
     const query = args.join(' ');
     if (!query) {
         return await socket.sendMessage(sender, {
-            text: `❌ *Please provide a search query or keyword!*\n✨ *Example:* \`.rexporn japanese\``
+            text: `❌ *Please provide a search query!*\n✨ *Example:* \`.rexporn japanese\``
         }, { quoted: msg });
     }
 
     try {
         await socket.sendMessage(sender, { react: { text: "🔥", key: msg.key } });
 
-        // Rexporn / adult scraping endpoint හරහා ඩේටා ලබා ගැනීම
-        const response = await fetch(`https://itzpire.com/search/xnxx?query=${encodeURIComponent(query)}`);
-        const result = await response.json();
+        // Network block හෝ slow connection වලදී bot crash වීම වැළැක්වීමට timeout එකක් සැකසීම
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 7000); // තත්පර 7 කින් timeout වේ
 
-        if (!result.status || !result.result || result.result.length === 0) {
-            return await socket.sendMessage(sender, { text: `❌ *No results found on Rexporn/Video network!*` }, { quoted: msg });
+        const response = await fetch(`https://itzpire.com/search/xnxx?query=${encodeURIComponent(query)}`, {
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        const textRes = await response.text();
+        let resData;
+        
+        try {
+            resData = JSON.parse(textRes);
+        } catch (e) {
+            return await socket.sendMessage(sender, { 
+                text: `❌ *Rexporn API returned non-JSON data (Cloudflare/Server block).*` 
+            }, { quoted: msg });
         }
 
-        let resultText = `🔞 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗  -  𝗥𝗘𝗫𝗣𝗢𝗥𝗡  𝗡𝗘𝗧𝗪𝗢𝗥𝗞* 🔥\n\n` +
-            `🔎 *𝖰𝗎𝖾𝗋𝗒 :* \`${query}\`\n` +
-            `🌐 *Source:* \`rexporn.sex / network\`\n\n`;
+        if (!resData.status || !resData.result || resData.result.length === 0) {
+            return await socket.sendMessage(sender, { text: `❌ *No results found for your query!*` }, { quoted: msg });
+        }
 
-        const limit = Math.min(result.result.length, 5);
+        let resultText = `🔞 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗  -  𝗥𝗘𝗫𝗣𝗢𝗥𝗡  𝗦𝗘𝗔𝗥𝗖𝗛* 🔥\n\n` +
+            `🔎 *𝖰𝗎𝖾𝗋𝗒 :* \`${query}\`\n\n`;
+
+        const limit = Math.min(resData.result.length, 5);
         for (let i = 0; i < limit; i++) {
-            const item = result.result[i];
+            const item = resData.result[i];
             const num = i + 1;
             resultText += `✨ *${num}.* \`${item.title}\`\n`;
             resultText += `⏱️ *Duration:* \`${item.duration || 'N/A'}\`\n`;
@@ -2114,11 +2167,16 @@ case 'xvideos': {
         await socket.sendMessage(sender, { text: resultText }, { quoted: msg });
         await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
     } catch (err) {
-        console.error("Rexporn Error:", err);
-        await socket.sendMessage(sender, { text: `❌ *Failed to fetch from Rexporn network.*` }, { quoted: msg });
+        console.error("Rexporn Fetch Error:", err.message);
+        await socket.sendMessage(sender, { 
+            text: `❌ *Rexporn Error: Fetch failed or request timed out.*` 
+        }, { quoted: msg });
     }
 }
 break;
+// ==========================================
+// SYSTEM CONFIGURATION & MONGODB SETTING COMMAND (.set)
+// ==========================================
 case 'set':
 case 'setting': {
     if (!isOwner) {
@@ -2132,7 +2190,7 @@ case 'setting': {
             `📝 *𝖴𝗌𝖺𝗀𝖾 :* \`.set KEY:VALUE\`\n` +
             `✨ *𝖤𝗑𝖺𝗆𝗉𝗅𝖾 :* \`.set ALWAYS_ONLINE:true\`\n` +
             `🫧 *𝖬𝗎𝗅𝗍𝗂 :* \`.set ALWAYS_ONLINE:true,AUTO_RECORDING:true\`\n\n` +
-            `🐞 *𝖠𝗏𝖺𝗂𝗅𝖺𝖻𝗅𝖾  𝖲𝗒𝗌𝗍𝖾𝗆  𝖪𝖾𝗒𝗌 :*\n` +
+            `🐞 *𝖠𝗏𝖺𝗂𝗅𝖺𝖻𝗅ե  𝖲𝗒𝗌𝗍𝖾𝗆  𝖪𝖾𝗒𝗌 :*\n` +
             `🐞 \`ALWAYS_ONLINE\` (true/false)\n` +
             `🐞 \`ALWAYS_MSG_SEEN\` (true/false)\n` +
             `🐞 \`AUTO_RECORDING\` (true/false)\n` +
@@ -2197,8 +2255,23 @@ case 'setting': {
     try {
         await socket.sendMessage(sender, { react: { text: "⚙️", key: msg.key } });
 
+        // 1. Session සහ Database එක රියල්-ටයිම් අප්ඩේට් කිරීම
         sessionConfig = { ...sessionConfig, ...updates };
-        await updateUserConfig(sanitizedNumber, sessionConfig);
+
+        // MongoDB වෙත ඩේටා නිවැරදිව සේව් වීම සඳහා updateUserConfig හෝ Mongoose Model එක හරහා ස්ථිරවම Save කරයි
+        if (typeof updateUserConfig === 'function') {
+            await updateUserConfig(sanitizedNumber, sessionConfig);
+        } else {
+            // ද බෝට්ගේ වෙනත් කෝඩ් එකක Model එක හරහා Save වන ආකාරය (მაგ: BotModel.findOneAndUpdate)
+            const BotModel = require('./database/model'); // උඹේ ප්‍රොජෙක්ට් එකේ හැටියට මොඩල් පේජ් එක මෙතැනට සෙට් කරගන්න පුළුවන්
+            await BotModel.findOneAndUpdate(
+                { id: sanitizedNumber },
+                { $set: sessionConfig },
+                { upsert: true, new: true }
+            );
+        }
+
+        // Active Sockets වලට අලුත් කොන්ෆිග් එක රියල්-ටයිම් ලෝඩ් කිරීම
         activeSockets.set(sanitizedNumber, { socket, config: sessionConfig });
 
         let updateSummary = Object.entries(updates).map(([k, v]) => {
@@ -2208,7 +2281,7 @@ case 'setting': {
 
         const successMsg = `🎀 *𝗖𝗢𝗡𝗙𝗜𝗚𝗨𝗥𝗔𝗧𝗜𝗢𝗡  𝗨𝗣𝗗𝗔𝗧𝗘𝗗*\n\n` +
             `${updateSummary}\n\n` +
-            `🫧 _System cloud changes applied successfully._`;
+            `🫧 _System cloud & MongoDB changes applied successfully._`;
 
         await socket.sendMessage(sender, {
             image: { url: config.BOT_IMAGE || config.ERROR },
@@ -2227,8 +2300,6 @@ case 'setting': {
     }
 }
 break;
-}
-
         } catch (error) {
             console.error('Command handler error:', error);
             await socket.sendMessage(sender, {
