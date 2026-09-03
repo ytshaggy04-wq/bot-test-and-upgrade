@@ -2300,15 +2300,15 @@ case 'setting': {
     }
 }
 break;
-          try {          
-  } catch (error) {
+        }
+        } catch (error) {
             console.error('Command handler error:', error);
             await socket.sendMessage(sender, {
                 text: `❌ ERROR\nAn error occurred: ${error.message}`,
             });
         }
-    } // මේ බ්‍රේස් එකෙන් on/messages.upsert හෝ main message listener function එක වැහෙනවා
-} // මේ බ්‍රేස් එකෙන් මුළු module.ex
+    });
+}
 
 async function setupMessageHandlers(socket) {
     const messageHandler = async ({ messages }) => {
