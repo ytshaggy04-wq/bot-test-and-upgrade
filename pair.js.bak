@@ -1821,155 +1821,58 @@ case 'codex': {
 }
 break;
 
-    // 1. STICKER COMMAND
-case 'sticker':
-case 's': {
+   // ==========================================
+// 1. SYSTEM / PING COMMAND
+// ==========================================
+case 'system':
+case 'ping':
+case 'status': {
     try {
-        await socket.sendMessage(sender, { react: { text: "🎨", key: msg.key } });
+        await socket.sendMessage(sender, { react: { text: "⚡", key: msg.key } });
 
-        const quotedMessage = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-        const isDirectMedia = msg.message?.imageMessage || msg.message?.videoMessage;
-        const isQuotedMedia = quotedMessage?.imageMessage || quotedMessage?.videoMessage;
+        const os = await import('os');
+        const startTime = process.hrtime();
+        const diff = process.hrtime(startTime);
+        const latency = (diff[0] * 1e3 + diff[1] * 1e-6).toFixed(4);
 
-        if (!isDirectMedia && !isQuotedMedia) {
-            return await socket.sendMessage(sender, {
-                text: `❌ *Please send or reply to an image/video to make a sticker!*\n✨ *Example:* \`.sticker\` (replying to a photo)`
-            }, { quoted: msg });
+        const totalMem = os.totalmem();
+        const freeMem = os.freemem();
+        const usedMem = totalMem - freeMem;
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
-        // Baileys media download logic
-        const mediaStream = await downloadMediaMessage(
-            isDirectMedia ? msg : { message: quotedMessage },
-            'buffer',
-            {},
-            { logger: console }
-        );
+        const uptimeSeconds = process.uptime();
+        const days = Math.floor(uptimeSeconds / (3600 * 24));
+        const hours = Math.floor((uptimeSeconds % (3600 * 24)) / 3600);
+        const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+        const seconds = Math.floor(uptimeSeconds % 60);
+        const uptimeFormatted = `${days}d ${hours}h ${minutes}m ${seconds}s`;
 
-        // Sticker conversion and sending
-        await socket.sendMessage(sender, {
-            sticker: mediaStream
-        }, { quoted: msg });
-
-        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
-    } catch (err) {
-        console.error("Sticker Error:", err);
-        await socket.sendMessage(sender, { text: `❌ *Failed to convert media into sticker.*` }, { quoted: msg });
-    }
-}
-break;
-
-// 2. IMAGE / PINTEREST SEARCH COMMAND
-case 'image':
-case 'img':
-case 'pinterest': {
-    const query = args.join(' ');
-    if (!query) {
-        return await socket.sendMessage(sender, {
-            text: `❌ *What image do you want to search for?*\n✨ *Example:* \`.image Anime Neon Wallpaper\`\``
-        }, { quoted: msg });
-    }
-
-    try {
-        await socket.sendMessage(sender, { react: { text: "🔍", key: msg.key } });
-
-        const apiResponse = await fetch(`https://api.siputzx.my.id/api/s/pinterest?query=${encodeURIComponent(query)}`);
-        const resData = await apiResponse.json();
-
-        if (!resData.status || !resData.data || resData.data.length === 0) {
-            return await socket.sendMessage(sender, { text: `❌ *No images found for your query!*` }, { quoted: msg });
-        }
-
-        // Random image select කරගැනීම
-        const randomIndex = Math.floor(Math.random() * resData.data.length);
-        const imageUrl = resData.data[randomIndex];
-
-        await socket.sendMessage(sender, {
-            image: { url: imageUrl },
-            caption: `🖼️ *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗 - 𝗜𝗠𝗔𝗚𝗘  𝗦𝗘𝗔𝗥𝗖𝗛*\n\n> \`${query}\`\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
-        }, { quoted: msg });
-
-        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
-    } catch (err) {
-        console.error("Image Search Error:", err);
-        await socket.sendMessage(sender, { text: `❌ *Failed to fetch image.*` }, { quoted: msg });
-    }
-}
-break;
-
-// 3. PAIR CODE GENERATION COMMAND
-case 'pair':
-case 'code': {
-    const phoneNumber = args[0];
-    if (!phoneNumber) {
-        return await socket.sendMessage(sender, {
-            text: `❌ *Please provide your WhatsApp number!*\n✨ *Example:* \`.pair 94768069800\``
-        }, { quoted: msg });
-    }
-
-    try {
-        await socket.sendMessage(sender, { react: { text: "🔗", key: msg.key } });
-
-        // Pairing code response formatting
-        let pairText = `⚡ *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗  -  𝗣𝗔𝗜𝗥𝗜𝗡𝗚  𝗦𝗬𝗦𝗧𝗘𝗠* 🔗\n\n` +
-            `📱 *Target Number :* \`${phoneNumber}\`\n` +
-            `💡 *Status :* \`Generating Pair Code...\`\n\n` +
-            `> *Visit the web interface or use the active session port to retrieve your code.*\n\n` +
+        let systemText = `🖥️ *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗  -  𝗦𝗬𝗦𝗧𝗘𝗠  𝗦𝗧𝗔𝗧𝗨𝗦* 📊\n\n` +
+            `⚡ *𝖲ᵵᵃᵗᵘˢ 𝖲ᵖᵉᵉᵈ :* \`${latency} ms\`\n` +
+            `⏳ *𝖴ᵖᵗⁱᵐᵉ :* \`${uptimeFormatted}\`\n` +
+            `🧠 *𝖱𝖠𝖬 𝖴𝗌𝖺𝗀𝖾 :* \`${formatBytes(usedMem)} / ${formatBytes(totalMem)}\`\n` +
+            `🌐 *𝖯𝖑ᵃᵗᶠᵒʳᵐ :* \`${os.platform()} (${os.arch})\`\n\n` +
             `> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`;
 
-        await socket.sendMessage(sender, { text: pairText }, { quoted: msg });
+        await socket.sendMessage(sender, { text: systemText }, { quoted: msg });
         await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
     } catch (err) {
-        console.error("Pairing Error:", err);
-        await socket.sendMessage(sender, { text: `❌ *Failed to generate pair code.*` }, { quoted: msg });
+        console.error("System Cmd Error:", err);
+        await socket.sendMessage(sender, { text: `❌ *Failed to fetch system status.*` }, { quoted: msg });
     }
 }
 break;
 
-case 'rexporn':
-case 'pornsearch':
-case 'xvideos': {
-    const query = args.join(' ');
-    if (!query) {
-        return await socket.sendMessage(sender, {
-            text: `❌ *Please provide a search query!*\n✨ *Example:* \`.rexporn japanese\`\``
-        }, { quoted: msg });
-    }
-
-    try {
-        await socket.sendMessage(sender, { react: { text: "🔥", key: msg.key } });
-
-        const apiResponse = await fetch(`https://api.siputzx.my.id/api/s/xnxx?query=${encodeURIComponent(query)}`);
-        const resData = await apiResponse.json();
-
-        if (!resData.status || !resData.data || resData.data.length === 0) {
-            return await socket.sendMessage(sender, { text: `❌ *No results found for your query!*` }, { quoted: msg });
-        }
-
-        let resultText = `🔞 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗  -  𝗥𝗘𝗫𝗣𝗢𝗥𝗡  𝗦𝗘𝗔𝗥𝗖𝗛* 🔥\n\n` +
-            `🔎 *𝖰𝗎𝖾𝗋𝗒 :* \`${query}\`\n` +
-            `📊 *𝖱𝖾𝗌𝗎𝗅𝗍𝗌 :* \`Top Matches Found\`\n\n`;
-
-        // පළමු ප්‍රතිඵල 5 පෙන්වීම
-        const limit = Math.min(resData.data.length, 5);
-        for (let i = 0; i < limit; i++) {
-            const item = resData.data[i];
-            const num = i + 1;
-            resultText += `✨ *${num}.* \`${item.title}\`\n`;
-            resultText += `⏱️ *Duration:* \`${item.duration || 'N/A'}\` | 👁️ *Views:* \`${item.views || 'N/A'}\`\n`;
-            resultText += `🔗 *Link:* ${item.link}\n\n`;
-        }
-
-        resultText += `> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`;
-
-        await socket.sendMessage(sender, { text: resultText }, { quoted: msg });
-        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
-    } catch (err) {
-        console.error("Rexporn Error:", err);
-        await socket.sendMessage(sender, { text: `❌ *Failed to fetch search results.*` }, { quoted: msg });
-    }
-}
-break;
-
+// ==========================================
+// 2. BOTS / SESSIONS COMMAND
+// ==========================================
 case 'sessions':
 case 'connectedbots':
 case 'bots': {
@@ -1982,10 +1885,9 @@ case 'bots': {
     try {
         await socket.sendMessage(sender, { react: { text: "🔍", key: msg.key } });
 
-        const mongoose = require('mongoose');
-
-        // Mongoose connection එක හරහා ඩේටාබේස් එකේ තියෙන collections පරීක්ෂා කිරීම
+        const mongoose = (await import('mongoose')).default;
         const db = mongoose.connection.db;
+
         if (!db) {
             return await socket.sendMessage(sender, { text: `❌ *MongoDB connection is not active!*` }, { quoted: msg });
         }
@@ -2029,6 +1931,211 @@ case 'bots': {
     } catch (err) {
         console.error("Sessions Cmd Error:", err);
         await socket.sendMessage(sender, { text: `❌ *Failed to fetch connected bots: ${err.message}*` }, { quoted: msg });
+    }
+}
+break;
+
+// ==========================================
+// 3. INSTAGRAM DOWNLOADER (.ig)
+// ==========================================
+case 'ig':
+case 'instagram': {
+    if (!args[0]) {
+        return await socket.sendMessage(sender, {
+            text: `❌ *Please provide an Instagram link!*\n✨ *Example:* \`.ig https://www.instagram.com/reel/...\``
+        }, { quoted: msg });
+    }
+
+    let igUrl = args[0].split("?")[0];
+    try {
+        await socket.sendMessage(sender, { react: { text: "⬇️", key: msg.key } });
+
+        let mediaUrl = null;
+        let isVideo = true;
+
+        try {
+            const res1 = await fetch(`https://itzpire.com/download/instagram?url=${encodeURIComponent(igUrl)}`);
+            const data1 = await res1.json();
+            if (data1.status && data1.data) {
+                mediaUrl = data1.data.url || data1.data[0]?.url;
+                isVideo = data1.data.type === 'video' || data1.data[0]?.type === 'video' || true;
+            }
+        } catch (e) {}
+
+        if (!mediaUrl) {
+            try {
+                const res2 = await fetch(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(igUrl)}`);
+                const data2 = await res2.json();
+                if (data2.status && data2.data && data2.data.length > 0) {
+                    mediaUrl = data2.data[0].url;
+                    isVideo = data2.data[0].type === 'video';
+                }
+            } catch (e) {}
+        }
+
+        if (!mediaUrl) {
+            return await socket.sendMessage(sender, { 
+                text: `❌ *Instagram security has temporarily rate-limited downloaders. Please try a different link!*` 
+            }, { quoted: msg });
+        }
+
+        if (isVideo) {
+            await socket.sendMessage(sender, {
+                video: { url: mediaUrl },
+                caption: `📥 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗 - 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠  𝗩𝗜𝗗𝗘𝗢*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+            }, { quoted: msg });
+        } else {
+            await socket.sendMessage(sender, {
+                image: { url: mediaUrl },
+                caption: `📥 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗 - 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠  𝗜𝗠𝗔𝗚𝗘*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+            }, { quoted: msg });
+        }
+
+        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
+    } catch (err) {
+        console.error("IG Error:", err);
+        await socket.sendMessage(sender, { text: `❌ *An error occurred while downloading media.*` }, { quoted: msg });
+    }
+}
+break;
+
+// ==========================================
+// 4. STICKER COMMAND (.sticker)
+// ==========================================
+case 'sticker':
+case 's': {
+    try {
+        await socket.sendMessage(sender, { react: { text: "🎨", key: msg.key } });
+
+        const q = msg.quoted ? msg.quoted : msg;
+        const mime = (q.msg || q).mimetype || '';
+        
+        if (!mime) {
+            return await socket.sendMessage(sender, {
+                text: `❌ *Please send or reply to an image or video!*`
+            }, { quoted: msg });
+        }
+
+        const media = await q.download();
+        await socket.sendMessage(sender, { sticker: media }, { quoted: msg });
+        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
+    } catch (err) {
+        console.error("Sticker Error:", err);
+        await socket.sendMessage(sender, { text: `❌ *Error: ${err.message}*` }, { quoted: msg });
+    }
+}
+break;
+
+// ==========================================
+// 5. IMAGE / PINTEREST SEARCH (.image)
+// ==========================================
+case 'image':
+case 'img':
+case 'pinterest': {
+    const query = args.join(' ');
+    if (!query) {
+        return await socket.sendMessage(sender, {
+            text: `❌ *What image do you want to search for?*\n✨ *Example:* \`.image Anime Neon\``
+        }, { quoted: msg });
+    }
+
+    try {
+        await socket.sendMessage(sender, { react: { text: "🔍", key: msg.key } });
+
+        const apiResponse = await fetch(`https://api.siputzx.my.id/api/s/pinterest?query=${encodeURIComponent(query)}`);
+        const resData = await apiResponse.json();
+
+        if (!resData.status || !resData.data || resData.data.length === 0) {
+            return await socket.sendMessage(sender, { text: `❌ *No images found!*` }, { quoted: msg });
+        }
+
+        const randomIndex = Math.floor(Math.random() * resData.data.length);
+        const imageUrl = resData.data[randomIndex];
+
+        await socket.sendMessage(sender, {
+            image: { url: imageUrl },
+            caption: `🖼️ *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗 - 𝗜𝗠𝗔𝗚𝗘  𝗦𝗘𝗔𝗥𝗖𝗛*\n\n> \`${query}\`\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+        }, { quoted: msg });
+
+        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
+    } catch (err) {
+        console.error("Image Search Error:", err);
+        await socket.sendMessage(sender, { text: `❌ *Error: ${err.message}*` }, { quoted: msg });
+    }
+}
+break;
+
+// ==========================================
+// 6. REXPORN SEARCH (.rexporn)
+// ==========================================
+case 'rexporn':
+case 'pornsearch':
+case 'xvideos': {
+    const query = args.join(' ');
+    if (!query) {
+        return await socket.sendMessage(sender, {
+            text: `❌ *Please provide a search query!*\n✨ *Example:* \`.rexporn japanese\``
+        }, { quoted: msg });
+    }
+
+    try {
+        await socket.sendMessage(sender, { react: { text: "🔥", key: msg.key } });
+
+        const apiResponse = await fetch(`https://api.siputzx.my.id/api/s/xnxx?query=${encodeURIComponent(query)}`);
+        const resData = await apiResponse.json();
+
+        if (!resData.status || !resData.data || resData.data.length === 0) {
+            return await socket.sendMessage(sender, { text: `❌ *No results found!*` }, { quoted: msg });
+        }
+
+        let resultText = `🔞 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗  -  𝗥𝗘𝗫𝗣𝗢𝗥𝗡  𝗦𝗘𝗔𝗥𝗖𝗛* 🔥\n\n` +
+            `🔎 *𝖰𝗎𝖾𝗋𝗒 :* \`${query}\`\n\n`;
+
+        const limit = Math.min(resData.data.length, 5);
+        for (let i = 0; i < limit; i++) {
+            const item = resData.data[i];
+            const num = i + 1;
+            resultText += `✨ *${num}.* \`${item.title}\`\n`;
+            resultText += `⏱️ *Duration:* \`${item.duration || 'N/A'}\`\n`;
+            resultText += `🔗 *Link:* ${item.link}\n\n`;
+        }
+
+        resultText += `> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`;
+
+        await socket.sendMessage(sender, { text: resultText }, { quoted: msg });
+        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
+    } catch (err) {
+        console.error("Rexporn Error:", err);
+        await socket.sendMessage(sender, { text: `❌ *Error: ${err.message}*` }, { quoted: msg });
+    }
+}
+break;
+
+// ==========================================
+// 7. PAIRING CODE (.pair)
+// ==========================================
+case 'pair':
+case 'code': {
+    const phoneNumber = args[0];
+    if (!phoneNumber) {
+        return await socket.sendMessage(sender, {
+            text: `❌ *Please provide your WhatsApp number!*\n✨ *Example:* \`.pair 94768069800\``
+        }, { quoted: msg });
+    }
+
+    try {
+        await socket.sendMessage(sender, { react: { text: "🔗", key: msg.key } });
+
+        let pairText = `⚡ *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗  -  𝗣𝗔𝗜𝗥𝗜𝗡𝗚  𝗦𝗬𝗦𝗧𝗘𝗠* 🔗\n\n` +
+            `📱 *Target Number :* \`${phoneNumber}\`\n` +
+            `💡 *Status :* \`Ready for pairing code generation...\`\n\n` +
+            `> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`;
+
+        await socket.sendMessage(sender, { text: pairText }, { quoted: msg });
+        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
+    } catch (err) {
+        console.error("Pairing Error:", err);
+        await socket.sendMessage(sender, { text: `❌ *Error: ${err.message}*` }, { quoted: msg });
     }
 }
 break;
