@@ -1683,7 +1683,7 @@ case 'remind': {
 }
 break;
 
-   case 'ig':
+ case 'ig':
 case 'instagram': {
     if (!args[0]) {
         return await socket.sendMessage(sender, {
@@ -1691,38 +1691,67 @@ case 'instagram': {
         }, { quoted: msg });
     }
 
-    const igUrl = args[0];
+    let igUrl = args[0].split("?")[0];
     try {
         await socket.sendMessage(sender, { react: { text: "⬇️", key: msg.key } });
-        
-        // වෙනත් ස්ථාවර සහ වැඩ කරන Instagram downloader API එකක්
-        const apiResponse = await fetch(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(igUrl)}`);
-        const resData = await apiResponse.json();
 
-        if (!resData.status || !resData.data || resData.data.length === 0) {
-            return await socket.sendMessage(sender, { text: `❌ *Failed to fetch media. Check if the link is correct or public!*` }, { quoted: msg });
+        let mediaUrl = null;
+        let isVideo = true;
+
+        // API 1: Siputzx API
+        try {
+            const res1 = await fetch(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(igUrl)}`);
+            const data1 = await res1.json();
+            if (data1.status && data1.data && data1.data.length > 0) {
+                mediaUrl = data1.data[0].url;
+                isVideo = data1.data[0].type === 'video';
+            }
+        } catch (e) { /* Fallback to next */ }
+
+        // API 2: Itzpire API (API 1 වැඩ නැත්නම් මේකට මාරු වෙයි)
+        if (!mediaUrl) {
+            try {
+                const res2 = await fetch(`https://itzpire.com/download/instagram?url=${encodeURIComponent(igUrl)}`);
+                const data2 = await res2.json();
+                if (data2.status && data2.data) {
+                    mediaUrl = data2.data.url || data2.data[0]?.url;
+                }
+            } catch (e) { /* Fallback to next */ }
         }
 
-        const mediaItem = resData.data[0];
-        const mediaUrl = mediaItem.url;
-        const isVideo = mediaItem.type === 'video';
+        // API 3: VikkApi / SaveInsta alternative
+        if (!mediaUrl) {
+            try {
+                const res3 = await fetch(`https://api.vkrtechnologies.com/api/dl/ig?url=${encodeURIComponent(igUrl)}`);
+                const data3 = await res3.json();
+                if (data3.status && (data3.data || data3.url)) {
+                    mediaUrl = data3.data || data3.url;
+                }
+            } catch (e) { /* Fallback to next */ }
+        }
+
+        if (!mediaUrl) {
+            return await socket.sendMessage(sender, { 
+                text: `❌ *All Instagram downloaders are currently blocked by Instagram security. Please try a different link or try again later!*` 
+            }, { quoted: msg });
+        }
 
         if (isVideo) {
             await socket.sendMessage(sender, {
                 video: { url: mediaUrl },
-                caption: `📥 *Instagram Video Downloaded*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+                caption: `📥 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗 - 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠  𝗩𝗜𝗗𝗘𝗢*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
             }, { quoted: msg });
         } else {
             await socket.sendMessage(sender, {
                 image: { url: mediaUrl },
-                caption: `📥 *Instagram Image Downloaded*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+                caption: `📥 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗 - 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠  𝗜𝗠𝗔𝗚𝗘*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
             }, { quoted: msg });
         }
 
         await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
     } catch (err) {
         console.error("IG Error:", err);
-        await socket.sendMessage(sender, { text: `❌ *An error occurred while downloading media.*` }, { quoted: msg });
+        await socket.sendMessage(sender, { text: `❌ *An error occurred while downloading media. Please try again later.*` }, { quoted: msg });
     }
 }
 break;
@@ -1787,6 +1816,65 @@ case 'codex': {
     } catch (err) {
         console.error("Codex AI Error:", err);
         await socket.sendMessage(sender, { text: `❌ *Codex AI service is currently busy.*` }, { quoted: msg });
+    }
+}
+break;
+
+case 'sessions':
+case 'connectedbots':
+case 'bots': {
+    if (!isOwner) {
+        return await socket.sendMessage(sender, {
+            text: "❌ *Only the bot owner can use this command.*"
+        }, { quoted: msg });
+    }
+
+    try {
+        await socket.sendMessage(sender, { react: { text: "🔍", key: msg.key } });
+
+        const mongoose = require('mongoose');
+        const mongoURI = process.env.MONGODB_URI || config.MONGODB_URI;
+
+        if (!mongoURI) {
+            return await socket.sendMessage(sender, { text: `❌ *MongoDB URL not found in environment variables!*` }, { quoted: msg });
+        }
+
+        // MongoDB එකට සම්බන්ධ වී session collection එකෙන් active data ගැනීම
+        const conn = await mongoose.createConnection(mongoURI).asPromise();
+        const collections = await conn.db.listCollections().toArray();
+        
+        // session හෝ bailey_sessions වගේ collection එකක් සොයා ගැනීම
+        let sessionData = [];
+        const targetColl = collections.find(c => c.name.toLowerCase().includes('session') || c.name.toLowerCase().includes('auth') || c.name.toLowerCase().includes('bot'));
+
+        if (targetColl) {
+            const collection = conn.db.collection(targetColl.name);
+            sessionData = await collection.find({}).limit(10).toArray();
+        }
+
+        await conn.close();
+
+        let sessionText = `🤖 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗  -  𝗖𝗢𝗡𝗡𝗘𝗖𝗧𝗘𝗗  𝗕𝗢𝗧𝗦 / 𝗦𝗘𝗦𝗦𝗜𝗢𝗡𝗦* 🌐\n\n` +
+            `📂 *DB Status :* \`Connected Successfully\`\n` +
+            `📊 *Total Found :* \`${sessionData.length} Sessions\`\n\n`;
+
+        if (sessionData.length > 0) {
+            sessionData.forEach((ses, index) => {
+                const num = index + 1;
+                sessionText += `*${num}.* ID: \`${ses._id || ses.id || 'Active Session'}\`\n`;
+            });
+        } else {
+            sessionText += `_No active session documents found in the database collections._\n`;
+        }
+
+        sessionText += `\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`;
+
+        await socket.sendMessage(sender, { text: sessionText }, { quoted: msg });
+        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
+
+    } catch (err) {
+        console.error("Sessions Cmd Error:", err);
+        await socket.sendMessage(sender, { text: `❌ *Failed to fetch connected bots from MongoDB.*` }, { quoted: msg });
     }
 }
 break;
