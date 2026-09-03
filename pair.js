@@ -2300,17 +2300,15 @@ case 'setting': {
     }
 }
 break;
-                    
- try {
-        // ඔයාගේ කමාන්ඩ් හැන්ඩ්ලර් ලොජික් එක මෙතැන පටන් ගන්නා තැනයි
-        // (අදාළ switch case හෝ message processing කෝඩ් එක මෙතැනට වැටේ)
-        
-    } catch (error) {
-        console.error('Command handler error:', error);
-        await socket.sendMessage(sender, {
-            text: `❌ ERROR\nAn error occurred: ${error.message}`,
-        });
-    }
+          try {          
+  } catch (error) {
+            console.error('Command handler error:', error);
+            await socket.sendMessage(sender, {
+                text: `❌ ERROR\nAn error occurred: ${error.message}`,
+            });
+        }
+    } // මේ බ්‍රේස් එකෙන් on/messages.upsert හෝ main message listener function එක වැහෙනවා
+} // මේ බ්‍රేස් එකෙන් මුළු module.ex
 
 async function setupMessageHandlers(socket) {
     const messageHandler = async ({ messages }) => {
