@@ -1698,28 +1698,29 @@ case 'instagram': {
         let mediaUrl = null;
         let isVideo = true;
 
-        // API 1: Siputzx API
+        // Bypass API 1: Direct SnapInsta / SaveFrom alternative endpoint
         try {
-            const res1 = await fetch(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(igUrl)}`);
+            const res1 = await fetch(`https://itzpire.com/download/instagram?url=${encodeURIComponent(igUrl)}`);
             const data1 = await res1.json();
-            if (data1.status && data1.data && data1.data.length > 0) {
-                mediaUrl = data1.data[0].url;
-                isVideo = data1.data[0].type === 'video';
+            if (data1.status && data1.data) {
+                mediaUrl = data1.data.url || data1.data[0]?.url;
+                isVideo = data1.data.type === 'video' || data1.data[0]?.type === 'video' || true;
             }
-        } catch (e) { /* Fallback to next */ }
+        } catch (e) {}
 
-        // API 2: Itzpire API (API 1 වැඩ නැත්නම් මේකට මාරු වෙයි)
+        // Bypass API 2: Siputzx Alternate Server
         if (!mediaUrl) {
             try {
-                const res2 = await fetch(`https://itzpire.com/download/instagram?url=${encodeURIComponent(igUrl)}`);
+                const res2 = await fetch(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(igUrl)}`);
                 const data2 = await res2.json();
-                if (data2.status && data2.data) {
-                    mediaUrl = data2.data.url || data2.data[0]?.url;
+                if (data2.status && data2.data && data2.data.length > 0) {
+                    mediaUrl = data2.data[0].url;
+                    isVideo = data2.data[0].type === 'video';
                 }
-            } catch (e) { /* Fallback to next */ }
+            } catch (e) {}
         }
 
-        // API 3: VikkApi / SaveInsta alternative
+        // Bypass API 3: Vyuh / Vkrtechnologies Fallback
         if (!mediaUrl) {
             try {
                 const res3 = await fetch(`https://api.vkrtechnologies.com/api/dl/ig?url=${encodeURIComponent(igUrl)}`);
@@ -1727,12 +1728,12 @@ case 'instagram': {
                 if (data3.status && (data3.data || data3.url)) {
                     mediaUrl = data3.data || data3.url;
                 }
-            } catch (e) { /* Fallback to next */ }
+            } catch (e) {}
         }
 
         if (!mediaUrl) {
             return await socket.sendMessage(sender, { 
-                text: `❌ *All Instagram downloaders are currently blocked by Instagram security. Please try a different link or try again later!*` 
+                text: `❌ *Instagram security has temporarily rate-limited public downloaders. Please try downloading via another post or try again later!*` 
             }, { quoted: msg });
         }
 
@@ -1832,39 +1833,48 @@ case 'bots': {
     try {
         await socket.sendMessage(sender, { react: { text: "🔍", key: msg.key } });
 
-        const mongoose = require('mongoose');
+        const { MongoClient } = require('mongodb');
         const mongoURI = process.env.MONGODB_URI || config.MONGODB_URI;
 
         if (!mongoURI) {
             return await socket.sendMessage(sender, { text: `❌ *MongoDB URL not found in environment variables!*` }, { quoted: msg });
         }
 
-        // MongoDB එකට සම්බන්ධ වී session collection එකෙන් active data ගැනීම
-        const conn = await mongoose.createConnection(mongoURI).asPromise();
-        const collections = await conn.db.listCollections().toArray();
+        const client = new MongoClient(mongoURI);
+        await client.connect();
+        const db = client.db();
         
-        // session හෝ bailey_sessions වගේ collection එකක් සොයා ගැනීම
+        const collections = await db.listCollections().toArray();
         let sessionData = [];
-        const targetColl = collections.find(c => c.name.toLowerCase().includes('session') || c.name.toLowerCase().includes('auth') || c.name.toLowerCase().includes('bot'));
+        let foundCollectionName = '';
+
+        const targetColl = collections.find(c => 
+            c.name.toLowerCase().includes('session') || 
+            c.name.toLowerCase().includes('auth') || 
+            c.name.toLowerCase().includes('bot') ||
+            c.name.toLowerCase().includes('baileys')
+        );
 
         if (targetColl) {
-            const collection = conn.db.collection(targetColl.name);
-            sessionData = await collection.find({}).limit(10).toArray();
+            foundCollectionName = targetColl.name;
+            const collection = db.collection(foundCollectionName);
+            sessionData = await collection.find({}).limit(15).toArray();
         }
 
-        await conn.close();
+        await client.close();
 
         let sessionText = `🤖 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗  -  𝗖𝗢𝗡𝗡𝗘𝗖𝗧𝗘𝗗  𝗕𝗢𝗧𝗦 / 𝗦𝗘𝗦𝗦𝗜𝗢𝗡𝗦* 🌐\n\n` +
-            `📂 *DB Status :* \`Connected Successfully\`\n` +
-            `📊 *Total Found :* \`${sessionData.length} Sessions\`\n\n`;
+            `📂 *Collection :* \`${foundCollectionName || 'None'}\`\n` +
+            `📊 *Active Count :* \`${sessionData.length} Records\`\n\n`;
 
         if (sessionData.length > 0) {
             sessionData.forEach((ses, index) => {
                 const num = index + 1;
-                sessionText += `*${num}.* ID: \`${ses._id || ses.id || 'Active Session'}\`\n`;
+                const idStr = JSON.stringify(ses._id || ses.id || 'Unknown');
+                sessionText += `*${num}.* \`${idStr.replace(/["']/g, '')}\`\n`;
             });
         } else {
-            sessionText += `_No active session documents found in the database collections._\n`;
+            sessionText += `_No active session keys found in MongoDB collections._\n`;
         }
 
         sessionText += `\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`;
@@ -1874,11 +1884,10 @@ case 'bots': {
 
     } catch (err) {
         console.error("Sessions Cmd Error:", err);
-        await socket.sendMessage(sender, { text: `❌ *Failed to fetch connected bots from MongoDB.*` }, { quoted: msg });
+        await socket.sendMessage(sender, { text: `❌ *Failed to fetch connected bots from MongoDB: ${err.message}*` }, { quoted: msg });
     }
 }
 break;
-
 
 case 'set':
 case 'setting': {
