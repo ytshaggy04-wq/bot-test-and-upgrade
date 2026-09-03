@@ -2000,7 +2000,7 @@ case 'instagram': {
 break;
 
 // ==========================================
-// 1. STICKER COMMAND (.sticker)
+// 3. STICKER COMMAND (.sticker / .s)
 // ==========================================
 case 'sticker':
 case 's': {
@@ -2034,7 +2034,7 @@ case 's': {
 break;
 
 // ==========================================
-// 2. IMAGE / PINTEREST SEARCH (.image)
+// 4. IMAGE / PINTEREST SEARCH (.image)
 // ==========================================
 case 'image':
 case 'img':
@@ -2049,9 +2049,15 @@ case 'pinterest': {
     try {
         await socket.sendMessage(sender, { react: { text: "🔍", key: msg.key } });
 
-        // Stable JSON image source
         const response = await fetch(`https://itzpire.com/search/pinterest?query=${encodeURIComponent(query)}`);
-        const result = await response.json();
+        const textRes = await response.text();
+        
+        let result;
+        try {
+            result = JSON.parse(textRes);
+        } catch (e) {
+            return await socket.sendMessage(sender, { text: `❌ *Image API is currently down or returned invalid data. Try again!*` }, { quoted: msg });
+        }
 
         if (!result.status || !result.result || result.result.length === 0) {
             return await socket.sendMessage(sender, { text: `❌ *No images found for your query!*` }, { quoted: msg });
@@ -2073,7 +2079,7 @@ case 'pinterest': {
 break;
 
 // ==========================================
-// 3. REXPORN SEARCH (.rexporn)
+// 5. REXPORN SEARCH (.rexporn)
 // ==========================================
 case 'rexporn':
 case 'pornsearch':
@@ -2089,7 +2095,14 @@ case 'xvideos': {
         await socket.sendMessage(sender, { react: { text: "🔥", key: msg.key } });
 
         const response = await fetch(`https://itzpire.com/search/xnxx?query=${encodeURIComponent(query)}`);
-        const result = await response.json();
+        const textRes = await response.text();
+        
+        let result;
+        try {
+            result = JSON.parse(textRes);
+        } catch (e) {
+            return await socket.sendMessage(sender, { text: `❌ *API returned invalid response (Not valid JSON). Try later!*` }, { quoted: msg });
+        }
 
         if (!result.status || !result.result || result.result.length === 0) {
             return await socket.sendMessage(sender, { text: `❌ *No results found for your query!*` }, { quoted: msg });
@@ -2117,50 +2130,6 @@ case 'xvideos': {
     }
 }
 break;
-
-// ==========================================
-// 4. PAIRING CODE COMMAND (.pair) - CRASH FIXED
-// ==========================================
-case 'pair':
-case 'code': {
-    const phoneNumber = args[0]?.replace(/[^0-9]/g, '');
-    if (!phoneNumber) {
-        return await socket.sendMessage(sender, {
-            text: `❌ *Please provide a valid WhatsApp number!*\n✨ *Example:* \`.pair 94768069800\``
-        }, { quoted: msg });
-    }
-
-    try {
-        await socket.sendMessage(sender, { react: { text: "🔗", key: msg.key } });
-
-        // Safe check for pairing function to prevent bot crash
-        if (typeof socket.requestPairingCode !== 'function') {
-            return await socket.sendMessage(sender, { 
-                text: `⚡ *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗  -  𝗣𝗔𝗜𝗥𝗜𝗡𝗚  𝗦𝗬𝗦𝗧𝗘𝗠* 🔗\n\n` +
-                      `📱 *Target Number :* \`${phoneNumber}\`\n` +
-                      `💡 *Status :* \`Please use the Web UI Pairing Panel or restart session to generate code.\`\n\n` +
-                      `> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}` 
-            }, { quoted: msg });
-        }
-
-        let code = await socket.requestPairingCode(phoneNumber);
-        code = code?.match(/.{1,4}/g)?.join("-") || code;
-
-        let pairText = `⚡ *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗  -  𝗣𝗔𝗜𝗥𝗜𝗡𝗚  𝗦𝗬𝗦𝗧𝗘𝗠* 🔗\n\n` +
-            `📱 *Target Number :* \`${phoneNumber}\`\n` +
-            `🔑 *Pair Code :* \`${code}\`\n\n` +
-            `> *Type this code on your WhatsApp linked devices notification!*` +
-            `\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`;
-
-        await socket.sendMessage(sender, { text: pairText }, { quoted: msg });
-        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
-    } catch (err) {
-        console.error("Pairing Error:", err);
-        await socket.sendMessage(sender, { text: `❌ *Pairing Error: ${err.message}*` }, { quoted: msg });
-    }
-}
-break;
-                    
 case 'set':
 case 'setting': {
     if (!isOwner) {
