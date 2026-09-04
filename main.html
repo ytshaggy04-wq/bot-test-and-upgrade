@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#020617" />
     <title>SHAGGY XMD | WhatsApp Bot</title>
+
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
     <style>
         * {
             box-sizing: border-box;
@@ -12,40 +16,125 @@
         }
 
         :root {
-            --bg: #03050d;
-            --card: rgba(6, 9, 20, 0.94);
-            --blue: #00aaff;
-            --blue2: #0077ff;
-            --text: #f1f5ff;
-            --muted: #788599;
-            --border: rgba(0, 170, 255, 0.25);
+            --bg: #01030a;
+            --bg2: #020617;
+            --card: rgba(5, 10, 24, 0.78);
+            --card2: rgba(7, 14, 32, 0.9);
+
+            --blue: #00b7ff;
+            --blue2: #006eff;
+            --cyan: #00e5ff;
+            --deep: #003dff;
+
+            --text: #f5f9ff;
+            --muted: #7890aa;
+
+            --border: rgba(0, 183, 255, 0.25);
+            --borderStrong: rgba(0, 183, 255, 0.55);
+
+            --glow:
+                0 0 15px rgba(0, 183, 255, .25),
+                0 0 45px rgba(0, 110, 255, .10);
+
+            --radius: 22px;
         }
 
-        html, body {
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
             margin: 0;
             padding: 0;
             width: 100%;
             min-height: 100vh;
-            font-family: Arial, sans-serif;
+
+            font-family:
+                Inter,
+                system-ui,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                Arial,
+                sans-serif;
+
             color: var(--text);
-            background: #010207;
+            background:
+                radial-gradient(
+                    circle at 50% -10%,
+                    rgba(0, 183, 255, .12),
+                    transparent 35%
+                ),
+                radial-gradient(
+                    circle at 0% 60%,
+                    rgba(0, 80, 255, .08),
+                    transparent 30%
+                ),
+                #01030a;
+
             overflow-x: hidden;
         }
 
-        #bgCanvas {
+        /* =========================
+           BACKGROUND
+        ========================= */
+
+        body::before {
+            content: "";
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+
+            background:
+                linear-gradient(
+                    rgba(0, 183, 255, .025) 1px,
+                    transparent 1px
+                ),
+                linear-gradient(
+                    90deg,
+                    rgba(0, 183, 255, .025) 1px,
+                    transparent 1px
+                );
+
+            background-size: 45px 45px;
+            mask-image: linear-gradient(
+                to bottom,
+                black,
+                transparent 85%
+            );
+        }
+
+        body::after {
+            content: "";
+            position: fixed;
+            width: 500px;
+            height: 500px;
+            left: 50%;
+            top: 15%;
+            transform: translate(-50%, -50%);
+
+            background: rgba(0, 183, 255, .055);
+            filter: blur(100px);
+            border-radius: 50%;
+
             pointer-events: none;
             z-index: 0;
         }
 
+        #bgCanvas {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 0;
+            opacity: .7;
+        }
+
         #sakuraCanvas {
             position: fixed;
-            top: 0;
-            left: 0;
+            inset: 0;
             width: 100vw;
             height: 100vh;
             pointer-events: none;
@@ -53,83 +142,174 @@
             display: none;
         }
 
+        /* =========================
+           INTRO
+        ========================= */
+
         #introScreen {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: radial-gradient(circle at center, #071224 0%, #010207 100%);
+            inset: 0;
+
+            background:
+                radial-gradient(
+                    circle at center,
+                    #06162c 0%,
+                    #020711 42%,
+                    #010207 100%
+                );
+
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+
             z-index: 9999;
-            transition: opacity 0.8s ease, visibility 0.8s ease;
+
+            transition:
+                opacity .8s ease,
+                visibility .8s ease;
+        }
+
+        #introScreen::before {
+            content: "";
+            position: absolute;
+            width: 280px;
+            height: 280px;
+
+            background: rgba(0, 183, 255, .08);
+            filter: blur(70px);
+            border-radius: 50%;
         }
 
         .spinner-box {
             position: relative;
-            width: 80px;
-            height: 80px;
+            width: 92px;
+            height: 92px;
+
             display: flex;
             align-items: center;
             justify-content: center;
+
+            z-index: 2;
         }
 
         .spinner-ring {
             position: absolute;
-            width: 100%;
-            height: 100%;
-            border: 3px solid rgba(0, 170, 255, 0.1);
-            border-top: 3px solid var(--blue);
+            inset: 0;
+
+            border: 2px solid rgba(0, 183, 255, .08);
+            border-top: 3px solid var(--cyan);
+            border-right: 3px solid var(--blue);
+
             border-radius: 50%;
+
             animation: spinRing 1s linear infinite;
-            box-shadow: 0 0 20px rgba(0, 170, 255, 0.3);
+
+            box-shadow:
+                0 0 20px rgba(0, 183, 255, .35),
+                inset 0 0 20px rgba(0, 183, 255, .08);
+        }
+
+        .spinner-ring::after {
+            content: "";
+            position: absolute;
+            inset: 8px;
+
+            border: 1px dashed rgba(0, 183, 255, .25);
+            border-radius: 50%;
+
+            animation: spinReverse 2s linear infinite;
         }
 
         .spinner-icon {
-            color: var(--blue);
+            color: var(--cyan);
             font-size: 28px;
+
+            filter:
+                drop-shadow(0 0 8px var(--cyan))
+                drop-shadow(0 0 20px var(--blue));
+
             animation: pulseIcon 1.2s ease-in-out infinite alternate;
         }
 
         .intro-title {
-            margin-top: 25px;
-            font-size: 24px;
-            font-weight: 800;
-            letter-spacing: 3px;
-            color: #ffffff;
-            text-shadow: 0 0 20px var(--blue);
+            margin-top: 28px;
+
+            font-size: 25px;
+            font-weight: 900;
+
+            letter-spacing: 5px;
+
+            color: #fff;
+
+            text-shadow:
+                0 0 10px rgba(0, 183, 255, .8),
+                0 0 30px rgba(0, 110, 255, .4);
+
+            z-index: 2;
         }
 
         .intro-sub {
-            margin-top: 8px;
-            font-size: 12px;
-            color: var(--muted);
-            letter-spacing: 1px;
+            margin-top: 10px;
+
+            font-size: 11px;
+            color: #6f8aa5;
+
+            letter-spacing: 2px;
+            text-transform: uppercase;
+
+            z-index: 2;
         }
 
         @keyframes spinRing {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes spinReverse {
+            from {
+                transform: rotate(360deg);
+            }
+            to {
+                transform: rotate(0deg);
+            }
         }
 
         @keyframes pulseIcon {
-            0% { opacity: 0.4; transform: scale(0.9); }
-            100% { opacity: 1; transform: scale(1.1); }
+            from {
+                opacity: .45;
+                transform: scale(.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1.12);
+            }
         }
+
+        /* =========================
+           MAIN WRAPPER
+        ========================= */
 
         .wrapper {
             position: relative;
             z-index: 10;
+
             width: 100%;
+            min-height: 100vh;
+
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 0 0 50px 0;
+
+            padding-bottom: 65px;
+
             opacity: 0;
             visibility: hidden;
+
             transition: opacity 1s ease;
         }
 
@@ -138,219 +318,555 @@
             visibility: visible;
         }
 
+        /* =========================
+           HERO
+        ========================= */
+
         .hero-section {
             position: relative;
+
             width: 100%;
             max-width: 520px;
-            min-height: 340px;
+            min-height: 380px;
+
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
-            padding: 30px 20px;
-            background-image: url('https://cdn.phototourl.com/free/2026-09-03-d66a750c-2912-4ad2-b380-ddaac7b57351.jpg');
-            background-size: 100% 100%;
+
+            padding: 34px 20px 42px;
+
+            background-image:
+                linear-gradient(
+                    180deg,
+                    rgba(1, 5, 15, .30),
+                    rgba(1, 5, 15, .88)
+                ),
+                url('https://cdn.phototourl.com/free/2026-09-03-d66a750c-2912-4ad2-b380-ddaac7b57351.jpg');
+
+            background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            border-bottom: 1.5px solid var(--border);
+
+            border-bottom: 1px solid rgba(0, 183, 255, .3);
+
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: "";
+
+            position: absolute;
+            width: 280px;
+            height: 280px;
+
+            left: 50%;
+            top: 35%;
+
+            transform: translate(-50%, -50%);
+
+            background: rgba(0, 183, 255, .12);
+            filter: blur(80px);
+
+            border-radius: 50%;
+        }
+
+        .hero-section::after {
+            content: "";
+
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+
+            height: 100px;
+
+            background:
+                linear-gradient(
+                    to top,
+                    #01030a,
+                    transparent
+                );
+
+            pointer-events: none;
         }
 
         .hero-overlay {
             position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(3, 5, 13, 0.75);
+            inset: 0;
+
+            background:
+                linear-gradient(
+                    180deg,
+                    rgba(1, 5, 15, .38),
+                    rgba(1, 5, 15, .55) 45%,
+                    rgba(1, 3, 10, .95)
+                );
+
             z-index: 1;
         }
 
         .hero-content {
             position: relative;
             z-index: 2;
+
             width: 100%;
+
             display: flex;
             flex-direction: column;
             align-items: center;
         }
 
+        /* =========================
+           STATUS
+        ========================= */
+
         .status-pill {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            background: rgba(0, 170, 255, 0.15);
-            border: 1px solid var(--border);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 1px;
-            color: var(--blue);
-            margin-bottom: 15px;
-            backdrop-filter: blur(5px);
+            gap: 9px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(0, 183, 255, .14),
+                    rgba(0, 70, 255, .07)
+                );
+
+            border: 1px solid rgba(0, 183, 255, .3);
+
+            padding: 7px 15px;
+            border-radius: 30px;
+
+            font-size: 10px;
+            font-weight: 800;
+
+            letter-spacing: 1.2px;
+            color: #66d9ff;
+
+            margin-bottom: 18px;
+
+            backdrop-filter: blur(15px);
+
+            box-shadow:
+                0 0 18px rgba(0, 183, 255, .08),
+                inset 0 0 15px rgba(0, 183, 255, .04);
         }
 
         .status-dot {
             width: 8px;
             height: 8px;
-            background: var(--blue);
+
+            background: #00eaff;
+
             border-radius: 50%;
-            box-shadow: 0 0 10px var(--blue);
+
+            box-shadow:
+                0 0 6px #00eaff,
+                0 0 16px #00aaff;
+
             animation: pulseDot 1.5s infinite;
         }
 
-        @keyframes pulseDot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        @keyframes pulseDot {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: .4;
+                transform: scale(.75);
+            }
+        }
+
+        /* =========================
+           LOGO
+        ========================= */
 
         .logo-box {
-            width: 85px;
-            height: 85px;
+            width: 94px;
+            height: 94px;
+
             border-radius: 50%;
-            border: 2.5px solid var(--blue);
+
+            border: 2px solid #00c8ff;
+
             background: #000;
+
             overflow: hidden;
-            box-shadow: 0 0 25px rgba(0,170,255,0.5);
-            margin-bottom: 12px;
+
+            box-shadow:
+                0 0 12px rgba(0, 200, 255, .6),
+                0 0 35px rgba(0, 110, 255, .3),
+                inset 0 0 15px rgba(0, 183, 255, .15);
+
+            margin-bottom: 15px;
+
             position: relative;
+
             animation: floatLogo 3s ease-in-out infinite;
         }
 
-        @keyframes floatLogo {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-6px); }
+        .logo-box::before {
+            content: "";
+
+            position: absolute;
+            inset: -3px;
+
+            border-radius: 50%;
+
+            border: 1px solid rgba(0, 229, 255, .35);
+
+            animation: logoRing 3s linear infinite;
         }
 
         .logo-box img {
             width: 100%;
             height: 100%;
+
             object-fit: cover;
+
+            display: block;
         }
 
         .online-badge {
             position: absolute;
-            bottom: 4px;
-            right: 4px;
-            width: 12px;
-            height: 12px;
-            background: var(--blue);
-            border: 2px solid #03050d;
+
+            bottom: 5px;
+            right: 5px;
+
+            width: 14px;
+            height: 14px;
+
+            background: #00e676;
+
+            border: 3px solid #020711;
+
             border-radius: 50%;
+
+            box-shadow:
+                0 0 8px #00e676,
+                0 0 18px rgba(0, 230, 118, .5);
         }
 
+        @keyframes floatLogo {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-7px);
+            }
+        }
+
+        @keyframes logoRing {
+            from {
+                transform: rotate(0deg);
+                opacity: .7;
+            }
+            to {
+                transform: rotate(360deg);
+                opacity: .2;
+            }
+        }
+
+        /* =========================
+           HERO TEXT
+        ========================= */
+
         .hero-content h1 {
-            margin: 0 0 8px 0;
-            font-size: 24px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            color: #ffffff;
-            text-shadow: 0 0 15px rgba(0,170,255,0.6);
+            margin: 0 0 10px;
+
+            font-size: clamp(22px, 6vw, 28px);
+            line-height: 1.15;
+
+            font-weight: 900;
+            letter-spacing: .3px;
+
+            color: #fff;
+
+            text-shadow:
+                0 0 12px rgba(0, 183, 255, .35);
         }
 
         .hero-content h1 span {
-            color: var(--blue);
+            color: var(--cyan);
+
+            text-shadow:
+                0 0 8px rgba(0, 229, 255, .8),
+                0 0 25px rgba(0, 110, 255, .4);
         }
 
         .verified-pill {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            background: rgba(0, 170, 255, 0.2);
-            border: 1px solid var(--blue);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 10px;
-            font-weight: 700;
-            color: var(--blue);
-            margin-bottom: 10px;
+            gap: 7px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(0, 183, 255, .18),
+                    rgba(0, 70, 255, .10)
+                );
+
+            border: 1px solid rgba(0, 200, 255, .65);
+
+            padding: 5px 13px;
+            border-radius: 30px;
+
+            font-size: 9px;
+            font-weight: 800;
+
+            color: #6bddff;
+
+            margin-bottom: 11px;
+
+            box-shadow:
+                0 0 15px rgba(0, 183, 255, .1);
         }
 
         .hero-desc {
-            margin: 0 0 15px 0;
+            margin: 0 0 18px;
+
             font-size: 12px;
-            color: #d0e4ff;
-            line-height: 1.4;
-            max-width: 380px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            line-height: 1.55;
+
+            color: #bfd7eb;
+
+            max-width: 390px;
+
+            text-shadow:
+                0 2px 6px rgba(0,0,0,.8);
         }
+
+        /* =========================
+           STATS
+        ========================= */
 
         .stats-row {
             display: flex;
             justify-content: center;
-            gap: 10px;
+            gap: 7px;
+
             width: 100%;
+
             flex-wrap: wrap;
         }
 
         .stat-item {
             display: flex;
             align-items: center;
-            gap: 5px;
-            font-size: 10px;
-            color: #c0d7df;
-            font-weight: 700;
-            background: rgba(0,0,0,0.4);
-            padding: 4px 8px;
-            border-radius: 8px;
-            border: 1px solid rgba(0,170,255,0.2);
+            gap: 6px;
+
+            font-size: 9px;
+            color: #c7e3f3;
+
+            font-weight: 800;
+
+            background:
+                rgba(0, 8, 20, .65);
+
+            padding: 6px 9px;
+
+            border-radius: 9px;
+
+            border: 1px solid rgba(0, 183, 255, .18);
+
+            backdrop-filter: blur(10px);
+
+            box-shadow:
+                inset 0 0 10px rgba(0, 183, 255, .025);
         }
 
         .stat-item i {
-            color: var(--blue);
+            color: #00c8ff;
+
+            filter:
+                drop-shadow(0 0 5px rgba(0, 183, 255, .6));
         }
+
+        /* =========================
+           FORM CONTAINER
+        ========================= */
 
         .form-card-container {
             width: 100%;
             max-width: 520px;
-            padding: 0 16px;
-            margin-top: -15px;
+
+            padding: 0 15px;
+
+            margin-top: -20px;
+
             position: relative;
             z-index: 5;
         }
 
-        @keyframes borderGlow {
-            0% { border-color: rgba(0, 170, 255, 0.3); box-shadow: 0 25px 60px rgba(0,0,0,0.8), 0 0 15px rgba(0,170,255,0.15); }
-            50% { border-color: rgba(0, 170, 255, 0.9); box-shadow: 0 25px 60px rgba(0,0,0,0.8), 0 0 35px rgba(0,170,255,0.4); }
-            100% { border-color: rgba(0, 170, 255, 0.3); box-shadow: 0 25px 60px rgba(0,0,0,0.8), 0 0 15px rgba(0,170,255,0.15); }
-        }
+        /* =========================
+           CARD
+        ========================= */
 
         .card-box {
-            background: var(--card);
-            border: 1.5px solid var(--border);
-            border-radius: 22px;
-            padding: 24px;
-            backdrop-filter: blur(20px);
+            position: relative;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(7, 15, 33, .91),
+                    rgba(2, 7, 18, .94)
+                );
+
+            border: 1px solid rgba(0, 183, 255, .28);
+
+            border-radius: 24px;
+
+            padding: 23px;
+
+            backdrop-filter: blur(25px);
+
+            overflow: hidden;
+
+            box-shadow:
+                0 25px 70px rgba(0,0,0,.65),
+                0 0 30px rgba(0,110,255,.08);
+
             animation: borderGlow 4s infinite;
         }
 
+        .card-box::before {
+            content: "";
+
+            position: absolute;
+
+            width: 180px;
+            height: 180px;
+
+            top: -100px;
+            right: -80px;
+
+            background: rgba(0, 183, 255, .08);
+
+            filter: blur(50px);
+
+            border-radius: 50%;
+
+            pointer-events: none;
+        }
+
+        .card-box::after {
+            content: "";
+
+            position: absolute;
+
+            left: 10%;
+            right: 10%;
+            bottom: 0;
+
+            height: 1px;
+
+            background:
+                linear-gradient(
+                    90deg,
+                    transparent,
+                    rgba(0, 183, 255, .5),
+                    transparent
+                );
+
+            opacity: .7;
+        }
+
+        @keyframes borderGlow {
+            0%, 100% {
+                border-color: rgba(0, 183, 255, .22);
+                box-shadow:
+                    0 25px 70px rgba(0,0,0,.65),
+                    0 0 18px rgba(0,110,255,.06);
+            }
+
+            50% {
+                border-color: rgba(0, 183, 255, .55);
+                box-shadow:
+                    0 25px 70px rgba(0,0,0,.65),
+                    0 0 35px rgba(0,110,255,.14);
+            }
+        }
+
+        /* =========================
+           TABS
+        ========================= */
+
         .tab-switcher {
             display: flex;
-            background: rgba(0,0,0,0.5);
-            border-radius: 14px;
+
+            background:
+                rgba(0, 2, 8, .72);
+
+            border-radius: 15px;
+
             padding: 4px;
-            margin-bottom: 22px;
-            border: 1px solid rgba(255,255,255,0.06);
+
+            margin-bottom: 24px;
+
+            border: 1px solid rgba(255,255,255,.05);
+
+            box-shadow:
+                inset 0 0 20px rgba(0,0,0,.3);
         }
 
         .tab-btn {
             flex: 1;
-            padding: 12px;
+
+            padding: 12px 9px;
+
             text-align: center;
+
             background: transparent;
-            border: none;
-            color: var(--muted);
-            font-size: 13px;
-            font-weight: 700;
+            border: 1px solid transparent;
+
+            color: #64788e;
+
+            font-size: 12px;
+            font-weight: 800;
+
             border-radius: 11px;
+
             cursor: pointer;
+
             display: flex;
             align-items: center;
             justify-content: center;
+
             gap: 8px;
-            transition: 0.3s;
+
+            transition: .3s ease;
+        }
+
+        .tab-btn i {
+            font-size: 13px;
         }
 
         .tab-btn.active {
-            background: rgba(0, 170, 255, 0.15);
-            color: var(--blue);
-            border: 1px solid var(--border);
-            box-shadow: 0 0 15px rgba(0,170,255,0.2);
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(0, 183, 255, .17),
+                    rgba(0, 70, 255, .09)
+                );
+
+            color: #45d4ff;
+
+            border-color: rgba(0,183,255,.3);
+
+            box-shadow:
+                0 0 18px rgba(0,183,255,.12),
+                inset 0 0 15px rgba(0,183,255,.04);
         }
+
+        .tab-btn:active {
+            transform: scale(.97);
+        }
+
+        /* =========================
+           INPUT
+        ========================= */
 
         .input-group {
             margin-bottom: 18px;
@@ -359,351 +875,877 @@
 
         .input-group label {
             display: block;
+
             margin-bottom: 8px;
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            color: #8fa8bc;
+
+            font-size: 10px;
+            font-weight: 900;
+
+            letter-spacing: 1.4px;
+
+            color: #8da8be;
+
             text-transform: uppercase;
         }
 
         .phone-input-box {
             display: flex;
             align-items: center;
-            background: rgba(0, 0, 0, 0.6);
-            border: 1.5px solid rgba(0, 170, 255, 0.3);
-            border-radius: 14px;
-            padding: 4px 6px 4px 14px;
-            transition: 0.3s;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(0,0,0,.65),
+                    rgba(2,8,18,.85)
+                );
+
+            border: 1px solid rgba(0,183,255,.25);
+
+            border-radius: 15px;
+
+            padding: 4px 6px 4px 15px;
+
+            transition: .3s ease;
+
+            box-shadow:
+                inset 0 0 15px rgba(0,0,0,.35);
         }
 
         .phone-input-box:focus-within {
-            border-color: var(--blue);
-            box-shadow: 0 0 20px rgba(0,170,255,0.25);
+            border-color: rgba(0,200,255,.8);
+
+            box-shadow:
+                0 0 0 3px rgba(0,183,255,.06),
+                0 0 25px rgba(0,183,255,.16),
+                inset 0 0 15px rgba(0,183,255,.03);
         }
 
         .phone-input-box span {
-            color: var(--blue);
-            font-weight: 800;
-            font-size: 15px;
-            padding-right: 10px;
-            border-right: 1px solid rgba(255,255,255,0.15);
+            color: #39d4ff;
+
+            font-weight: 900;
+            font-size: 14px;
+
+            padding-right: 11px;
+
+            border-right:
+                1px solid rgba(255,255,255,.12);
+
+            text-shadow:
+                0 0 8px rgba(0,183,255,.35);
         }
 
         #phoneInput {
             flex: 1;
+
+            min-width: 0;
+
             background: transparent;
+
             border: none;
             outline: none;
+
             color: #fff;
+
             font-size: 16px;
-            font-weight: 700;
+            font-weight: 800;
+
             padding: 12px 10px;
         }
 
         #phoneInput::placeholder {
-            color: #4a5c73;
+            color: #40566d;
         }
 
         #clearBtn {
-            background: rgba(255,255,255,0.06);
-            border: none;
-            color: #8fa8bc;
+            background:
+                rgba(255,255,255,.055);
+
+            border: 1px solid rgba(255,255,255,.04);
+
+            color: #7890a6;
+
             width: 32px;
             height: 32px;
+
             border-radius: 50%;
+
             cursor: pointer;
+
             display: none;
+
             align-items: center;
             justify-content: center;
+
+            transition: .2s;
         }
+
+        #clearBtn:hover {
+            color: #fff;
+            background: rgba(0,183,255,.12);
+        }
+
+        /* =========================
+           TERMS
+        ========================= */
 
         .terms-row {
             display: flex;
             align-items: flex-start;
-            gap: 10px;
+
+            gap: 9px;
+
             margin-bottom: 20px;
+
             text-align: left;
-            font-size: 12px;
-            color: #9cb5cb;
+
+            font-size: 10px;
+
+            color: #8299ae;
+
             cursor: pointer;
+
+            line-height: 1.5;
         }
 
         .terms-row input[type="checkbox"] {
             accent-color: var(--blue);
-            width: 16px;
-            height: 16px;
+
+            width: 15px;
+            height: 15px;
+
             margin-top: 1px;
+
             cursor: pointer;
+
+            flex-shrink: 0;
         }
 
         .terms-row a {
-            color: var(--blue);
+            color: #3acfff;
             text-decoration: none;
+
+            font-weight: 700;
         }
 
+        /* =========================
+           PAIR BUTTON
+        ========================= */
+
         #pairBtn {
+            position: relative;
+
             width: 100%;
-            min-height: 52px;
-            background: linear-gradient(135deg, #00bfff, #0066ff);
-            border: 1px solid rgba(0,170,255,0.6);
-            border-radius: 14px;
-            color: #001122;
-            font-size: 16px;
-            font-weight: 800;
+            min-height: 54px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #00d5ff 0%,
+                    #008cff 48%,
+                    #0058ff 100%
+                );
+
+            border: 1px solid rgba(0,225,255,.7);
+
+            border-radius: 15px;
+
+            color: #00101c;
+
+            font-size: 15px;
+            font-weight: 900;
+
             cursor: pointer;
-            box-shadow: 0 10px 25px rgba(0,170,255,0.3);
+
+            box-shadow:
+                0 10px 30px rgba(0,110,255,.28),
+                0 0 20px rgba(0,183,255,.12);
+
             display: flex;
             align-items: center;
             justify-content: center;
+
             gap: 10px;
-            transition: 0.3s;
+
+            transition:
+                transform .25s ease,
+                box-shadow .25s ease,
+                filter .25s ease;
+
+            overflow: hidden;
+        }
+
+        #pairBtn::before {
+            content: "";
+
+            position: absolute;
+
+            top: 0;
+            left: -100%;
+
+            width: 70%;
+            height: 100%;
+
+            background:
+                linear-gradient(
+                    90deg,
+                    transparent,
+                    rgba(255,255,255,.32),
+                    transparent
+                );
+
+            transform: skewX(-20deg);
+
+            transition: left .6s ease;
+        }
+
+        #pairBtn:hover::before {
+            left: 140%;
         }
 
         #pairBtn:hover {
-            background: linear-gradient(135deg, #18ccff, #0052cc);
-            box-shadow: 0 14px 30px rgba(0,170,255,0.45);
             transform: translateY(-2px);
+
+            filter: brightness(1.08);
+
+            box-shadow:
+                0 14px 35px rgba(0,110,255,.4),
+                0 0 30px rgba(0,183,255,.2);
+        }
+
+        #pairBtn:active {
+            transform: scale(.98);
         }
 
         #pairBtn:disabled {
-            opacity: 0.7;
+            opacity: .65;
             cursor: not-allowed;
             transform: none;
         }
 
+        /* =========================
+           RESPONSE
+        ========================= */
+
         #responseBox {
             display: none;
+
             margin-top: 18px;
-            padding: 16px;
-            background: rgba(0,170,255,0.06);
-            border: 1.5px solid var(--blue);
-            border-radius: 14px;
+
+            padding: 17px;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(0,183,255,.08),
+                    rgba(0,50,120,.05)
+                );
+
+            border: 1px solid rgba(0,200,255,.6);
+
+            border-radius: 15px;
+
             text-align: left;
+
+            box-shadow:
+                0 0 25px rgba(0,183,255,.08),
+                inset 0 0 20px rgba(0,183,255,.025);
+
+            animation: responseIn .35s ease;
+        }
+
+        @keyframes responseIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         #rCode {
-            font-family: 'Courier New', monospace;
-            font-size: 24px;
-            font-weight: 800;
+            font-family: "Courier New", monospace;
+
+            font-size: 23px;
+            font-weight: 900;
+
             color: #fff;
+
             letter-spacing: 2px;
+
             word-break: break-all;
+
             cursor: pointer;
+
+            text-shadow:
+                0 0 12px rgba(0,183,255,.4);
         }
 
         #copyBtn {
-            background: rgba(0,170,255,0.2);
-            border: 1px solid var(--blue);
-            color: var(--blue);
-            padding: 5px 12px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 700;
+            background:
+                rgba(0,183,255,.12);
+
+            border: 1px solid rgba(0,200,255,.6);
+
+            color: #4dd7ff;
+
+            padding: 7px 12px;
+
+            border-radius: 9px;
+
+            font-size: 10px;
+            font-weight: 900;
+
             cursor: pointer;
+
+            transition: .2s;
         }
+
+        #copyBtn:hover {
+            background: rgba(0,183,255,.2);
+            transform: translateY(-1px);
+        }
+
+        /* =========================
+           SPEED
+        ========================= */
 
         .live-speed-box {
             width: 100%;
             max-width: 520px;
-            padding: 0 16px;
-            margin-top: 15px;
+
+            padding: 0 15px;
+
+            margin-top: 16px;
+
             position: relative;
             z-index: 5;
         }
 
         .speed-card {
-            background: var(--card);
-            border: 1.5px solid var(--border);
-            border-radius: 18px;
-            padding: 16px 20px;
+            position: relative;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(6,14,30,.84),
+                    rgba(2,7,18,.9)
+                );
+
+            border: 1px solid rgba(0,183,255,.2);
+
+            border-radius: 19px;
+
+            padding: 15px 17px;
+
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            backdrop-filter: blur(15px);
+
+            box-shadow:
+                0 12px 35px rgba(0,0,0,.45);
+
+            backdrop-filter: blur(18px);
+
+            overflow: hidden;
+        }
+
+        .speed-card::before {
+            content: "";
+
+            position: absolute;
+
+            width: 100px;
+            height: 100px;
+
+            left: -60px;
+            top: -50px;
+
+            background: rgba(0,183,255,.08);
+
+            filter: blur(30px);
+            border-radius: 50%;
         }
 
         .speed-info {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 11px;
         }
 
         .speed-icon {
-            width: 40px;
-            height: 40px;
-            background: rgba(0,170,255,0.1);
-            border: 1px solid var(--border);
+            width: 42px;
+            height: 42px;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(0,183,255,.15),
+                    rgba(0,70,255,.08)
+                );
+
+            border: 1px solid rgba(0,183,255,.25);
+
             border-radius: 12px;
+
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--blue);
-            font-size: 18px;
+
+            color: #32d2ff;
+
+            font-size: 17px;
+
+            box-shadow:
+                0 0 15px rgba(0,183,255,.08);
         }
 
         .speed-details .title {
-            font-size: 11px;
-            font-weight: 800;
+            font-size: 9px;
+
+            font-weight: 900;
+
             letter-spacing: 1px;
-            color: var(--muted);
+
+            color: #667f96;
+
             text-transform: uppercase;
         }
 
         .speed-details .value {
-            font-size: 15px;
-            font-weight: 800;
-            color: #fff;
-            margin-top: 2px;
+            font-size: 13px;
+
+            font-weight: 900;
+
+            color: #e9f7ff;
+
+            margin-top: 3px;
         }
 
         .ping-badge {
-            background: rgba(0,170,255,0.15);
-            border: 1px solid var(--blue);
-            padding: 5px 10px;
+            background:
+                rgba(0,183,255,.09);
+
+            border: 1px solid rgba(0,183,255,.35);
+
+            padding: 6px 9px;
+
             border-radius: 20px;
-            font-size: 11px;
-            font-weight: 800;
-            color: var(--blue);
+
+            font-size: 10px;
+
+            font-weight: 900;
+
+            color: #45d4ff;
+
             display: flex;
             align-items: center;
+
             gap: 6px;
+
+            white-space: nowrap;
         }
 
         .ping-dot {
             width: 6px;
             height: 6px;
-            background: var(--blue);
+
+            background: #00e5ff;
+
             border-radius: 50%;
+
+            box-shadow:
+                0 0 8px #00e5ff;
+
             animation: pulseDot 1s infinite;
         }
+
+        /* =========================
+           INFO
+        ========================= */
 
         .info-container {
             width: 100%;
             max-width: 520px;
-            padding: 0 16px;
+
+            padding: 0 15px;
+
             margin-top: 20px;
         }
 
         .info-card {
-            background: var(--card);
-            border: 1.5px solid var(--border);
-            border-radius: 20px;
-            padding: 22px;
-            margin-bottom: 20px;
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(6,14,30,.82),
+                    rgba(2,7,18,.9)
+                );
+
+            border: 1px solid rgba(0,183,255,.18);
+
+            border-radius: 21px;
+
+            padding: 21px;
+
+            margin-bottom: 16px;
+
             backdrop-filter: blur(20px);
+
+            box-shadow:
+                0 15px 40px rgba(0,0,0,.4);
+
+            transition:
+                transform .3s ease,
+                border-color .3s ease;
+        }
+
+        .info-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(0,183,255,.32);
         }
 
         .section-title {
-            font-size: 13px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            color: var(--blue);
-            margin-bottom: 16px;
+            font-size: 12px;
+
+            font-weight: 900;
+
+            letter-spacing: 1.2px;
+
+            color: #38d3ff;
+
+            margin-bottom: 17px;
+
             display: flex;
             align-items: center;
+
             gap: 8px;
+
+            text-shadow:
+                0 0 10px rgba(0,183,255,.25);
         }
+
+        .section-title i {
+            font-size: 14px;
+        }
+
+        /* =========================
+           STEPS
+        ========================= */
 
         .step-item {
             display: flex;
             align-items: flex-start;
-            gap: 12px;
-            margin-bottom: 14px;
+
+            gap: 11px;
+
+            margin-bottom: 15px;
+        }
+
+        .step-item:last-child {
+            margin-bottom: 0;
         }
 
         .step-num {
             font-family: monospace;
-            font-size: 13px;
-            font-weight: 800;
-            color: var(--blue);
-            background: rgba(0,170,255,0.1);
-            padding: 3px 6px;
-            border-radius: 6px;
-            border: 1px solid rgba(0,170,255,0.3);
+
+            font-size: 11px;
+            font-weight: 900;
+
+            color: #31d2ff;
+
+            background:
+                rgba(0,183,255,.08);
+
+            padding: 5px 7px;
+
+            border-radius: 7px;
+
+            border: 1px solid rgba(0,183,255,.22);
+
+            box-shadow:
+                inset 0 0 10px rgba(0,183,255,.03);
+
+            flex-shrink: 0;
         }
 
         .step-text {
-            font-size: 12px;
-            color: #b5c8db;
-            line-height: 1.4;
+            font-size: 11px;
+
+            color: #91a9bd;
+
+            line-height: 1.5;
         }
 
         .step-text strong {
             display: block;
-            color: #fff;
-            font-size: 13px;
+
+            color: #f1f8ff;
+
+            font-size: 12px;
+
             margin-bottom: 2px;
         }
 
+        /* =========================
+           FEATURES
+        ========================= */
+
         .features-list {
             display: flex;
+
             flex-direction: column;
+
             gap: 8px;
         }
 
         .feature-row {
             display: flex;
             align-items: center;
-            gap: 12px;
-            background: rgba(0,0,0,0.4);
-            border: 1px solid rgba(255,255,255,0.05);
-            padding: 10px 14px;
+
+            gap: 11px;
+
+            background:
+                linear-gradient(
+                    90deg,
+                    rgba(0,183,255,.045),
+                    rgba(0,0,0,.2)
+                );
+
+            border: 1px solid rgba(255,255,255,.045);
+
+            padding: 10px 13px;
+
             border-radius: 12px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #d0e4ff;
+
+            font-size: 12px;
+            font-weight: 700;
+
+            color: #c5dcef;
+
+            transition:
+                .25s ease;
+        }
+
+        .feature-row:hover {
+            transform: translateX(3px);
+
+            border-color:
+                rgba(0,183,255,.25);
+
+            background:
+                rgba(0,183,255,.07);
         }
 
         .feature-row i {
-            color: var(--blue);
-            font-size: 16px;
+            color: #22d2ff;
+
+            font-size: 15px;
+
             width: 20px;
+
             text-align: center;
+
+            filter:
+                drop-shadow(
+                    0 0 6px rgba(0,183,255,.4)
+                );
         }
+
+        /* =========================
+           WHATSAPP FLOAT
+        ========================= */
 
         .whatsapp-float {
             position: fixed;
+
             bottom: 20px;
-            right: 20px;
-            width: 55px;
-            height: 55px;
-            background: #25d366;
+            right: 18px;
+
+            width: 56px;
+            height: 56px;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    #25d366,
+                    #10a94f
+                );
+
             color: #fff;
+
             border-radius: 50%;
+
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 28px;
-            box-shadow: 0 5px 20px rgba(37,211,102,0.5);
+
+            font-size: 27px;
+
+            box-shadow:
+                0 7px 25px rgba(37,211,102,.35),
+                0 0 20px rgba(37,211,102,.12);
+
             z-index: 999;
+
             text-decoration: none;
-            transition: 0.3s;
+
+            border: 2px solid rgba(255,255,255,.15);
+
+            transition: .3s ease;
         }
 
         .whatsapp-float:hover {
-            transform: scale(1.1);
+            transform: scale(1.08) translateY(-2px);
+
+            box-shadow:
+                0 12px 30px rgba(37,211,102,.45);
         }
 
         .wa-badge {
             position: absolute;
-            top: -2px;
-            right: -2px;
-            background: #ff3b3b;
+
+            top: -3px;
+            right: -3px;
+
+            background: #ff3b4d;
+
             color: #fff;
-            font-size: 10px;
-            font-weight: 800;
+
+            font-size: 9px;
+            font-weight: 900;
+
             width: 18px;
             height: 18px;
+
             border-radius: 50%;
+
             display: flex;
             align-items: center;
             justify-content: center;
+
             border: 2px solid #03050d;
+
+            box-shadow:
+                0 0 8px rgba(255,59,77,.35);
+        }
+
+        /* =========================
+           LOADER
+        ========================= */
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* =========================
+           MOBILE
+        ========================= */
+
+        @media (max-width: 520px) {
+
+            .hero-section {
+                min-height: 365px;
+                padding: 29px 16px 38px;
+            }
+
+            .logo-box {
+                width: 88px;
+                height: 88px;
+            }
+
+            .hero-content h1 {
+                font-size: 22px;
+            }
+
+            .hero-desc {
+                font-size: 11px;
+                max-width: 350px;
+            }
+
+            .stats-row {
+                gap: 5px;
+            }
+
+            .stat-item {
+                font-size: 8px;
+                padding: 5px 7px;
+            }
+
+            .form-card-container {
+                padding: 0 11px;
+            }
+
+            .card-box {
+                padding: 18px;
+                border-radius: 21px;
+            }
+
+            .speed-card {
+                padding: 13px;
+            }
+
+            .speed-details .value {
+                font-size: 12px;
+            }
+
+            .info-container {
+                padding: 0 11px;
+            }
+
+            .info-card {
+                padding: 18px;
+            }
+
+            .whatsapp-float {
+                bottom: 16px;
+                right: 15px;
+            }
+        }
+
+        @media (max-width: 370px) {
+
+            .hero-content h1 {
+                font-size: 20px;
+            }
+
+            .status-pill {
+                font-size: 8px;
+            }
+
+            .stat-item {
+                font-size: 7px;
+            }
+
+            .card-box {
+                padding: 15px;
+            }
+
+            .ping-badge {
+                padding: 5px 7px;
+            }
+        }
+
+        /* =========================
+           REDUCED MOTION
+        ========================= */
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: .01ms !important;
+                animation-iteration-count: 1 !important;
+                scroll-behavior: auto !important;
+            }
         }
     </style>
 </head>
+
 <body>
 
     <canvas id="bgCanvas"></canvas>
@@ -714,176 +1756,519 @@
             <div class="spinner-ring"></div>
             <i class="fas fa-bolt spinner-icon"></i>
         </div>
+
         <div class="intro-title">SHAGGY XMD</div>
         <div class="intro-sub">Loading Secure System...</div>
     </div>
 
     <div class="wrapper" id="mainWrapper">
-        
+
+        <!-- =========================
+             HERO
+        ========================== -->
+
         <div class="hero-section">
+
             <div class="hero-overlay"></div>
+
             <div class="hero-content">
+
                 <div class="status-pill">
-                    <span class="status-dot"></span> LIVE • FREE • NO ACCOUNT NEEDED
+                    <span class="status-dot"></span>
+                    LIVE • FREE • NO ACCOUNT NEEDED
                 </div>
 
                 <div class="logo-box">
-                    <img src="https://cdn.phototourl.com/free/2026-09-01-46a05f97-db49-4c9c-99ef-bc7d9f649769.png" alt="Logo">
+                    <img
+                        src="https://cdn.phototourl.com/free/2026-09-01-46a05f97-db49-4c9c-99ef-bc7d9f649769.png"
+                        alt="SHAGGY XMD Logo"
+                    />
+
                     <div class="online-badge"></div>
                 </div>
 
-                <h1>Deploy <span>SHAGGY XMD</span> WhatsApp Bot</h1>
+                <h1>
+                    Deploy <span>SHAGGY XMD</span> WhatsApp Bot
+                </h1>
 
                 <div class="verified-pill">
-                    <i class="fas fa-shield-check"></i> SHAGGY XMD BETA VERIFIED
+                    <i class="fas fa-shield-check"></i>
+                    SHAGGY XMD BETA VERIFIED
                 </div>
 
                 <p class="hero-desc">
-                    Connect your WhatsApp in 30 seconds. Pair code or QR scan — 100% free with fast download support.
+                    Connect your WhatsApp in 30 seconds.
+                    Pair code or QR scan — 100% free with fast download support.
                 </p>
 
                 <div class="stats-row">
-                    <div class="stat-item"><i class="fas fa-bolt"></i> 127+ APIs</div>
-                    <div class="stat-item"><i class="fas fa-robot"></i> AI Powered</div>
-                    <div class="stat-item"><i class="fas fa-wifi"></i> Always Online</div>
-                    <div class="stat-item"><i class="fas fa-shield-alt"></i> 100% Free</div>
+
+                    <div class="stat-item">
+                        <i class="fas fa-bolt"></i>
+                        127+ APIs
+                    </div>
+
+                    <div class="stat-item">
+                        <i class="fas fa-robot"></i>
+                        AI Powered
+                    </div>
+
+                    <div class="stat-item">
+                        <i class="fas fa-wifi"></i>
+                        Always Online
+                    </div>
+
+                    <div class="stat-item">
+                        <i class="fas fa-shield-alt"></i>
+                        100% Free
+                    </div>
+
                 </div>
             </div>
         </div>
 
+        <!-- =========================
+             PAIR CARD
+        ========================== -->
+
         <div class="form-card-container">
+
             <div class="card-box">
+
                 <div class="tab-switcher">
-                    <button class="tab-btn active" onclick="switchTab('pair')">
-                        <i class="fas fa-mobile-alt"></i> Pair Code
+
+                    <button
+                        class="tab-btn active"
+                        onclick="switchTab('pair')"
+                    >
+                        <i class="fas fa-mobile-alt"></i>
+                        Pair Code
                     </button>
-                    <button class="tab-btn" onclick="switchTab('qr')">
-                        <i class="fas fa-qrcode"></i> QR Scan
+
+                    <button
+                        class="tab-btn"
+                        onclick="switchTab('qr')"
+                    >
+                        <i class="fas fa-qrcode"></i>
+                        QR Scan
                     </button>
+
                 </div>
 
                 <div id="pairSection">
+
                     <div class="input-group">
-                        <label><i class="fas fa-phone"></i> WhatsApp Number</label>
+
+                        <label>
+                            <i class="fas fa-phone"></i>
+                            WhatsApp Number
+                        </label>
+
                         <div class="phone-input-box">
+
                             <span>+94</span>
-                            <input type="tel" id="phoneInput" placeholder="768069800 (no + sign)" maxlength="10" />
-                            <button id="clearBtn" onclick="clearInput()">
+
+                            <input
+                                type="tel"
+                                id="phoneInput"
+                                placeholder="768069800 (no + sign)"
+                                maxlength="10"
+                            />
+
+                            <button
+                                id="clearBtn"
+                                onclick="clearInput()"
+                            >
                                 <i class="fas fa-times"></i>
                             </button>
+
                         </div>
+
                     </div>
 
                     <label class="terms-row">
-                        <input type="checkbox" id="termsCheck" checked />
-                        <span>I understand this is for a secondary WhatsApp number only. I accept the <a href="#" onclick="alert('Terms: Free to use for bot linking.')">Terms of Service</a></span>
+
+                        <input
+                            type="checkbox"
+                            id="termsCheck"
+                            checked
+                        />
+
+                        <span>
+                            I understand this is for a secondary WhatsApp number only.
+                            I accept the
+                            <a
+                                href="#"
+                                onclick="alert('Terms: Free to use for bot linking.')"
+                            >
+                                Terms of Service
+                            </a>
+                        </span>
+
                     </label>
 
-                    <button id="pairBtn" onclick="getPairCode()">
-                        <span id="loader" style="display:none; border:2px solid rgba(0,17,34,0.3); border-top:2px solid #001122; border-radius:50%; width:20px; height:20px; animation:spin .8s linear infinite;"></span>
-                        <span id="btnText"><i class="fas fa-link"></i> Get Pair Code</span>
+                    <button
+                        id="pairBtn"
+                        onclick="getPairCode()"
+                    >
+
+                        <span
+                            id="loader"
+                            style="
+                                display:none;
+                                border:2px solid rgba(0,17,34,0.3);
+                                border-top:2px solid #001122;
+                                border-radius:50%;
+                                width:20px;
+                                height:20px;
+                                animation:spin .8s linear infinite;
+                            "
+                        ></span>
+
+                        <span id="btnText">
+                            <i class="fas fa-link"></i>
+                            Get Pair Code
+                        </span>
+
                     </button>
 
                     <div id="responseBox">
-                        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+
+                        <div
+                            style="
+                                display:flex;
+                                align-items:center;
+                                justify-content:space-between;
+                                gap:10px;
+                            "
+                        >
+
                             <div>
-                                <div style="font-size:10px; font-weight:800; color:var(--blue); letter-spacing:1px; text-transform:uppercase;">Pairing Code Ready</div>
-                                <div id="rCode" onclick="copyCode()" title="Click to copy">——</div>
+
+                                <div
+                                    style="
+                                        font-size:10px;
+                                        font-weight:900;
+                                        color:var(--blue);
+                                        letter-spacing:1px;
+                                        text-transform:uppercase;
+                                    "
+                                >
+                                    Pairing Code Ready
+                                </div>
+
+                                <div
+                                    id="rCode"
+                                    onclick="copyCode()"
+                                    title="Click to copy"
+                                >
+                                    ——
+                                </div>
+
                             </div>
-                            <button id="copyBtn" onclick="copyCode()"><i class="fas fa-copy"></i> Copy</button>
+
+                            <button
+                                id="copyBtn"
+                                onclick="copyCode()"
+                            >
+                                <i class="fas fa-copy"></i>
+                                Copy
+                            </button>
+
                         </div>
-                        <div id="rMessage" style="font-size:11px; color:#8fa8bc; margin-top:6px;">Tap code to copy instantly</div>
+
+                        <div
+                            id="rMessage"
+                            style="
+                                font-size:11px;
+                                color:#8fa8bc;
+                                margin-top:6px;
+                            "
+                        >
+                            Tap code to copy instantly
+                        </div>
+
                     </div>
+
                 </div>
 
-                <div id="qrSection" style="display:none; text-align:center; padding:10px 0;">
-                    <div style="background:rgba(0,0,0,0.4); border:1px dashed var(--blue); padding:20px; border-radius:14px; margin-bottom:15px;">
-                        <i class="fas fa-qrcode" style="font-size:60px; color:var(--blue); margin-bottom:10px;"></i>
-                        <div style="font-size:13px; font-weight:700; color:#fff;">QR Code Scanning</div>
-                        <div style="font-size:11px; color:var(--muted); margin-top:4px;">Coming soon / Use Pair Code for instant connection.</div>
+                <!-- =========================
+                     QR
+                ========================== -->
+
+                <div
+                    id="qrSection"
+                    style="
+                        display:none;
+                        text-align:center;
+                        padding:10px 0;
+                    "
+                >
+
+                    <div
+                        style="
+                            background:rgba(0,0,0,.4);
+                            border:1px dashed rgba(0,183,255,.55);
+                            padding:25px 20px;
+                            border-radius:15px;
+                            margin-bottom:15px;
+                            box-shadow:inset 0 0 25px rgba(0,183,255,.03);
+                        "
+                    >
+
+                        <i
+                            class="fas fa-qrcode"
+                            style="
+                                font-size:60px;
+                                color:var(--blue);
+                                margin-bottom:12px;
+                                filter:drop-shadow(0 0 12px rgba(0,183,255,.5));
+                            "
+                        ></i>
+
+                        <div
+                            style="
+                                font-size:13px;
+                                font-weight:800;
+                                color:#fff;
+                            "
+                        >
+                            QR Code Scanning
+                        </div>
+
+                        <div
+                            style="
+                                font-size:11px;
+                                color:var(--muted);
+                                margin-top:5px;
+                            "
+                        >
+                            Coming soon / Use Pair Code for instant connection.
+                        </div>
+
                     </div>
+
                 </div>
+
             </div>
+
         </div>
 
+        <!-- =========================
+             SPEED
+        ========================== -->
+
         <div class="live-speed-box">
+
             <div class="speed-card">
+
                 <div class="speed-info">
+
                     <div class="speed-icon">
                         <i class="fas fa-gauge-high"></i>
                     </div>
+
                     <div class="speed-details">
-                        <div class="title">Bot Speed & Performance</div>
-                        <div class="value" id="speedStatusText">Optimal (99.9% Uptime)</div>
+
+                        <div class="title">
+                            Bot Speed & Performance
+                        </div>
+
+                        <div
+                            class="value"
+                            id="speedStatusText"
+                        >
+                            Optimal (99.9% Uptime)
+                        </div>
+
                     </div>
+
                 </div>
+
                 <div class="ping-badge">
-                    <span class="ping-dot"></span> <span id="pingValue">18ms</span>
+
+                    <span class="ping-dot"></span>
+
+                    <span id="pingValue">
+                        18ms
+                    </span>
+
                 </div>
+
             </div>
+
         </div>
+
+        <!-- =========================
+             INFO
+        ========================== -->
 
         <div class="info-container">
+
             <div class="info-card">
+
                 <div class="section-title">
-                    <i class="fas fa-terminal"></i> HOW TO CONNECT
+                    <i class="fas fa-terminal"></i>
+                    HOW TO CONNECT
                 </div>
+
                 <div class="step-item">
-                    <div class="step-num">01</div>
+
+                    <div class="step-num">
+                        01
+                    </div>
+
                     <div class="step-text">
-                        <strong>Enter your WhatsApp number</strong>
+
+                        <strong>
+                            Enter your WhatsApp number
+                        </strong>
+
                         Include country code, no spaces or plus sign.
+
                     </div>
+
                 </div>
+
                 <div class="step-item">
-                    <div class="step-num">02</div>
+
+                    <div class="step-num">
+                        02
+                    </div>
+
                     <div class="step-text">
-                        <strong>Generate and copy code</strong>
+
+                        <strong>
+                            Generate and copy code
+                        </strong>
+
                         Get your 8-letter unique pairing code instantly.
+
                     </div>
+
                 </div>
+
                 <div class="step-item">
-                    <div class="step-num">03</div>
+
+                    <div class="step-num">
+                        03
+                    </div>
+
                     <div class="step-text">
-                        <strong>Open WhatsApp → Linked Devices</strong>
+
+                        <strong>
+                            Open WhatsApp → Linked Devices
+                        </strong>
+
                         Go to WhatsApp on your phone and tap Link a Device.
+
                     </div>
+
                 </div>
+
                 <div class="step-item">
-                    <div class="step-num">04</div>
-                    <div class="step-text">
-                        <strong>Enter the code</strong>
-                        Your bot connects instantly without any app install!
+
+                    <div class="step-num">
+                        04
                     </div>
+
+                    <div class="step-text">
+
+                        <strong>
+                            Enter the code
+                        </strong>
+
+                        Your bot connects instantly without any app install!
+
+                    </div>
+
                 </div>
+
             </div>
 
             <div class="info-card">
+
                 <div class="section-title">
-                    <i class="fas fa-star"></i> BOT FEATURES
+                    <i class="fas fa-star"></i>
+                    BOT FEATURES
                 </div>
+
                 <div class="features-list">
-                    <div class="feature-row"><i class="fas fa-film"></i> .movie</div>
-                    <div class="feature-row"><i class="fab fa-tiktok"></i> .tiktok</div>
-                    <div class="feature-row"><i class="fas fa-music"></i> .song</div>
-                    <div class="feature-row"><i class="fas fa-heart-broken"></i> .xnxx</div>
+
+                    <div class="feature-row">
+                        <i class="fas fa-film"></i>
+                        .movie
+                    </div>
+
+                    <div class="feature-row">
+                        <i class="fab fa-tiktok"></i>
+                        .tiktok
+                    </div>
+
+                    <div class="feature-row">
+                        <i class="fas fa-music"></i>
+                        .song
+                    </div>
+
+                    <div class="feature-row">
+                        <i class="fas fa-heart-broken"></i>
+                        .xnxx
+                    </div>
+
                 </div>
+
             </div>
 
-            <div style="text-align: center; font-size: 11px; color: var(--muted); margin-top: 15px; letter-spacing: 1px;">
-                POWERED BY <span style="color: var(--blue); font-weight: bold;">SHAGGY TECH</span>
+            <div
+                style="
+                    text-align:center;
+                    font-size:10px;
+                    color:var(--muted);
+                    margin-top:18px;
+                    letter-spacing:1.5px;
+                "
+            >
+                POWERED BY
+                <span
+                    style="
+                        color:var(--blue);
+                        font-weight:900;
+                        text-shadow:0 0 10px rgba(0,183,255,.35);
+                    "
+                >
+                    SHAGGY TECH
+                </span>
             </div>
+
         </div>
+
     </div>
 
-    <a href="https://whatsapp.com" target="_blank" class="whatsapp-float">
+    <!-- =========================
+         WHATSAPP
+    ========================== -->
+
+    <a
+        href="https://whatsapp.com"
+        target="_blank"
+        class="whatsapp-float"
+    >
         <i class="fab fa-whatsapp"></i>
-        <span class="wa-badge">2</span>
+
+        <span class="wa-badge">
+            2
+        </span>
     </a>
 
     <script>
+
+        /* =====================================================
+           ORIGINAL LOGIC — PRESERVED
+        ===================================================== */
+
         const canvas = document.getElementById('bgCanvas');
         const ctx = canvas.getContext('2d');
+
         let width = canvas.width = window.innerWidth;
         let height = canvas.height = window.innerHeight;
 
@@ -893,7 +2278,9 @@
         });
 
         const bubbles = [];
-        for (let i = 0; i < Math.floor(width/30); i++) {
+
+        for (let i = 0; i < Math.floor(width / 30); i++) {
+
             bubbles.push({
                 x: Math.random() * width,
                 y: Math.random() * height,
@@ -903,1207 +2290,498 @@
                 vy: -Math.random() * 1 - 0.3,
                 alpha: Math.random() * 0.4 + 0.1
             });
+
         }
 
         function animate() {
+
             ctx.clearRect(0, 0, width, height);
+
             bubbles.forEach(b => {
+
                 b.x += b.vx;
                 b.y += b.vy;
-                if (b.y < -10) { b.y = height + 10; b.x = Math.random() * width; }
+
+                if (b.y < -10) {
+                    b.y = height + 10;
+                    b.x = Math.random() * width;
+                }
+
                 ctx.save();
+
                 ctx.beginPath();
-                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+
+                ctx.arc(
+                    b.x,
+                    b.y,
+                    b.radius,
+                    0,
+                    Math.PI * 2
+                );
+
                 ctx.fillStyle = b.color;
                 ctx.globalAlpha = b.alpha;
+
                 ctx.shadowBlur = 10;
                 ctx.shadowColor = b.color;
+
                 ctx.fill();
+
                 ctx.restore();
+
             });
+
             requestAnimationFrame(animate);
         }
+
         animate();
 
-        const sakuraCanvas = document.getElementById('sakuraCanvas');
-        const sCtx = sakuraCanvas.getContext('2d');
-        let sWidth = sakuraCanvas.width = window.innerWidth;
-        let sHeight = sakuraCanvas.height = window.innerHeight;
+
+        /* =========================
+           SAKURA / BLUE SHOWER
+        ========================== */
+
+        const sakuraCanvas =
+            document.getElementById('sakuraCanvas');
+
+        const sCtx =
+            sakuraCanvas.getContext('2d');
+
+        let sWidth =
+            sakuraCanvas.width = window.innerWidth;
+
+        let sHeight =
+            sakuraCanvas.height = window.innerHeight;
 
         window.addEventListener('resize', () => {
-            sWidth = sakuraCanvas.width = window.innerWidth;
-            sHeight = sakuraCanvas.height = window.innerHeight;
+
+            sWidth =
+                sakuraCanvas.width = window.innerWidth;
+
+            sHeight =
+                sakuraCanvas.height = window.innerHeight;
+
         });
 
         let petals = [];
         let isSakuraActive = false;
 
         function startSakuraShower() {
+
             sakuraCanvas.style.display = 'block';
+
             petals = [];
+
             for (let i = 0; i < 70; i++) {
+
                 petals.push({
                     x: Math.random() * sWidth,
                     y: Math.random() * sHeight - sHeight,
                     r: Math.random() * 6 + 4,
                     d: Math.random() * 50,
-                    color: Math.random() > 0.3 ? '#00aaff' : '#0077ff',
+                    color: Math.random() > 0.3
+                        ? '#00aaff'
+                        : '#0077ff',
                     tilt: Math.random() * 10 - 10,
-                    tiltAngleIncremental: Math.random() * 0.07 + 0.05,
+                    tiltAngleIncremental:
+                        Math.random() * 0.07 + 0.05,
                     tiltAngle: 0
                 });
+
             }
+
             isSakuraActive = true;
+
             renderSakura();
 
             setTimeout(() => {
+
                 isSakuraActive = false;
+
                 sakuraCanvas.style.display = 'none';
-                sCtx.clearRect(0, 0, sWidth, sHeight);
+
+                sCtx.clearRect(
+                    0,
+                    0,
+                    sWidth,
+                    sHeight
+                );
+
             }, 6000);
+
         }
 
         function renderSakura() {
+
             if (!isSakuraActive) return;
-            sCtx.clearRect(0, 0, sWidth, sHeight);
+
+            sCtx.clearRect(
+                0,
+                0,
+                sWidth,
+                sHeight
+            );
+
             petals.forEach(p => {
-                p.tiltAngle += p.tiltAngleIncremental;
-                p.y += (Math.cos(p.d) + 2 + p.r / 2) / 2;
-                p.x += Math.sin(p.tiltAngle) * 2;
+
+                p.tiltAngle +=
+                    p.tiltAngleIncremental;
+
+                p.y +=
+                    (Math.cos(p.d) + 2 + p.r / 2) / 2;
+
+                p.x +=
+                    Math.sin(p.tiltAngle) * 2;
 
                 if (p.y > sHeight) {
+
                     p.y = -20;
-                    p.x = Math.random() * sWidth;
+
+                    p.x =
+                        Math.random() * sWidth;
+
                 }
 
                 sCtx.beginPath();
+
                 sCtx.lineWidth = p.r / 2;
+
                 sCtx.strokeStyle = p.color;
                 sCtx.fillStyle = p.color;
+
                 sCtx.save();
-                sCtx.translate(p.x, p.y);
-                sCtx.rotate(p.tiltAngle);
+
+                sCtx.translate(
+                    p.x,
+                    p.y
+                );
+
+                sCtx.rotate(
+                    p.tiltAngle
+                );
+
                 sCtx.globalAlpha = 0.8;
+
                 sCtx.shadowBlur = 8;
                 sCtx.shadowColor = p.color;
-                sCtx.fillRect(0, 0, p.r, p.r * 1.5);
+
+                sCtx.fillRect(
+                    0,
+                    0,
+                    p.r,
+                    p.r * 1.5
+                );
+
                 sCtx.restore();
+
             });
+
             requestAnimationFrame(renderSakura);
+
         }
 
+
+        /* =========================
+           WELCOME VOICE
+        ========================== */
+
         function playWelcomeVoice() {
+
             if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance("Welcome to Shaggy XMD WhatsApp bot project");
+
+                const utterance =
+                    new SpeechSynthesisUtterance(
+                        "Welcome to Shaggy XMD WhatsApp bot project"
+                    );
+
                 utterance.rate = 0.95;
                 utterance.pitch = 1.4;
                 utterance.volume = 1.0;
 
-                const voices = window.speechSynthesis.getVoices();
-                const femaleVoice = voices.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('susan') || v.name.toLowerCase().includes('google uk english female') || v.name.toLowerCase().includes('google en-us'));
+                const voices =
+                    window.speechSynthesis.getVoices();
+
+                const femaleVoice =
+                    voices.find(v =>
+                        v.name.toLowerCase().includes('female') ||
+                        v.name.toLowerCase().includes('zira') ||
+                        v.name.toLowerCase().includes('susan') ||
+                        v.name.toLowerCase().includes('google uk english female') ||
+                        v.name.toLowerCase().includes('google en-us')
+                    );
+
                 if (femaleVoice) {
                     utterance.voice = femaleVoice;
                 }
 
-                window.speechSynthesis.speak(utterance);
+                window.speechSynthesis.speak(
+                    utterance
+                );
+
             }
+
         }
 
         if ('speechSynthesis' in window) {
+
             window.speechSynthesis.onvoiceschanged = () => {
                 window.speechSynthesis.getVoices();
             };
+
         }
 
+
+        /* =========================
+           INTRO
+        ========================== */
+
         window.addEventListener('load', () => {
+
             setTimeout(() => {
-                const intro = document.getElementById('introScreen');
-                const wrapper = document.getElementById('mainWrapper');
-                
+
+                const intro =
+                    document.getElementById('introScreen');
+
+                const wrapper =
+                    document.getElementById('mainWrapper');
+
                 playWelcomeVoice();
 
                 intro.style.opacity = '0';
+
                 setTimeout(() => {
+
                     intro.style.display = 'none';
+
                     wrapper.classList.add('show');
+
                 }, 800);
+
             }, 1800);
+
         });
+
+
+        /* =========================
+           TAB SWITCH
+        ========================== */
 
         function switchTab(tab) {
-            const btns = document.querySelectorAll('.tab-btn');
-            btns.forEach(b => b.classList.remove('active'));
+
+            const btns =
+                document.querySelectorAll('.tab-btn');
+
+            btns.forEach(b =>
+                b.classList.remove('active')
+            );
+
             if (tab === 'pair') {
+
                 btns[0].classList.add('active');
-                document.getElementById('pairSection').style.display = 'block';
-                document.getElementById('qrSection').style.display = 'none';
+
+                document.getElementById(
+                    'pairSection'
+                ).style.display = 'block';
+
+                document.getElementById(
+                    'qrSection'
+                ).style.display = 'none';
+
             } else {
+
                 btns[1].classList.add('active');
-                document.getElementById('pairSection').style.display = 'none';
-                document.getElementById('qrSection').style.display = 'block';
+
+                document.getElementById(
+                    'pairSection'
+                ).style.display = 'none';
+
+                document.getElementById(
+                    'qrSection'
+                ).style.display = 'block';
+
             }
+
         }
 
-        const phoneInput = document.getElementById('phoneInput');
-        const clearBtn = document.getElementById('clearBtn');
-        const pairBtn = document.getElementById('pairBtn');
-        const loader = document.getElementById('loader');
-        const btnText = document.getElementById('btnText');
-        const responseBox = document.getElementById('responseBox');
-        const rCode = document.getElementById('rCode');
-        const termsCheck = document.getElementById('termsCheck');
 
-        phoneInput.addEventListener('input', function() {
-            this.value = this.value.replace(/\D/g, '');
-            clearBtn.style.display = this.value.length > 0 ? 'flex' : 'none';
-        });
+        /* =========================
+           PAIR SYSTEM
+        ========================== */
+
+        const phoneInput =
+            document.getElementById('phoneInput');
+
+        const clearBtn =
+            document.getElementById('clearBtn');
+
+        const pairBtn =
+            document.getElementById('pairBtn');
+
+        const loader =
+            document.getElementById('loader');
+
+        const btnText =
+            document.getElementById('btnText');
+
+        const responseBox =
+            document.getElementById('responseBox');
+
+        const rCode =
+            document.getElementById('rCode');
+
+        const termsCheck =
+            document.getElementById('termsCheck');
+
+
+        phoneInput.addEventListener(
+            'input',
+            function() {
+
+                this.value =
+                    this.value.replace(/\D/g, '');
+
+                clearBtn.style.display =
+                    this.value.length > 0
+                        ? 'flex'
+                        : 'none';
+
+            }
+        );
+
 
         function clearInput() {
+
             phoneInput.value = '';
+
             clearBtn.style.display = 'none';
+
             phoneInput.focus();
+
         }
+
 
         function copyCode() {
-            const code = rCode.textContent.trim();
+
+            const code =
+                rCode.textContent.trim();
+
             if (!code || code === '——') return;
-            navigator.clipboard.writeText(code).then(() => {
-                rCode.innerHTML = '<span style="color:#00aaff;">COPIED!</span>';
-                setTimeout(() => { rCode.textContent = code; }, 1500);
-            });
-        }
 
-        async function getPairCode() {
-            const phone = phoneInput.value.trim();
-            if (!termsCheck.checked) {
-                alert('Please accept the Terms of Service checkbox first.');
-                return;
-            }
-            if (!phone || phone.length < 9) {
-                alert('Please enter a valid phone number (at least 9 digits).');
-                phoneInput.focus();
-                return;
-            }
+            navigator.clipboard
+                .writeText(code)
+                .then(() => {
 
-            const fullNumber = `94${phone}`;
-            pairBtn.disabled = true;
-            loader.style.display = 'block';
-            btnText.innerHTML = '<span>Requesting Code...</span>';
-            responseBox.style.display = 'block';
-            rCode.textContent = 'Generating...';
+                    rCode.innerHTML =
+                        '<span style="color:#00aaff;">COPIED!</span>';
 
-            try {
-                const response = await fetch(`/code?number=${fullNumber}`, { method: 'GET' });
-                const data = await response.json();
-                if (response.ok && data.code) {
-                    rCode.textContent = data.code;
-                    copyCode();
-                    startSakuraShower();
-                } else {
-                    rCode.textContent = data.error || 'Failed to get code';
-                }
-            } catch (err) {
-                rCode.textContent = 'Connection Error!';
-            } finally {
-                pairBtn.disabled = false;
-                loader.style.display = 'none';
-                btnText.innerHTML = '<i class="fas fa-link"></i> Get Pair Code';
-            }
-        }
-    </script>
-</body>
-</html>            width: 80px;
-            height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+                    setTimeout(() => {
+                        rCode.textContent = code;
+                    }, 1500);
 
-        .spinner-ring {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border: 3px solid rgba(0, 255, 157, 0.1);
-            border-top: 3px solid var(--green);
-            border-radius: 50%;
-            animation: spinRing 1s linear infinite;
-            box-shadow: 0 0 20px rgba(0, 255, 157, 0.3);
-        }
-
-        .spinner-icon {
-            color: var(--green);
-            font-size: 28px;
-            animation: pulseIcon 1.2s ease-in-out infinite alternate;
-        }
-
-        .intro-title {
-            margin-top: 25px;
-            font-size: 24px;
-            font-weight: 800;
-            letter-spacing: 3px;
-            color: #ffffff;
-            text-shadow: 0 0 20px var(--green);
-        }
-
-        .intro-sub {
-            margin-top: 8px;
-            font-size: 12px;
-            color: var(--muted);
-            letter-spacing: 1px;
-        }
-
-        @keyframes spinRing {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        @keyframes pulseIcon {
-            0% { opacity: 0.4; transform: scale(0.9); }
-            100% { opacity: 1; transform: scale(1.1); }
-        }
-
-        /* Main Container */
-        .wrapper {
-            position: relative;
-            z-index: 10;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 0 0 50px 0;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 1s ease;
-        }
-
-        .wrapper.show {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .hero-section {
-            position: relative;
-            width: 100%;
-            max-width: 520px;
-            min-height: 380px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            padding: 25px 20px;
-            background-image: url('https://cdn.phototourl.com/free/2026-09-01-b959ea45-2b09-463d-af11-be53dde760ee.jpg');
-            background-size: cover;
-            background-position: center;
-            border-bottom: 1.5px solid var(--border);
-        }
-
-        .hero-overlay {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: linear-gradient(to bottom, rgba(3,7,5,0.75) 0%, rgba(3,7,5,0.92) 80%, #030705 100%);
-            z-index: 1;
-        }
-
-        .hero-content {
-            position: relative;
-            z-index: 2;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .status-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(0, 255, 157, 0.1);
-            border: 1px solid var(--border);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 1px;
-            color: var(--green);
-            margin-bottom: 18px;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--green);
-            border-radius: 50%;
-            box-shadow: 0 0 10px var(--green);
-            animation: pulseDot 1.5s infinite;
-        }
-
-        @keyframes pulseDot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-
-        .logo-box {
-            width: 90px;
-            height: 90px;
-            border-radius: 50%;
-            border: 2.5px solid var(--green);
-            background: #000;
-            overflow: hidden;
-            box-shadow: 0 0 30px rgba(0,255,157,0.4);
-            margin-bottom: 15px;
-            position: relative;
-        }
-
-        .logo-box img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .online-badge {
-            position: absolute;
-            bottom: 4px;
-            right: 4px;
-            width: 14px;
-            height: 14px;
-            background: var(--green);
-            border: 2px solid #030705;
-            border-radius: 50%;
-        }
-
-        .hero-content h1 {
-            margin: 0 0 10px 0;
-            font-size: 26px;
-            font-weight: 800;
-            letter-spacing: 1.5px;
-            color: #ffffff;
-            text-shadow: 0 0 15px rgba(0,255,157,0.4);
-        }
-
-        .hero-content h1 span {
-            color: var(--green);
-        }
-
-        .verified-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(0, 255, 157, 0.12);
-            border: 1px solid var(--green);
-            padding: 5px 14px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--green);
-            margin-bottom: 12px;
-        }
-
-        .hero-desc {
-            margin: 0 0 20px 0;
-            font-size: 13px;
-            color: #b5c8bf;
-            line-height: 1.4;
-            max-width: 400px;
-        }
-
-        .stats-row {
-            display: flex;
-            justify-content: center;
-            gap: 12px;
-            width: 100%;
-            flex-wrap: wrap;
-            margin-top: 5px;
-        }
-
-        .stat-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 11px;
-            color: #9cb5ab;
-            font-weight: 600;
-        }
-
-        .stat-item i {
-            color: var(--green);
-        }
-
-        .form-card-container {
-            width: 100%;
-            max-width: 520px;
-            padding: 0 16px;
-            margin-top: -15px;
-            position: relative;
-            z-index: 5;
-        }
-
-        .card-box {
-            background: var(--card);
-            border: 1.5px solid var(--border);
-            border-radius: 22px;
-            padding: 24px;
-            box-shadow: 0 25px 60px rgba(0,0,0,0.8), 0 0 30px rgba(0,255,157,0.15);
-            backdrop-filter: blur(20px);
-        }
-
-        .tab-switcher {
-            display: flex;
-            background: rgba(0,0,0,0.5);
-            border-radius: 14px;
-            padding: 4px;
-            margin-bottom: 22px;
-            border: 1px solid rgba(255,255,255,0.06);
-        }
-
-        .tab-btn {
-            flex: 1;
-            padding: 12px;
-            text-align: center;
-            background: transparent;
-            border: none;
-            color: var(--muted);
-            font-size: 13px;
-            font-weight: 700;
-            border-radius: 11px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            transition: 0.3s;
-        }
-
-        .tab-btn.active {
-            background: rgba(0, 255, 157, 0.15);
-            color: var(--green);
-            border: 1px solid var(--border);
-            box-shadow: 0 0 15px rgba(0,255,157,0.2);
-        }
-
-        .input-group {
-            margin-bottom: 18px;
-            text-align: left;
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            color: #8fa89e;
-            text-transform: uppercase;
-        }
-
-        .phone-input-box {
-            display: flex;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.6);
-            border: 1.5px solid rgba(0, 255, 157, 0.3);
-            border-radius: 14px;
-            padding: 4px 6px 4px 14px;
-            transition: 0.3s;
-        }
-
-        .phone-input-box:focus-within {
-            border-color: var(--green);
-            box-shadow: 0 0 20px rgba(0,255,157,0.25);
-        }
-
-        .phone-input-box span {
-            color: var(--green);
-            font-weight: 800;
-            font-size: 15px;
-            padding-right: 10px;
-            border-right: 1px solid rgba(255,255,255,0.15);
-        }
-
-        #phoneInput {
-            flex: 1;
-            background: transparent;
-            border: none;
-            outline: none;
-            color: #fff;
-            font-size: 16px;
-            font-weight: 700;
-            padding: 12px 10px;
-        }
-
-        #phoneInput::placeholder {
-            color: #4a6358;
-        }
-
-        #clearBtn {
-            background: rgba(255,255,255,0.06);
-            border: none;
-            color: #8fa89e;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .terms-row {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            margin-bottom: 20px;
-            text-align: left;
-            font-size: 12px;
-            color: #9cb5ab;
-            cursor: pointer;
-        }
-
-        .terms-row input[type="checkbox"] {
-            accent-color: var(--green);
-            width: 16px;
-            height: 16px;
-            margin-top: 1px;
-            cursor: pointer;
-        }
-
-        .terms-row a {
-            color: var(--green);
-            text-decoration: none;
-        }
-
-        #pairBtn {
-            width: 100%;
-            min-height: 52px;
-            background: linear-gradient(135deg, #00d985, #009e65);
-            border: 1px solid rgba(0,255,157,0.6);
-            border-radius: 14px;
-            color: #001a10;
-            font-size: 16px;
-            font-weight: 800;
-            cursor: pointer;
-            box-shadow: 0 10px 25px rgba(0,255,157,0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            transition: 0.3s;
-        }
-
-        #pairBtn:hover {
-            background: linear-gradient(135deg, #18f39c, #00b875);
-            box-shadow: 0 14px 30px rgba(0,255,157,0.45);
-            transform: translateY(-2px);
-        }
-
-        #pairBtn:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        #responseBox {
-            display: none;
-            margin-top: 18px;
-            padding: 16px;
-            background: rgba(0,255,157,0.06);
-            border: 1.5px solid var(--green);
-            border-radius: 14px;
-            text-align: left;
-        }
-
-        #rCode {
-            font-family: 'Courier New', monospace;
-            font-size: 24px;
-            font-weight: 800;
-            color: #fff;
-            letter-spacing: 2px;
-            word-break: break-all;
-            cursor: pointer;
-        }
-
-        #copyBtn {
-            background: rgba(0,255,157,0.2);
-            border: 1px solid var(--green);
-            color: var(--green);
-            padding: 5px 12px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        .info-container {
-            width: 100%;
-            max-width: 520px;
-            padding: 0 16px;
-            margin-top: 25px;
-        }
-
-        .info-card {
-            background: var(--card);
-            border: 1.5px solid var(--border);
-            border-radius: 20px;
-            padding: 22px;
-            margin-bottom: 20px;
-            backdrop-filter: blur(20px);
-        }
-
-        .section-title {
-            font-size: 13px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            color: var(--green);
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .step-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            margin-bottom: 14px;
-        }
-
-        .step-num {
-            font-family: monospace;
-            font-size: 13px;
-            font-weight: 800;
-            color: var(--green);
-            background: rgba(0,255,157,0.1);
-            padding: 3px 6px;
-            border-radius: 6px;
-            border: 1px solid rgba(0,255,157,0.3);
-        }
-
-        .step-text {
-            font-size: 12px;
-            color: #b5c8bf;
-            line-height: 1.4;
-        }
-
-        .step-text strong {
-            display: block;
-            color: #fff;
-            font-size: 13px;
-            margin-bottom: 2px;
-        }
-
-        .features-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .feature-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: rgba(0,0,0,0.4);
-            border: 1px solid rgba(255,255,255,0.05);
-            padding: 10px 14px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #d0e8df;
-        }
-
-        .feature-row i {
-            color: var(--green);
-            font-size: 16px;
-            width: 20px;
-            text-align: center;
-        }
-
-        .whatsapp-float {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 55px;
-            height: 55px;
-            background: #25d366;
-            color: #fff;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            box-shadow: 0 5px 20px rgba(37,211,102,0.5);
-            z-index: 999;
-            text-decoration: none;
-            transition: 0.3s;
-        }
-
-        .whatsapp-float:hover {
-            transform: scale(1.1);
-        }
-
-        .wa-badge {
-            position: absolute;
-            top: -2px;
-            right: -2px;
-            background: #ff3b3b;
-            color: #fff;
-            font-size: 10px;
-            font-weight: 800;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid #030705;
-        }
-    </style>
-</head>
-<body>
-
-    <canvas id="bgCanvas"></canvas>
-
-    <div id="introScreen">
-        <div class="spinner-box">
-            <div class="spinner-ring"></div>
-            <i class="fas fa-bolt spinner-icon"></i>
-        </div>
-        <div class="intro-title">SHAGGY XMD</div>
-        <div class="intro-sub">Loading Secure System...</div>
-    </div>
-
-    <div class="wrapper" id="mainWrapper">
-        
-        <div class="hero-section">
-            <div class="hero-overlay"></div>
-            <div class="hero-content">
-                <div class="status-pill">
-                    <span class="status-dot"></span> LIVE • FREE • NO ACCOUNT NEEDED
-                </div>
-
-                <div class="logo-box">
-                    <img src="https://cdn.phototourl.com/free/2026-09-01-46a05f97-db49-4c9c-99ef-bc7d9f649769.png" alt="Logo">
-                    <div class="online-badge"></div>
-                </div>
-
-                <h1>Deploy <span>SHAGGY XMD</span> WhatsApp Bot</h1>
-
-                <div class="verified-pill">
-                    <i class="fas fa-shield-check"></i> SHAGGY XMD BETA VERIFIED
-                </div>
-
-                <p class="hero-desc">
-                    Connect your WhatsApp in 30 seconds. Pair code or QR scan — 100% free with fast movie download support.
-                </p>
-
-                <div class="stats-row">
-                    <div class="stat-item"><i class="fas fa-bolt"></i> 127+ APIs</div>
-                    <div class="stat-item"><i class="fas fa-robot"></i> AI Powered</div>
-                    <div class="stat-item"><i class="fas fa-wifi"></i> Always Online</div>
-                    <div class="stat-item"><i class="fas fa-shield-alt"></i> 100% Free</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="form-card-container">
-            <div class="card-box">
-                <div class="tab-switcher">
-                    <button class="tab-btn active" onclick="switchTab('pair')">
-                        <i class="fas fa-mobile-alt"></i> Pair Code
-                    </button>
-                    <button class="tab-btn" onclick="switchTab('qr')">
-                        <i class="fas fa-qrcode"></i> QR Scan
-                    </button>
-                </div>
-
-                <div id="pairSection">
-                    <div class="input-group">
-                        <label><i class="fas fa-phone"></i> WhatsApp Number</label>
-                        <div class="phone-input-box">
-                            <span>+94</span>
-                            <input type="tel" id="phoneInput" placeholder="768069800 (no + sign)" maxlength="10" />
-                            <button id="clearBtn" onclick="clearInput()">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <label class="terms-row">
-                        <input type="checkbox" id="termsCheck" checked />
-                        <span>I understand this is for a secondary WhatsApp number only. I accept the <a href="#" onclick="alert('Terms: Free to use for bot linking.')">Terms of Service</a></span>
-                    </label>
-
-                    <button id="pairBtn" onclick="getPairCode()">
-                        <span id="loader" style="display:none; border:2px solid rgba(0,26,16,0.3); border-top:2px solid #001a10; border-radius:50%; width:20px; height:20px; animation:spin .8s linear infinite;"></span>
-                        <span id="btnText"><i class="fas fa-link"></i> Get Pair Code</span>
-                    </button>
-
-                    <div id="responseBox">
-                        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                            <div>
-                                <div style="font-size:10px; font-weight:800; color:var(--green); letter-spacing:1px; text-transform:uppercase;">Pairing Code Ready</div>
-                                <div id="rCode" onclick="copyCode()" title="Click to copy">——</div>
-                            </div>
-                            <button id="copyBtn" onclick="copyCode()"><i class="fas fa-copy"></i> Copy</button>
-                        </div>
-                        <div id="rMessage" style="font-size:11px; color:#8fa89e; margin-top:6px;">Tap code to copy instantly</div>
-                    </div>
-                </div>
-
-                <div id="qrSection" style="display:none; text-align:center; padding:10px 0;">
-                    <div style="background:rgba(0,0,0,0.4); border:1px dashed var(--green); padding:20px; border-radius:14px; margin-bottom:15px;">
-                        <i class="fas fa-qrcode" style="font-size:60px; color:var(--green); margin-bottom:10px;"></i>
-                        <div style="font-size:13px; font-weight:700; color:#fff;">QR Code Scanning</div>
-                        <div style="font-size:11px; color:var(--muted); margin-top:4px;">Coming soon / Use Pair Code for instant connection.</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="info-container">
-            <div class="info-card">
-                <div class="section-title">
-                    <i class="fas fa-terminal"></i> HOW TO CONNECT
-                </div>
-                <div class="step-item">
-                    <div class="step-num">01</div>
-                    <div class="step-text">
-                        <strong>Enter your WhatsApp number</strong>
-                        Include country code, no spaces or plus sign.
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-num">02</div>
-                    <div class="step-text">
-                        <strong>Generate and copy code</strong>
-                        Get your 8-letter unique pairing code instantly.
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-num">03</div>
-                    <div class="step-text">
-                        <strong>Open WhatsApp → Linked Devices</strong>
-                        Go to WhatsApp on your phone and tap Link a Device.
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-num">04</div>
-                    <div class="step-text">
-                        <strong>Enter the code</strong>
-                        Your bot connects instantly without any app install!
-                    </div>
-                </div>
-            </div>
-
-            <div class="info-card">
-                <div class="section-title">
-                    <i class="fas fa-star"></i> 127+ BOT FEATURES
-                </div>
-                <div class="features-list">
-                    <div class="feature-row"><i class="fas fa-film"></i> Cinesubz movie dl</div>
-                    <div class="feature-row"><i class="fas fa-video"></i> Sinhalasub movie dl</div>
-                    <div class="feature-row"><i class="fas fa-tv"></i> Anime dl</div>
-                    <div class="feature-row"><i class="fas fa-child"></i> Cartoon dl</div>
-                    <div class="feature-row"><i class="fab fa-tiktok"></i> Tiktok dl</div>
-                    <div class="feature-row"><i class="fas fa-music"></i> Song dl</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <a href="https://whatsapp.com" target="_blank" class="whatsapp-float">
-        <i class="fab fa-whatsapp"></i>
-        <span class="wa-badge">2</span>
-    </a>
-
-    <script>
-        const canvas = document.getElementById('bgCanvas');
-        const ctx = canvas.getContext('2d');
-        let width = canvas.width = window.innerWidth;
-        let height = canvas.height = window.innerHeight;
-
-        window.addEventListener('resize', () => {
-            width = canvas.width = window.innerWidth;
-            height = canvas.height = window.innerHeight;
-        });
-
-        const bubbles = [];
-        for (let i = 0; i < Math.floor(width/30); i++) {
-            bubbles.push({
-                x: Math.random() * width,
-                y: Math.random() * height,
-                radius: Math.random() * 5 + 2,
-                color: Math.random() > 0.4 ? '#00ff9d' : '#00c878',
-                vx: (Math.random() - 0.5) * 0.5,
-                vy: -Math.random() * 1 - 0.3,
-                alpha: Math.random() * 0.4 + 0.1
-            });
-        }
-
-        function animate() {
-            ctx.clearRect(0, 0, width, height);
-            bubbles.forEach(b => {
-                b.x += b.vx;
-                b.y += b.vy;
-                if (b.y < -10) { b.y = height + 10; b.x = Math.random() * width; }
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-                ctx.fillStyle = b.color;
-                ctx.globalAlpha = b.alpha;
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = b.color;
-                ctx.fill();
-                ctx.restore();
-            });
-            requestAnimationFrame(animate);
-        }
-        animate();
-
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                const intro = document.getElementById('introScreen');
-                const wrapper = document.getElementById('mainWrapper');
-                intro.style.opacity = '0';
-                setTimeout(() => {
-                    intro.style.display = 'none';
-                    wrapper.classList.add('show');
-                }, 800);
-            }, 1800);
-        });
-
-        function switchTab(tab) {
-            const btns = document.querySelectorAll('.tab-btn');
-            btns.forEach(b => b.classList.remove('active'));
-            if (tab === 'pair') {
-                btns[0].classList.add('active');
-                document.getElementById('pairSection').style.display = 'block';
-                document.getElementById('qrSection').style.display = 'none';
-            } else {
-                btns[1].classList.add('active');
-                document.getElementById('pairSection').style.display = 'none';
-                document.getElementById('qrSection').style.display = 'block';
-            }
-        }
-
-        const phoneInput = document.getElementById('phoneInput');
-        const clearBtn = document.getElementById('clearBtn');
-        const pairBtn = document.getElementById('pairBtn');
-        const loader = document.getElementById('loader');
-        const btnText = document.getElementById('btnText');
-        const responseBox = document.getElementById('responseBox');
-        const rCode = document.getElementById('rCode');
-        const termsCheck = document.getElementById('termsCheck');
-
-        phoneInput.addEventListener('input', function() {
-            this.value = this.value.replace(/\D/g, '');
-            clearBtn.style.display = this.value.length > 0 ? 'flex' : 'none';
-        });
-
-        function clearInput() {
-            phoneInput.value = '';
-            clearBtn.style.display = 'none';
-            phoneInput.focus();
-        }
-
-        function copyCode() {
-            const code = rCode.textContent.trim();
-            if (!code || code === '——') return;
-            navigator.clipboard.writeText(code).then(() => {
-                rCode.innerHTML = '<span style="color:#00ff9d;">COPIED!</span>';
-                setTimeout(() => { rCode.textContent = code; }, 1500);
-            });
-        }
-
-        async function getPairCode() {
-            const phone = phoneInput.value.trim();
-            if (!termsCheck.checked) {
-                alert('Please accept the Terms of Service checkbox first.');
-                return;
-            }
-            if (!phone || phone.length < 9) {
-                alert('Please enter a valid phone number (at least 9 digits).');
-                phoneInput.focus();
-                return;
-            }
-
-            const fullNumber = `94${phone}`;
-            pairBtn.disabled = true;
-            loader.style.display = 'block';
-            btnText.innerHTML = '<span>Requesting Code...</span>';
-            responseBox.style.display = 'block';
-            rCode.textContent = 'Generating...';
-
-            try {
-                const response = await fetch(`/code?number=${fullNumber}`, { method: 'GET' });
-                const data = await response.json();
-                if (response.ok && data.code) {
-                    rCode.textContent = data.code;
-                    copyCode();
-                } else {
-                    rCode.textContent = data.error || 'Failed to get code';
-                }
-            } catch (err) {
-                rCode.textContent = 'Connection Error!';
-            } finally {
-                pairBtn.disabled = false;
-                loader.style.display = 'none';
-                btnText.innerHTML = '<i class="fas fa-link"></i> Get Pair Code';
-            }
-        }
-    </script>
-</body>
-                                    </html>            transition: all 0.3s ease-in-out;
-            border-radius: 12px !important;
-            padding: 12px 20px;
-            width: 100%;
-            cursor: pointer;
-            font-size: 16px;
-        }
-
-        button:hover, .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
-        }
-
-        /* Inputs Styling */
-        input, select {
-            background: rgba(30, 41, 59, 0.8) !important;
-            border: 1px solid rgba(168, 85, 247, 0.4) !important;
-            color: #ffffff !important;
-            border-radius: 10px !important;
-            padding: 12px 15px;
-            width: 100%;
-            box-sizing: border-box;
-            margin-bottom: 20px;
-            font-size: 15px;
-            outline: none;
-            transition: all 0.3s;
-        }
-
-        input:focus {
-            border-color: #3b82f6 !important;
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.4) !important;
-        }
-
-        /* Code Display Box */
-        #code, .pair-code, #result {
-            background: rgba(2, 6, 23, 0.9);
-            border: 1px dashed #a855f7;
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 22px;
-            font-weight: bold;
-            letter-spacing: 2px;
-            color: #38bdf8;
-            margin-top: 15px;
-            word-break: break-all;
-        }
-
-        /* Snowfall Animation Container */
-        .snowflakes {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        .snowflake {
-            color: #ffffff;
-            font-size: 1em;
-            font-family: Arial, sans-serif;
-            text-shadow: 0 0 5px #a855f7, 0 0 10px #3b82f6;
-            position: fixed;
-            top: -10px;
-            animation: fall linear infinite;
-        }
-
-        @keyframes fall {
-            0% {
-                transform: translateY(-10vh) translateX(0);
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(105vh) translateX(20px);
-                opacity: 0.3;
-            }
-        }
-
-        @keyframes fadeInOut {
-            0% { opacity: 0; transform: translateY(-20px); }
-            15% { opacity: 1; transform: translateY(0); }
-            85% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-20px); }
-        }
-    </style>
-</head>
-<body>
-
-    <!-- Snowfall HTML Layer -->
-    <div class="snowflakes" aria-hidden="true">
-        <div class="snowflake">❅</div>
-        <div class="snowflake">❆</div>
-        <div class="snowflake">❄</div>
-        <div class="snowflake">❅</div>
-        <div class="snowflake">❆</div>
-        <div class="snowflake">❄</div>
-        <div class="snowflake">❅</div>
-        <div class="snowflake">❆</div>
-        <div class="snowflake">❄</div>
-    </div>
-
-    <!-- Main Container Card -->
-    <div class="card">
-        <h2>⚡ SHAGGY XMD ⚡</h2>
-        <p>Enter your WhatsApp number with country code to generate your Anime Pair Code.</p>
-        
-        <div class="input-group">
-            <input type="text" id="phone" placeholder="e.g. 94768069800" autocomplete="off">
-        </div>
-        
-        <button id="submit">Generate Pair Code</button>
-        
-        <div id="result" style="display: none;"></div>
-    </div>
-
-    <!-- Snowfall & Auto-Copy Script -->
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            // 1. Snowfall Effect Generator
-            const sfContainer = document.querySelector('.snowflakes');
-            const flakeChars = ['❅', '❆', '❄', '✨'];
-            
-            for (let i = 0; i < 35; i++) {
-                const span = document.createElement('div');
-                span.className = 'snowflake';
-                span.innerHTML = flakeChars[Math.floor(Math.random() * flakeChars.length)];
-                span.style.left = Math.random() * 100 + 'vw';
-                span.style.animationDuration = (Math.random() * 3 + 2) + 's';
-                span.style.animationDelay = Math.random() * 5 + 's';
-                span.style.fontSize = (Math.random() * 10 + 10) + 'px';
-                sfContainer.appendChild(span);
-            }
-
-            // 2. Auto-Copy Pair Code when generated (Without touching core logic)
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    if (mutation.addedNodes.length) {
-                        const codeDisplay = document.querySelector('#code, .pair-code, #result');
-                        if (codeDisplay && codeDisplay.innerText && codeDisplay.innerText.length >= 4 && !codeDisplay.dataset.copied) {
-                            const codeText = codeDisplay.innerText.trim();
-                            navigator.clipboard.writeText(codeText).then(() => {
-                                codeDisplay.dataset.copied = "true";
-                                
-                                const notice = document.createElement('div');
-                                notice.innerText = "📋 Pair Code Copied Automatically! ✨";
-                                notice.style.cssText = "position:fixed; top:20px; right:20px; background:linear-gradient(135deg, #a855f7, #3b82f6); color:#fff; padding:12px 20px; border-radius:10px; z-index:10000; box-shadow:0 4px 15px rgba(168,85,247,0.5); font-weight:bold; font-size:14px; animation: fadeInOut 2.5s forwards;";
-                                document.body.appendChild(notice);
-                                setTimeout(() => notice.remove(), 2500);
-                            }).catch(err => console.log('Auto-copy failed', err));
-                        }
-                    }
                 });
-            });
 
-            observer.observe(document.body, { childList: true, subtree: true });
-        });
+        }
+
+
+        /* =========================
+           GET PAIR CODE
+           ORIGINAL ENDPOINT PRESERVED
+        ========================== */
+
+        async function getPairCode() {
+
+            const phone =
+                phoneInput.value.trim();
+
+            if (!termsCheck.checked) {
+
+                alert(
+                    'Please accept the Terms of Service checkbox first.'
+                );
+
+                return;
+            }
+
+            if (!phone || phone.length < 9) {
+
+                alert(
+                    'Please enter a valid phone number (at least 9 digits).'
+                );
+
+                phoneInput.focus();
+
+                return;
+            }
+
+            const fullNumber =
+                `94${phone}`;
+
+            pairBtn.disabled = true;
+
+            loader.style.display = 'block';
+
+            btnText.innerHTML =
+                '<span>Requesting Code...</span>';
+
+            responseBox.style.display =
+                'block';
+
+            rCode.textContent =
+                'Generating...';
+
+            try {
+
+                const response =
+                    await fetch(
+                        `/code?number=${fullNumber}`,
+                        {
+                            method: 'GET'
+                        }
+                    );
+
+                const data =
+                    await response.json();
+
+                if (
+                    response.ok &&
+                    data.code
+                ) {
+
+                    rCode.textContent =
+                        data.code;
+
+                    copyCode();
+
+                    startSakuraShower();
+
+                } else {
+
+                    rCode.textContent =
+                        data.error ||
+                        'Failed to get code';
+
+                }
+
+            } catch (err) {
+
+                rCode.textContent =
+                    'Connection Error!';
+
+            } finally {
+
+                pairBtn.disabled = false;
+
+                loader.style.display =
+                    'none';
+
+                btnText.innerHTML =
+                    '<i class="fas fa-link"></i> Get Pair Code';
+
+            }
+
+        }
+
     </script>
+
 </body>
-</html>
+    </html>
