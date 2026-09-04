@@ -1971,6 +1971,92 @@ case 'xvideos': {
     }
 }
 break;
+                   case 'news':
+    case 'siyatha': {
+        try {
+            const apiUrl = 'https://api-siteh-22e22e4cb068.herokuapp.com/news/siyatha?api_key=lakiya_2f3b6c382d1236ad7a08d56331fb679935d51dfc846df2c254093fd1fff9494e';
+            const response = await axios.get(apiUrl);
+            const resData = response.data;
+
+            if (resData.status && resData.result) {
+                let newsItem = resData.result;
+                let caption = `📰 *${newsItem.title}*\n\n` +
+                              `📅 *Date:* ${newsItem.date}\n\n` +
+                              `${newsItem.desc}\n\n` +
+                              `🔗 *Link:* ${newsItem.link}`;
+
+                await sock.sendMessage(from, { 
+                    image: { url: newsItem.image }, 
+                    caption: caption 
+                }, { quoted: mek });
+            } else {
+                await sock.sendMessage(from, { text: '❌ පුවත් ලබාගැනීමේදී දෝෂයක් ඇති විය.' }, { quoted: mek });
+            }
+        } catch (e) {
+            console.error(e);
+            await sock.sendMessage(from, { text: '❌ දෝෂයක් සිදු විය: ' + e.message }, { quoted: mek });
+        }
+        break;
+    }
+
+    case 'fitgirl':
+    case 'fg': {
+        try {
+            if (!q) return await sock.sendMessage(from, { text: '❌ කරුණාකර සෙවිය යුතු ක්‍රීඩාවේ නමක් සඳහන් කරන්න!\nඋදා: `.fitgirl far cry`' }, { quoted: mek });
+
+            const searchUrl = `https://api-siteh-22e22e4cb068.herokuapp.com/fitgirl/search?game=${encodeURIComponent(q)}`;
+            const response = await axios.get(searchUrl);
+            const resData = response.data;
+
+            if (resData.status && resData.results && resData.results.length > 0) {
+                let txt = "🎮 *FitGirl Repacks Search Results* 🎮\n\n";
+                resData.results.forEach((game, index) => {
+                    txt += "*" + (index + 1) + ".* " + game.title + "\n🔗 " + game.link + "\n\n";
+                });
+                txt += "*සම්පූර්ණ විස්තර බැලීමට .fginfo [game name] භාවිතා කරන්න.*";
+                
+                await sock.sendMessage(from, { text: txt }, { quoted: mek });
+            }
+        } catch (e) {
+            console.error(e);
+            await sock.sendMessage(from, { text: '❌ දෝෂයක් සිදු විය: ' + e.message }, { quoted: mek });
+        }
+        break;
+    }
+
+    case 'fginfo':
+    case 'fitgirlinfo': {
+        try {
+            if (!q) return await sock.sendMessage(from, { text: '❌ කරුණාකර game එකේ නම නිවැරදිව ලබා දෙන්න!\nඋදා: `.fginfo far cry 5`' }, { quoted: mek });
+
+            const infoUrl = `https://api-siteh-22e22e4cb068.herokuapp.com/fitgirl/complete?game=${encodeURIComponent(q)}`;
+            const response = await axios.get(infoUrl);
+            const resData = response.data;
+
+            if (resData.status && resData.data && resData.data.game) {
+                let g = resData.data.game;
+                let caption = `🎮 *${g.title}*\n\n` +
+                              `📌 *Version:* ${g.version}\n` +
+                              `🏢 *Companies:* ${g.companies}\n` +
+                              `🌐 *Languages:* ${g.languages}\n` +
+                              `📦 *Original Size:* ${g.original_size}\n` +
+                              `💾 *Repack Size:* ${g.repack_size}\n` +
+                              `🏷️ *Categories:* ${g.categories.join(', ')}\n` +
+                              `📅 *Published:* ${g.published_date}`;
+
+                await sock.sendMessage(from, { 
+                    image: { url: g.poster }, 
+                    caption: caption 
+                }, { quoted: mek });
+            } else {
+                await sock.sendMessage(from, { text: '❌ අදාළ ක්‍රීඩාවේ තොරතුරු ලබා ගැනීමට නොහැකි විය.' }, { quoted: mek });
+            }
+        } catch (e) {
+            console.error(e);
+            await sock.sendMessage(from, { text: '❌ දෝෂයක් සිදු විය: ' + e.message }, { quoted: mek });
+        }
+        break;
+    } 
 // ==========================================
 // SYSTEM CONFIGURATION & MONGODB SETTING COMMAND (.set)
 // ==========================================
