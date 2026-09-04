@@ -2009,15 +2009,13 @@ break;
             const resData = response.data;
 
             if (resData.status && resData.results && resData.results.length > 0) {
-                let txt = `🎮 *FitGirl Repacks Search Results* 🎮\n\n`;
+                let txt = "🎮 *FitGirl Repacks Search Results* 🎮\n\n";
                 resData.results.forEach((game, index) => {
-                    txt += `*${index + 1}.* ${game.title}\n🔗 ${game.link}\n\n`;
+                    txt += "*" + (index + 1) + ".* " + game.title + "\n🔗 " + game.link + "\n\n";
                 });
-                txt += `*සම්පූර්ණ විස්තර බැලීමට `.fginfo [game name]` භාවිතා කරන්න.*`;
+                txt += "*සම්පූර්ණ විස්තර බැලීමට .fginfo [game name] භාවිතා කරන්න.*";
                 
                 await sock.sendMessage(from, { text: txt }, { quoted: mek });
-            } else {
-                await sock.sendMessage(from, { text: '❌ අදාළ ක්‍රීඩාව හමුවී නැත.' }, { quoted: mek });
             }
         } catch (e) {
             console.error(e);
