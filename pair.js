@@ -1567,15 +1567,16 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 
                         fs.writeFileSync(filePath, Buffer.from(response.data));
 
-                        await socket.sendMessage(sender, {
+                      await socket.sendMessage(sender, {
                             document: { url: filePath },
                             mimetype: 'video/mp4',
                             fileName: fileName,
                             caption: `╔═════════════════════╗
-║   🎬 *CODE X MOVIE BOT* ╚═════════════════════╝
+║   🎬 *CODE X MOVIE BOT* 
+╚═════════════════════╝
 📌 *Title:* ${movie.title}
 🎞️ *Quality:* ${selQ.quality}
-📦 *File Size:* `${selQ.size || 'N/A'}
+📦 *File Size:* ${selQ.size || 'N/A'}
 ⭐ *Developer:* Code X Game Developer`
                         }, { quoted: qm });
 
