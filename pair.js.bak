@@ -251,14 +251,21 @@ async function setupCommandHandlers(socket, number) {
         const videoId = data.videoId;
         const desc = ` *ᴛɪᴛʟᴇ* : _${data.title || 'N/A'}_     
 
-* ⏱️ 𝗗ᴜʀᴀᴛɪᴏɴ* ➟ _${data.timestamp || 'N/A'}_
-* 👀 𝗩ɪᴇᴡꜱ* ➟ _${data.views?.toLocaleString() || 'N/A'}_
-* 📅 𝗣ᴜʙʟɪꜱʜᴇᴅ* ➟ _${data.ago || 'N/A'}_
-* 🎤 𝗖ʜᴀɴɴᴇʟ* ➟ _${data.author?.name || 'N/A'}_
-*🔢 𝗥ᴇᴘʟʏ ᴡɪᴛʜ ᴀ 𝗡ᴜᴍʙᴇʀ 👇*
+╭━━━〔 🎬 𝗩𝗜𝗗𝗘𝗢 𝗜𝗡𝗙𝗢 〕━━━╮
 
-*01 ᴅᴏᴡɴʟᴏᴀᴅ ᴀᴜᴅɪᴏ 🌐*
-*02 ᴅᴏᴡɴʟᴏᴀᴅ ᴅᴏᴄᴜᴍᴇɴᴛ 🌐*
+⏱️ *𝗗ᴜʀᴀᴛɪᴏɴ* ➜ *${data.timestamp || 'N/A'}*
+👀 *𝗩ɪᴇᴡꜱ* ➜ *${data.views?.toLocaleString() || 'N/A'}*
+📅 *𝗣ᴜʙʟɪꜱʜᴇᴅ* ➜ *${data.ago || 'N/A'}*
+🎤 *𝗖ʜᴀɴɴᴇʟ* ➜ *${data.author?.name || 'N/A'}*
+
+╰━━━━━━━━━━━━━━━━━━━━╯
+
+🔢 *𝗥ᴇᴘʟʏ ᴡɪᴛʜ ᴀ 𝗡ᴜᴍʙᴇʀ 👇*
+
+*01* ➜ 🎵 *𝗗ᴏᴡɴʟᴏᴀᴅ 𝗔ᴜᴅɪᴏ* 🌐
+*02* ➜ 📄 *𝗗ᴏᴡɴʟᴏᴀᴅ 𝗗ᴏᴄᴜᴍᴇɴᴛ* 🌐
+
+*⚡ Powered by 𝗟𝗬𝗡𝗞𝗢*
 `;
 
         const sentMsg = await socket.sendMessage(sender, {
@@ -362,20 +369,29 @@ Failed to fetch TikTok video! Please try again later.`
 
         const captionMessage = `☘️ *TIKTOK DOWNLOADER*
 
-📝 Title: ${tiktokData.title || 'TikTok Video'}
-👤 Author: ${tiktokData.author?.nickname || 'Unknown'}
-❤️ Likes: ${tiktokData.digg_count?.toLocaleString() || 'N/A'}
-👀 Views: ${tiktokData.play_count?.toLocaleString() || 'N/A'}
-💬 Comments: ${tiktokData.comment_count?.toLocaleString() || 'N/A'}
-⏱️ Duration: ${tiktokData.duration || 'N/A'} seconds
+╭━━━〔 🎵 𝗧𝗜𝗞𝗧𝗢𝗞 𝗜𝗡𝗙𝗢 〕━━━╮
 
-⬇️ DOWNLOAD OPTIONS
+📝 *𝗧ɪᴛʟᴇ* ➜ *${tiktokData.title || 'TikTok Video'}*
+👤 *𝗔ᴜᴛʜᴏʀ* ➜ *${tiktokData.author?.nickname || 'Unknown'}*
+❤️ *𝗟ɪᴋᴇꜱ* ➜ *${tiktokData.digg_count?.toLocaleString() || 'N/A'}*
+👀 *𝗩ɪᴇᴡꜱ* ➜ *${tiktokData.play_count?.toLocaleString() || 'N/A'}*
+💬 *𝗖ᴏᴍᴍᴇɴᴛꜱ* ➜ *${tiktokData.comment_count?.toLocaleString() || 'N/A'}*
+⏱️ *𝗗ᴜʀᴀᴛɪᴏɴ* ➜ *${tiktokData.duration || 'N/A'} seconds*
 
-🔢 Reply with a number:
+╰━━━━━━━━━━━━━━━━━━━━╯
 
-*1 ║❯❯ No Watermark*
-*2 ║❯❯ With Watermark*
-*3 ║❯❯ Audio Only*`;
+╭━━━〔 ⬇️ 𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗 〕━━━╮
+
+🔢 *𝗥ᴇᴘʟʏ ᴡɪᴛʜ ᴀ 𝗡ᴜᴍʙᴇʀ 👇*
+
+*01* ║ ❯❯ 🎬 *𝗡ᴏ 𝗪ᴀᴛᴇʀᴍᴀʀᴋ*
+*02* ║ ❯❯ 💧 *𝗪ɪᴛʜ 𝗪ᴀᴛᴇʀᴍᴀʀᴋ*
+*03* ║ ❯❯ 🎵 *𝗔ᴜᴅɪᴏ 𝗢ɴʟʏ*
+
+╰━━━━━━━━━━━━━━━━━━━━╯
+
+*⚡ Powered by 𝗟𝗬𝗡𝗞𝗢*
+
 
         const sentMessage = await socket.sendMessage(sender, {
             image: { url: tiktokData.cover || config.SITHIJA_IMAGE_PATH },
@@ -510,15 +526,24 @@ case 'cinesubz':
 
         const cinezubResults = searchData.results.slice(0, 25);
         let listText = `☘️ *𝗧𝗩-𝗦𝗘𝗥𝗜𝗘𝗦 : _𝗦𝗘𝗔𝗥𝗖𝗛 𝗥𝗘𝗦𝗨𝗟𝗧𝗦_* 🔍
-╭──────●➤
-🔎 *𝗤𝘂𝗲𝗿𝘆 ➟* _${cinezubQuerytv}_
-📊 *Status ➟* _Results Found_
-╰──────────●➤
-╭──────●➤
-*🔢 ʀᴇᴘʟʏ ʙᴇʟᴏᴡ ɴᴜᴍʙᴇʀ*
-╰──────────●➤
-💡 *𝗥ᴇᴘʟʏ ᴡɪᴛʜ ᴀ 𝗡ᴜᴍʙᴇʀ 𝘁ᴏ 𝗦ᴇʟᴇᴄ𝘛*
-*╭──────●➤*\n\n`;
+╭━━━〔 🔎 𝗦𝗘𝗔𝗥𝗖 𝗥𝗘𝗦𝗨𝗟𝗧𝗦 〕━━━╮
+
+🔎 *𝗤ᴜᴇʀʏ* ➜ *${cinezubQuerytv}*
+📊 *𝗦ᴛᴀᴛᴜꜱ* ➜ *Results Found* 🎯
+
+╰━━━━━━━━━━━━━━━━━━━━╯
+
+╭━━━〔 🔢 𝗦𝗘𝗟𝗘𝗖𝗧 〕━━━╮
+
+📌 *𝗥ᴇᴘʟʏ ᴡɪᴛʜ ᴀ 𝗡ᴜᴍʙᴇʀ ᴛᴏ 𝗦ᴇʟᴇᴄᴛ 👇*
+
+╰━━━━━━━━━━━━━━━━━━━━╯
+
+*01* ║ ❯❯ 🎬 *𝗦ᴇʟᴇᴄᴛ 𝗩ɪᴅᴇᴏ*
+*02* ║ ❯❯ 🎥 *𝗦ᴇʟᴇᴄᴛ 𝗥ᴇꜱᴜʟᴛ*
+*03* ║ ❯❯ 📺 *𝗦ᴇʟᴇᴄᴛ 𝗠ᴏᴠɪᴇ*
+
+*⚡ Powered by 𝗟𝗬𝗡𝗞𝗢*
 
         cinezubResults.forEach((item, index) => {
             const type = item.link.includes('/tvshows/') ? '📺 TV Series' : '🎬 Movie';
@@ -1460,28 +1485,34 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 
         // Main Menu (Number reply removed)
         const mainMenuMsg = `*🌟 𝙃𝙚𝙮 ❟ ${pushName} ✨𝙃𝙤𝙬 𝙖𝙧𝙚 𝙮𝙤𝙪.*      
-*╭─「 ᴄᴏᴍᴍᴀɴᴅꜱ ᴘᴀɴᴇʟ」*
-*┃ \`🐸 ${greetings}\`*
-*┃ \`🧩 𝚃𝚒𝚖𝚎\` : ${formattedTime}*
-*┃ \`🦊 𝙳𝚊𝚝𝚎\` : ${formattedDate}*
-*┃ \`🤡 𝙱𝚘𝚝 𝙽𝚊𝚖𝚎:\` ɢʜᴏsᴛ*
-*┃ \`🐞 𝙿𝚕𝚊𝚝𝚏𝚘𝚛𝚖:\` Linux*
-*╰────────●●►*    
-*╭─「 ᴄᴏᴍᴍᴀɴᴅꜱ ᴘᴀɴᴇʟ」*
-│ 🎡 .cinesubz
-│ 🎡 .ping
-│ 🎡 .song
-│ 🎡 .tiktok
-│ 🎡 .menu
-│ 🎡 .alive
-│ 🎡 .sinhalasub
-│ 🎡 .ig
-│ 🎡 .schedule
-│ 🎡 .ai
-│ 🎡 .set
-│ 🎡 .rexporn
-│ 🎡 .animeclub
-*╰────────●●►*   
+╭━━━〔 🤖 𝗦𝗛𝗔𝗚𝗚𝗬-𝗫𝗠𝗗 〕━━━╮
+┃ 🐸 *${greetings}*
+┃ 🕐 *𝗧ɪᴍᴇ* ➜ *${formattedTime}*
+┃ 📅 *𝗗ᴀᴛᴇ* ➜ *${formattedDate}*
+┃ 🤖 *𝗕ᴏᴛ* ➜ *SHAGGY-XMD*
+┃ 💻 *𝗣ʟᴀᴛғᴏʀᴍ* ➜ *Linux*
+╰━━━━━━━━━━━━━━━━━━━━╯
+
+╭━━━〔 📜 𝗖𝗢𝗠𝗠𝗔𝗡𝗗𝗦 〕━━━╮
+┃
+┃ 🎬 *.cinesubz*
+┃ 🎵 *.song*
+┃ 🎵 *.tiktok*
+┃ 📜 *.menu*
+┃ ⚡ *.alive*
+┃ 🇱🇰 *.sinhalasub*
+┃ 📸 *.ig*
+┃ 📅 *.schedule*
+┃ 🤖 *.ai*
+┃ ⚙️ *.set*
+┃ 🐭 *.cartoon*
+┃ ⛩️ *.anime*
+┃
+╰━━━━━━━━━━━━━━━━━━━━╯
+
+*⚡ Powered by 𝗟𝗬𝗡𝗞𝗢*
+*🔥 𝗦𝗛𝗔𝗚𝗚𝗬-𝗫𝗠𝗗 𝗪𝗛𝗔𝗧𝗦𝗔𝗣𝗣 𝗕𝗢𝗧*
+
 > ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 
         await socket.sendMessage(sender, {
@@ -1511,11 +1542,27 @@ case 'remind': {
 
     if (parts.length < 3) {
         let helpText = `🎀 *𝗦𝗖𝗛𝗘𝗗𝗨𝗟𝗘𝗥  𝗠𝗔𝗡𝗔𝗚𝗘𝗥*\n\n` +
-            `📝 *𝖴𝗌𝖺𝗀𝖾 :* \`.schedule NUMBER | MESSAGE | TIME\`\n` +
-            `✨ *𝖤𝗑𝖺𝗆𝗉𝗅𝖾 :* \`.schedule 94768069800 | Hello Bro | 30s\`\n` +
-            `🫧 *𝖦𝗋𝗈𝗎𝗉 𝖤𝗑 :* \`.schedule 1203630...g.us | Meeting start! | 5m\`\n\n` +
-            `🐞 *Time Units :* \`s\` (seconds), \`m\` (minutes), \`h\` (hours)\n` +
-            `⚠️ *Note :* Use \`|\` (pipe) to separate parts.`;
+           ╭━━━〔 ⏰ 𝗦𝗖𝗛𝗘𝗗𝗨𝗟𝗘 𝗚𝗨𝗜𝗗𝗘 〕━━━╮
+
+📝 *𝗨𝘀𝗮𝗴𝗲*
+`.schedule NUMBER | MESSAGE | TIME`
+
+✨ *𝗘𝘅𝗮𝗺𝗽𝗹𝗲*
+`.schedule 94768069800 | Hello Bro | 30s`
+
+👥 *𝗚𝗿𝗼𝘂𝗽 𝗘𝘅𝗮𝗺𝗽𝗹𝗲*
+`.schedule 1203630...g.us | Meeting start! | 5m`
+
+╭━━━〔 ⏱️ 𝗧𝗜𝗠𝗘 𝗨𝗡𝗜𝗧𝗦 〕━━━╮
+┃ `s` ➜ Seconds
+┃ `m` ➜ Minutes
+┃ `h` ➜ Hours
+╰━━━━━━━━━━━━━━━━━━━━╯
+
+⚠️ *𝗡𝗼𝘁𝗲*
+Use `|` *(pipe)* to separate each part.
+
+*⚡ Powered by 𝗦𝗛𝗔𝗚𝗚𝗬-𝗫𝗠𝗗*
 
         return await socket.sendMessage(sender, {
             image: { url: config.BOT_IMAGE || config.ERROR },
@@ -1752,167 +1799,7 @@ case 'bots': {
     }
 }
 break;
-                
-              case 'movie': {
-    if (!args.length) {
-        await socket.sendMessage(sender, { text: '❌ *Usage:* .movie <movie name> (Ex: .movie avatar)' }, { quoted: msg });
-        break;
-    }
-    const query = args.join(' ');
-    await socket.sendMessage(sender, { text: `🎬 *Searching for "${query}"... Please wait!*` }, { quoted: msg });
-
-    try {
-        const searchUrl = `${config.API_MAIN_URL}/api/dubzone/search?q=${encodeURIComponent(query)}&api_key=${config.API_KEY}`;
-        let search = await axios.get(searchUrl).catch(() => null);
-
-        let searchResults = search?.data?.results || search?.data?.data || search?.data;
-
-        // සමහර නමකට ඩිරෙක්ට් නැත්නම් කුඩා කොටසක් හෝ ෆිල්ටර් කර සර්ච් කිරීමේ ආරක්ෂිත ක්‍රමයක්
-        if (!searchResults || (Array.isArray(searchResults) && searchResults.length === 0)) {
-            const altSearchUrl = `${config.API_MAIN_URL}/api/dubzone/search?q=${encodeURIComponent(query.split(' ')[0])}&api_key=${config.API_KEY}`;
-            const altSearch = await axios.get(altSearchUrl).catch(() => null);
-            searchResults = altSearch?.data?.results || altSearch?.data?.data || altSearch?.data;
-        }
-
-        if (!searchResults || (Array.isArray(searchResults) && searchResults.length === 0)) {
-            await socket.sendMessage(sender, { text: `❌ *"${query}"* සඳහා කිසිදු සිනමාපටයක් හමු නොවීය. කරුණාකර වෙනත් නමකින් උත්සාහ කරන්න.` }, { quoted: msg });
-            break;
-        }
-
-        const results = searchResults.slice(0, 10);
-        let list = `🎬 *CODE X - MOVIE SEARCH RESULTS*\n\n`;
-        results.forEach((r, i) => {
-            list += `*${i + 1}.* ${r.title || r.name}\n`;
-        });
-        list += `\n*Reply with the movie number:*`;
-
-        const searchMsg = await socket.sendMessage(sender, {
-            image: { url: config.BOT_IMAGE },
-            caption: list
-        }, { quoted: msg });
-
-        const movieHandler = async ({ messages }) => {
-            const m = messages[0];
-            if (!m?.message?.extendedTextMessage) return;
-            if (m.message.extendedTextMessage.contextInfo.stanzaId !== searchMsg.key.id) return;
-            if (m.key.remoteJid !== sender) return;
-
-            const num = parseInt(m.message.extendedTextMessage.text) - 1;
-            if (isNaN(num) || num < 0 || num >= results.length) return;
-
-            socket.ev.off('messages.upsert', movieHandler);
-            const selected = results[num];
-            await socket.sendMessage(sender, { text: '⏳ *Fetching movie details & qualities...*' }, { quoted: m });
-
-            try {
-                const targetLink = selected.link || selected.url;
-                const targetSlug = selected.slug;
-
-                const info = await axios.get(`${config.API_MAIN_URL}/api/dubzone/movie?url=${encodeURIComponent(targetLink)}&slug=${targetSlug}&api_key=${config.API_KEY}`);
-                const dl = await axios.get(`${config.API_MAIN_URL}/api/dubzone/downloads?slug=${targetSlug}&api_key=${config.API_KEY}`);
-
-                const movie = info.data.data || info.data;
-                const quals = dl.data.downloads || dl.data;
-
-                if (!quals || quals.length === 0) {
-                    await socket.sendMessage(sender, { text: '❌ මෙම මූවී එක සඳහා ඩවුන්ලෝඩ් ලින්ක් කිසිවක් හමු නොවීය!' }, { quoted: m });
-                    return;
-                }
-
-                let detail = `🎥 *${movie.title}*\n\n`;
-                detail += `⭐ *IMDB:* ${movie.imdb?.rating || 'N/A'}\n`;
-                detail += `📖 *Story:* ${movie.description ? movie.description.substring(0, 150) + '...' : 'N/A'}\n\n`;
-                detail += `📥 *SELECT QUALITY (480p / 720p / 1080p):*\n\n`;
-                
-                quals.forEach((q, i) => {
-                    detail += `*${i + 1}.* Quality: *${q.quality}* | Size: *${q.size || 'Unknown'}*\n`;
-                });
-                
-                detail += `\n*Reply with your quality number:*`;
-
-                const detailMsg = await socket.sendMessage(sender, {
-                    image: { url: movie.thumbnail || movie.image || config.BOT_IMAGE },
-                    caption: detail
-                }, { quoted: m });
-
-                const qualityHandler = async ({ messages }) => {
-                    const qm = messages[0];
-                    if (!qm?.message?.extendedTextMessage) return;
-                    if (qm.message.extendedTextMessage.contextInfo.stanzaId !== detailMsg.key.id) return;
-                    if (qm.key.remoteJid !== sender) return;
-
-                    const qNum = parseInt(qm.message.extendedTextMessage.text) - 1;
-                    if (isNaN(qNum) || qNum < 0 || qNum >= quals.length) return;
-
-                    socket.ev.off('messages.upsert', qualityHandler);
-                    const selQ = quals[qNum];
-
-                    let directUrl = selQ.direct_link || selQ.url || (selQ.links && selQ.links[0] ? selQ.links[0].url : null);
-
-                    if (!directUrl) {
-                        await socket.sendMessage(sender, { text: '❌ අදාළ කොලිටිය සඳහා direct download link එක ලබා ගැනීමට නොහැකි විය!' }, { quoted: qm });
-                        return;
-                    }
-
-                    await socket.sendMessage(sender, { 
-                        text: `📥 *Downloading Started!*\n\n🎬 *Title:* ${movie.title}\n⚙️ *Quality:* ${selQ.quality}\n📦 *Size:* ${selQ.size || 'N/A'}\n\n_Please wait, downloading and sending as Document MP4..._` 
-                    }, { quoted: qm });
-
-                    try {
-                        const cleanTitle = movie.title.replace(/[/\\?%*:|"<>]/g, '');
-                        const fileName = `${cleanTitle} [${selQ.quality}] - CODE X.mp4`;
-                        const filePath = path.join(__dirname, fileName);
-
-                        const response = await axios({
-                            method: 'GET',
-                            url: directUrl,
-                            responseType: 'arraybuffer',
-                            headers: {
-                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-                            },
-                            maxContentLength: Infinity,
-                            maxBodyLength: Infinity
-                        });
-
-                        fs.writeFileSync(filePath, Buffer.from(response.data));
-
-                      await socket.sendMessage(sender, {
-                            document: { url: filePath },
-                            mimetype: 'video/mp4',
-                            fileName: fileName,
-                            caption: `╔═════════════════════╗
-║   🎬 *CODE X MOVIE BOT* 
-╚═════════════════════╝
-📌 *Title:* ${movie.title}
-🎞️ *Quality:* ${selQ.quality}
-📦 *File Size:* ${selQ.size || 'N/A'}
-⭐ *Developer:* Code X Game Developer`
-                        }, { quoted: qm });
-
-                        if (fs.existsSync(filePath)) {
-                            fs.unlinkSync(filePath);
-                        }
-
-                    } catch (dlErr) {
-                        console.log(dlErr);
-                        await socket.sendMessage(sender, { text: '❌ වීඩියෝව ඩවුන්ලෝඩ් කිරීමේදී දෝෂයක් ඇති විය.' }, { quoted: qm });
-                    }
-                };
-                socket.ev.on('messages.upsert', qualityHandler);
-
-            } catch(e) {
-                console.log(e);
-                await socket.sendMessage(sender, { text: '❌ මූවී විස්තර ලබා ගැනීමේදී දෝෂයක් ඇති විය.' }, { quoted: m });
-            }
-        };
-        socket.ev.on('messages.upsert', movieHandler);
-
-    } catch (err) {
-        console.log(err);
-        await socket.sendMessage(sender, { text: '❌ API Error: ' + (err.message || 'Unknown error') }, { quoted: msg });
-    }
-    break;
-}  
+      
 // ==========================================
 // SYSTEM CONFIGURATION & MONGODB SETTING COMMAND (.set)
 // ==========================================
@@ -1926,18 +1813,31 @@ case 'setting': {
 
     if (!args.length) {
         let helpText = `🎀 *𝗦𝗬𝗦𝗧𝗘𝗠  𝗖𝗢𝗡𝗙𝗜𝗚𝗨𝗥𝗔𝗧𝗜𝗢𝗡  𝗣𝗔𝗡𝗘𝗟*\n\n` +
-            `📝 *𝖴𝗌𝖺𝗀𝖾 :* \`.set KEY:VALUE\`\n` +
-            `✨ *𝖤𝗑𝖺𝗆𝗉𝗅𝖾 :* \`.set ALWAYS_ONLINE:true\`\n` +
-            `🫧 *𝖬𝗎𝗅𝗍𝗂 :* \`.set ALWAYS_ONLINE:true,AUTO_RECORDING:true\`\n\n` +
-            `🐞 *𝖠𝗏𝖺𝗂𝗅𝖺𝖻𝗅ե  𝖲𝗒𝗌𝗍𝖾𝗆  𝖪𝖾𝗒𝗌 :*\n` +
-            `🐞 \`ALWAYS_ONLINE\` (true/false)\n` +
-            `🐞 \`ALWAYS_MSG_SEEN\` (true/false)\n` +
-            `🐞 \`AUTO_RECORDING\` (true/false)\n` +
-            `🐞 \`AUTO_TYPING\` (true/false)\n` +
-            `🐞 \`STATUS_VIEW\` (true/false)\n` +
-            `🐞 \`AUTO_LIKE\` (true/false)\n` +
-            `🐞 \`PREFIX\`\n` +
-            `🐞 \`MODE\` (public/private)\n`;
+     ╭━━━〔 ⚙️ 𝗦𝗛𝗔𝗚𝗚𝗬-𝗫𝗠𝗗 𝗦𝗘𝗧𝗧𝗜𝗡𝗚𝗦 〕━━━╮
+
+📝 *𝗨𝘀𝗮𝗴𝗲*
+`.set KEY:VALUE`
+
+✨ *𝗘𝘅𝗮𝗺𝗽𝗹𝗲*
+`.set ALWAYS_ONLINE:true`
+
+🫧 *𝗠𝘂𝗹𝘁𝗶 𝗦𝗲𝘁𝘁𝗶𝗻𝗴𝘀*
+`.set ALWAYS_ONLINE:true,AUTO_RECORDING:true`
+
+╭━━━〔 🔑 𝗦𝗬𝗦𝗧𝗘𝗠 𝗞𝗘𝗬𝗦 〕━━━╮
+┃ 🟢 `ALWAYS_ONLINE` ➜ true/false
+┃ 👁️ `ALWAYS_MSG_SEEN` ➜ true/false
+┃ 🎙️ `AUTO_RECORDING` ➜ true/false
+┃ ⌨️ `AUTO_TYPING` ➜ true/false
+┃ 👀 `STATUS_VIEW` ➜ true/false
+┃ ❤️ `AUTO_LIKE` ➜ true/false
+┃ 🔣 `PREFIX` ➜ Custom prefix
+┃ 🔐 `MODE` ➜ public/private
+╰━━━━━━━━━━━━━━━━━━━━╯
+
+💡 *𝗧ɪᴘ:* Use `,` to separate multiple settings.
+
+*⚡ Powered by 𝗦𝗛𝗔𝗚𝗚𝗬-𝗫𝗠𝗗*
 
         return await socket.sendMessage(sender, {
             image: { url: config.BOT_IMAGE || config.ERROR },
