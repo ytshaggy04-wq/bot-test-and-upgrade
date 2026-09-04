@@ -518,24 +518,15 @@ case 'cinesubz':
 
         const cinezubResults = searchData.results.slice(0, 25);
         let listText = `☘️ *𝗧𝗩-𝗦𝗘𝗥𝗜𝗘𝗦 : _𝗦𝗘𝗔𝗥𝗖𝗛 𝗥𝗘𝗦𝗨𝗟𝗧𝗦_* 🔍
-╭━━━〔 🔎 𝗦𝗘𝗔𝗥𝗖 𝗥𝗘𝗦𝗨𝗟𝗧𝗦 〕━━━╮
-
-🔎 *𝗤ᴜᴇʀʏ* ➜ *${cinezubQuerytv}*
-📊 *𝗦ᴛᴀᴛᴜꜱ* ➜ *Results Found* 🎯
-
-╰━━━━━━━━━━━━━━━━━━━━╯
-
-╭━━━〔 🔢 𝗦𝗘𝗟𝗘𝗖𝗧 〕━━━╮
-
-📌 *𝗥ᴇᴘʟʏ ᴡɪᴛʜ ᴀ 𝗡ᴜᴍʙᴇʀ ᴛᴏ 𝗦ᴇʟᴇᴄᴛ 👇*
-
-╰━━━━━━━━━━━━━━━━━━━━╯
-
-*01* ║ ❯❯ 🎬 *𝗦ᴇʟᴇᴄᴛ 𝗩ɪᴅᴇᴏ*
-*02* ║ ❯❯ 🎥 *𝗦ᴇʟᴇᴄᴛ 𝗥ᴇꜱᴜʟᴛ*
-*03* ║ ❯❯ 📺 *𝗦ᴇʟᴇᴄᴛ 𝗠ᴏᴠɪᴇ*
-
-*⚡ Powered by 𝗟𝗬𝗡𝗞𝗢*
+╭──────●➤
+🔎 *𝗤𝘂𝗲𝗿𝘆 ➟* _${cinezubQuerytv}_
+📊 *Status ➟* _Results Found_
+╰──────────●➤
+╭──────●➤
+*🔢 ʀᴇᴘʟʏ ʙᴇʟᴏᴡ ɴᴜᴍʙᴇʀ*
+╰──────────●➤
+💡 *𝗥ᴇᴘʟʏ ᴡɪᴛʜ ᴀ 𝗡ᴜᴍʙᴇʀ 𝘁ᴏ 𝗦ᴇʟᴇᴄ𝘛*
+*╭──────●➤*\n\n`;
 
         cinezubResults.forEach((item, index) => {
             const type = item.link.includes('/tvshows/') ? '📺 TV Series' : '🎬 Movie';
