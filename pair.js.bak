@@ -335,6 +335,7 @@ async function setupCommandHandlers(socket, number) {
     }
 
     break;  
+                
                  case 'tiktok':
     if (!args.length || !args.join(' ').startsWith('https://')) {
         await socket.sendMessage(sender, {
@@ -369,29 +370,20 @@ Failed to fetch TikTok video! Please try again later.`
 
         const captionMessage = `☘️ *TIKTOK DOWNLOADER*
 
-╭━━━〔 🎵 𝗧𝗜𝗞𝗧𝗢𝗞 𝗜𝗡𝗙𝗢 〕━━━╮
+📝 Title: ${tiktokData.title || 'TikTok Video'}
+👤 Author: ${tiktokData.author?.nickname || 'Unknown'}
+❤️ Likes: ${tiktokData.digg_count?.toLocaleString() || 'N/A'}
+👀 Views: ${tiktokData.play_count?.toLocaleString() || 'N/A'}
+💬 Comments: ${tiktokData.comment_count?.toLocaleString() || 'N/A'}
+⏱️ Duration: ${tiktokData.duration || 'N/A'} seconds
 
-📝 *𝗧ɪᴛʟᴇ* ➜ *${tiktokData.title || 'TikTok Video'}*
-👤 *𝗔ᴜᴛʜᴏʀ* ➜ *${tiktokData.author?.nickname || 'Unknown'}*
-❤️ *𝗟ɪᴋᴇꜱ* ➜ *${tiktokData.digg_count?.toLocaleString() || 'N/A'}*
-👀 *𝗩ɪᴇᴡꜱ* ➜ *${tiktokData.play_count?.toLocaleString() || 'N/A'}*
-💬 *𝗖ᴏᴍᴍᴇɴᴛꜱ* ➜ *${tiktokData.comment_count?.toLocaleString() || 'N/A'}*
-⏱️ *𝗗ᴜʀᴀᴛɪᴏɴ* ➜ *${tiktokData.duration || 'N/A'} seconds*
+⬇️ DOWNLOAD OPTIONS
 
-╰━━━━━━━━━━━━━━━━━━━━╯
+🔢 Reply with a number:
 
-╭━━━〔 ⬇️ 𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗 〕━━━╮
-
-🔢 *𝗥ᴇᴘʟʏ ᴡɪᴛʜ ᴀ 𝗡ᴜᴍʙᴇʀ 👇*
-
-*01* ║ ❯❯ 🎬 *𝗡ᴏ 𝗪ᴀᴛᴇʀᴍᴀʀᴋ*
-*02* ║ ❯❯ 💧 *𝗪ɪᴛʜ 𝗪ᴀᴛᴇʀᴍᴀʀᴋ*
-*03* ║ ❯❯ 🎵 *𝗔ᴜᴅɪᴏ 𝗢ɴʟʏ*
-
-╰━━━━━━━━━━━━━━━━━━━━╯
-
-*⚡ Powered by 𝗟𝗬𝗡𝗞𝗢*
-
+*1 ║❯❯ No Watermark*
+*2 ║❯❯ With Watermark*
+*3 ║❯❯ Audio Only*`;
 
         const sentMessage = await socket.sendMessage(sender, {
             image: { url: tiktokData.cover || config.SITHIJA_IMAGE_PATH },
