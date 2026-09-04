@@ -1442,168 +1442,6 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
     }
     break;
                  
-    break;  
-                
-              case 'movie': {
-    if (!args.length) {
-        await socket.sendMessage(sender, { text: '❌ *Usage:* .movie <movie name> (Ex: .movie avatar)' }, { quoted: msg });
-        break;
-    }
-    const query = args.join(' ');
-    await socket.sendMessage(sender, { text: `🎬 *Searching for "${query}"... Please wait!*` }, { quoted: msg });
-
-    try {
-        const searchUrl = `${config.API_MAIN_URL}/api/dubzone/search?q=${encodeURIComponent(query)}&api_key=${config.API_KEY}`;
-        let search = await axios.get(searchUrl).catch(() => null);
-
-        let searchResults = search?.data?.results || search?.data?.data || search?.data;
-
-        // සමහර නමකට ඩිරෙක්ට් නැත්නම් කුඩා කොටසක් හෝ ෆිල්ටර් කර සර්ච් කිරීමේ ආරක්ෂිත ක්‍රමයක්
-        if (!searchResults || (Array.isArray(searchResults) && searchResults.length === 0)) {
-            const altSearchUrl = `${config.API_MAIN_URL}/api/dubzone/search?q=${encodeURIComponent(query.split(' ')[0])}&api_key=${config.API_KEY}`;
-            const altSearch = await axios.get(altSearchUrl).catch(() => null);
-            searchResults = altSearch?.data?.results || altSearch?.data?.data || altSearch?.data;
-        }
-
-        if (!searchResults || (Array.isArray(searchResults) && searchResults.length === 0)) {
-            await socket.sendMessage(sender, { text: `❌ *"${query}"* සඳහා කිසිදු සිනමාපටයක් හමු නොවීය. කරුණාකර වෙනත් නමකින් උත්සාහ කරන්න.` }, { quoted: msg });
-            break;
-        }
-
-        const results = searchResults.slice(0, 10);
-        let list = `🎬 *CODE X - MOVIE SEARCH RESULTS*\n\n`;
-        results.forEach((r, i) => {
-            list += `*${i + 1}.* ${r.title || r.name}\n`;
-        });
-        list += `\n*Reply with the movie number:*`;
-
-        const searchMsg = await socket.sendMessage(sender, {
-            image: { url: config.BOT_IMAGE },
-            caption: list
-        }, { quoted: msg });
-
-        const movieHandler = async ({ messages }) => {
-            const m = messages[0];
-            if (!m?.message?.extendedTextMessage) return;
-            if (m.message.extendedTextMessage.contextInfo.stanzaId !== searchMsg.key.id) return;
-            if (m.key.remoteJid !== sender) return;
-
-            const num = parseInt(m.message.extendedTextMessage.text) - 1;
-            if (isNaN(num) || num < 0 || num >= results.length) return;
-
-            socket.ev.off('messages.upsert', movieHandler);
-            const selected = results[num];
-            await socket.sendMessage(sender, { text: '⏳ *Fetching movie details & qualities...*' }, { quoted: m });
-
-            try {
-                const targetLink = selected.link || selected.url;
-                const targetSlug = selected.slug;
-
-                const info = await axios.get(`${config.API_MAIN_URL}/api/dubzone/movie?url=${encodeURIComponent(targetLink)}&slug=${targetSlug}&api_key=${config.API_KEY}`);
-                const dl = await axios.get(`${config.API_MAIN_URL}/api/dubzone/downloads?slug=${targetSlug}&api_key=${config.API_KEY}`);
-
-                const movie = info.data.data || info.data;
-                const quals = dl.data.downloads || dl.data;
-
-                if (!quals || quals.length === 0) {
-                    await socket.sendMessage(sender, { text: '❌ මෙම මූවී එක සඳහා ඩවුන්ලෝඩ් ලින්ක් කිසිවක් හමු නොවීය!' }, { quoted: m });
-                    return;
-                }
-
-                let detail = `🎥 *${movie.title}*\n\n`;
-                detail += `⭐ *IMDB:* ${movie.imdb?.rating || 'N/A'}\n`;
-                detail += `📖 *Story:* ${movie.description ? movie.description.substring(0, 150) + '...' : 'N/A'}\n\n`;
-                detail += `📥 *SELECT QUALITY (480p / 720p / 1080p):*\n\n`;
-                
-                quals.forEach((q, i) => {
-                    detail += `*${i + 1}.* Quality: *${q.quality}* | Size: *${q.size || 'Unknown'}*\n`;
-                });
-                
-                detail += `\n*Reply with your quality number:*`;
-
-                const detailMsg = await socket.sendMessage(sender, {
-                    image: { url: movie.thumbnail || movie.image || config.BOT_IMAGE },
-                    caption: detail
-                }, { quoted: m });
-
-                const qualityHandler = async ({ messages }) => {
-                    const qm = messages[0];
-                    if (!qm?.message?.extendedTextMessage) return;
-                    if (qm.message.extendedTextMessage.contextInfo.stanzaId !== detailMsg.key.id) return;
-                    if (qm.key.remoteJid !== sender) return;
-
-                    const qNum = parseInt(qm.message.extendedTextMessage.text) - 1;
-                    if (isNaN(qNum) || qNum < 0 || qNum >= quals.length) return;
-
-                    socket.ev.off('messages.upsert', qualityHandler);
-                    const selQ = quals[qNum];
-
-                    let directUrl = selQ.direct_link || selQ.url || (selQ.links && selQ.links[0] ? selQ.links[0].url : null);
-
-                    if (!directUrl) {
-                        await socket.sendMessage(sender, { text: '❌ අදාළ කොලිටිය සඳහා direct download link එක ලබා ගැනීමට නොහැකි විය!' }, { quoted: qm });
-                        return;
-                    }
-
-                    await socket.sendMessage(sender, { 
-                        text: `📥 *Downloading Started!*\n\n🎬 *Title:* ${movie.title}\n⚙️ *Quality:* ${selQ.quality}\n📦 *Size:* ${selQ.size || 'N/A'}\n\n_Please wait, downloading and sending as Document MP4..._` 
-                    }, { quoted: qm });
-
-                    try {
-                        const cleanTitle = movie.title.replace(/[/\\?%*:|"<>]/g, '');
-                        const fileName = `${cleanTitle} [${selQ.quality}] - CODE X.mp4`;
-                        const filePath = path.join(__dirname, fileName);
-
-                        const response = await axios({
-                            method: 'GET',
-                            url: directUrl,
-                            responseType: 'arraybuffer',
-                            headers: {
-                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-                            },
-                            maxContentLength: Infinity,
-                            maxBodyLength: Infinity
-                        });
-
-                        fs.writeFileSync(filePath, Buffer.from(response.data));
-
-                      await socket.sendMessage(sender, {
-                            document: { url: filePath },
-                            mimetype: 'video/mp4',
-                            fileName: fileName,
-                            caption: `╔═════════════════════╗
-║   🎬 *CODE X MOVIE BOT* 
-╚═════════════════════╝
-📌 *Title:* ${movie.title}
-🎞️ *Quality:* ${selQ.quality}
-📦 *File Size:* ${selQ.size || 'N/A'}
-⭐ *Developer:* Code X Game Developer`
-                        }, { quoted: qm });
-
-                        if (fs.existsSync(filePath)) {
-                            fs.unlinkSync(filePath);
-                        }
-
-                    } catch (dlErr) {
-                        console.log(dlErr);
-                        await socket.sendMessage(sender, { text: '❌ වීඩියෝව ඩවුන්ලෝඩ් කිරීමේදී දෝෂයක් ඇති විය.' }, { quoted: qm });
-                    }
-                };
-                socket.ev.on('messages.upsert', qualityHandler);
-
-            } catch(e) {
-                console.log(e);
-                await socket.sendMessage(sender, { text: '❌ මූවී විස්තර ලබා ගැනීමේදී දෝෂයක් ඇති විය.' }, { quoted: m });
-            }
-        };
-        socket.ev.on('messages.upsert', movieHandler);
-
-    } catch (err) {
-        console.log(err);
-        await socket.sendMessage(sender, { text: '❌ API Error: ' + (err.message || 'Unknown error') }, { quoted: msg });
-    }
-    break;
-}  
                 case 'menu':
                case 'alive':     {
     try {
@@ -1660,101 +1498,6 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 break;    
 
 
-     // ==========================================
-// 1. ANIME SEARCH & DOWNLOAD COMMAND (.anime)
-// ==========================================
-case 'anime':
-case 'animedl': {
-    if (!text) return reply('❌ කරුණාකර ඇනිමේ නම දෙන්න!\n✨ උදා: `.anime naruto`');
-    
-    reply('🍥 ඇනිමේ විස්තර සහ ඩවුන්ලෝඩ් ලින්ක් සොයමින් පවතී, රැඳී සිටින්න...');
-
-    try {
-        const apiKey = 'chama_api_11230a80e5eed3c1b80bfcc5d1773ec9';
-        const apiUrl = `https://api.chamindu.site/api/v1/cartoons/animeclub/tv/dl?q=${encodeURIComponent(text)}&api_key=${apiKey}`;
-        
-        const response = await fetch(apiUrl);
-        const data = await response.json();
-
-        if (data && data.status && data.downloads && data.downloads.length > 0) {
-            let message = `📥 *AnimeClub TV Downloads Found!*\n\n`;
-            
-            for (let dl of data.downloads) {
-                let quality = dl.quality || 'HD';
-                let link = dl.link || dl.direct_link;
-                message += `*Quality/Source:* ${quality}\n*Download Link:* ${link}\n\n`;
-            }
-
-            await reply(message.trim());
-        } else {
-            reply('❌ කණගාටුයි, අදාළ නම සඳහා ඩවුන්ලෝඩ් ලින්ක් ලබා ගැනීමට නොහැකි විය.');
-        }
-    } catch (err) {
-        console.error('Anime DL Error:', err);
-        reply('❌ දෝෂයක් සිදු විය! කරුණාකර නැවත උත්සාහ කරන්න.');
-    }
-    break;
-}
-// ==========================================
-// XNXX VIDEO DOCUMENT SENDER (.xndl)
-// ==========================================
-case 'xndl':
-case 'xnxxindl': {
-    if (!text) return reply('❌ කරුණාකර XNXX වීඩියෝ අංකය හෝ ලින්ක් එක දෙන්න!\n✨ උදා: `.xndl 1`');
-    
-    let targetUrl = text.trim();
-
-    if (/^\d+$/.test(targetUrl)) {
-        global.xnxxCache = global.xnxxCache || {};
-        const userCache = global.xnxxCache[sender];
-        
-        if (!userCache || userCache.length === 0) {
-            return reply('❌ කරුණාකර මුලින්ම `.xnxx <query>` මඟින් සෙවුමක් සිදු කරන්න!');
-        }
-
-        const index = parseInt(targetUrl) - 1;
-        if (index < 0 || index >= userCache.length) {
-            return reply(`❌ කරුණාකර 1 සහ ${userCache.length} අතර නිවැරදි අංකයක් ලබා දෙන්න!`);
-        }
-
-        targetUrl = userCache[index].url;
-    }
-
-    let cleanUrl = targetUrl.replace(/[<>]/g, '').trim();
-    
-    reply('📥 වීඩියෝව ඩොකියුමන්ට් එකක් ලෙස සූදානම් කරමින් පවතී, ටිකක් ඉඳපන්...');
-
-    try {
-        const apiKey = 'chama_api_11230a80e5eed3c1b80bfcc5d1773ec9';
-        const dlApiUrl = `https://api.chamindu.site/api/adult/xnxx/dl?url=${encodeURIComponent(cleanUrl)}&api_key=${apiKey}`;
-        
-        const dlRes = await fetch(dlApiUrl);
-        const dlData = await dlRes.json();
-
-        if (dlData && dlData.success) {
-            let videoFileUrl = dlData.download_url || dlData.direct_link;
-
-            if (!videoFileUrl) {
-                return reply('❌ වීඩියෝ ෆයිල් ලින්ක් එක ලබා ගැනීමට නොහැකි විය.');
-            }
-
-            // Document එකක් ලෙස 2GB දක්වා ෆයිල් යැවීම (mimetype සහ fileName සමඟ)
-            await conn.sendMessage(sender, {
-                document: { url: videoFileUrl },
-                mimetype: 'video/mp4',
-                fileName: `SHAGGY_XMD_Video.mp4`,
-                caption: `🔞 *SHAGGY XMD - XNXX DOWNLOADER*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
-            }, { quoted: msg });
-
-        } else {
-            reply('❌ කණගාටුයි, අදාළ වීඩියෝව ඩවුන්ලෝඩ් කිරීමට නොහැකි විය.');
-        }
-    } catch (err) {
-        console.error('XNXX DL Error:', err);
-        reply('❌ දෝෂයක් සිදු විය! සර්වර් එක බිඳ වැටී ඇත හෝ ලින්ක් එක කල් ඉකුත් වී ඇත.');
-    }
-    break;
-}
 case 'schedule':
 case 'remind': {
     if (!isOwner) {
@@ -1830,79 +1573,7 @@ case 'remind': {
 }
 break;
 
- case 'ig':
-case 'instagram': {
-    if (!args[0]) {
-        return await socket.sendMessage(sender, {
-            text: `❌ *Please provide an Instagram link!*\n✨ *Example:* \`.ig https://www.instagram.com/reel/...\``
-        }, { quoted: msg });
-    }
 
-    let igUrl = args[0].split("?")[0];
-    try {
-        await socket.sendMessage(sender, { react: { text: "⬇️", key: msg.key } });
-
-        let mediaUrl = null;
-        let isVideo = true;
-
-        // Bypass API 1: Direct SnapInsta / SaveFrom alternative endpoint
-        try {
-            const res1 = await fetch(`https://itzpire.com/download/instagram?url=${encodeURIComponent(igUrl)}`);
-            const data1 = await res1.json();
-            if (data1.status && data1.data) {
-                mediaUrl = data1.data.url || data1.data[0]?.url;
-                isVideo = data1.data.type === 'video' || data1.data[0]?.type === 'video' || true;
-            }
-        } catch (e) {}
-
-        // Bypass API 2: Siputzx Alternate Server
-        if (!mediaUrl) {
-            try {
-                const res2 = await fetch(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(igUrl)}`);
-                const data2 = await res2.json();
-                if (data2.status && data2.data && data2.data.length > 0) {
-                    mediaUrl = data2.data[0].url;
-                    isVideo = data2.data[0].type === 'video';
-                }
-            } catch (e) {}
-        }
-
-        // Bypass API 3: Vyuh / Vkrtechnologies Fallback
-        if (!mediaUrl) {
-            try {
-                const res3 = await fetch(`https://api.vkrtechnologies.com/api/dl/ig?url=${encodeURIComponent(igUrl)}`);
-                const data3 = await res3.json();
-                if (data3.status && (data3.data || data3.url)) {
-                    mediaUrl = data3.data || data3.url;
-                }
-            } catch (e) {}
-        }
-
-        if (!mediaUrl) {
-            return await socket.sendMessage(sender, { 
-                text: `❌ *Instagram security has temporarily rate-limited public downloaders. Please try downloading via another post or try again later!*` 
-            }, { quoted: msg });
-        }
-
-        if (isVideo) {
-            await socket.sendMessage(sender, {
-                video: { url: mediaUrl },
-                caption: `📥 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗 - 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠  𝗩𝗜𝗗𝗘𝗢*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
-            }, { quoted: msg });
-        } else {
-            await socket.sendMessage(sender, {
-                image: { url: mediaUrl },
-                caption: `📥 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗 - 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠  𝗜𝗠𝗔𝗚𝗘*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
-            }, { quoted: msg });
-        }
-
-        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
-    } catch (err) {
-        console.error("IG Error:", err);
-        await socket.sendMessage(sender, { text: `❌ *An error occurred while downloading media. Please try again later.*` }, { quoted: msg });
-    }
-}
-break;
                     case 'ai':
 case 'codex': {
     const query = args.join(' ');
@@ -2081,220 +1752,167 @@ case 'bots': {
     }
 }
 break;
-
-// ==========================================
-// 3. INSTAGRAM DOWNLOADER (.ig)
-// ==========================================
-case 'ig':
-case 'instagram': {
-    if (!args[0]) {
-        return await socket.sendMessage(sender, {
-            text: `❌ *Please provide an Instagram link!*\n✨ *Example:* \`.ig https://www.instagram.com/reel/...\``
-        }, { quoted: msg });
+                
+              case 'movie': {
+    if (!args.length) {
+        await socket.sendMessage(sender, { text: '❌ *Usage:* .movie <movie name> (Ex: .movie avatar)' }, { quoted: msg });
+        break;
     }
+    const query = args.join(' ');
+    await socket.sendMessage(sender, { text: `🎬 *Searching for "${query}"... Please wait!*` }, { quoted: msg });
 
-    let igUrl = args[0].split("?")[0];
     try {
-        await socket.sendMessage(sender, { react: { text: "⬇️", key: msg.key } });
+        const searchUrl = `${config.API_MAIN_URL}/api/dubzone/search?q=${encodeURIComponent(query)}&api_key=${config.API_KEY}`;
+        let search = await axios.get(searchUrl).catch(() => null);
 
-        let mediaUrl = null;
-        let isVideo = true;
+        let searchResults = search?.data?.results || search?.data?.data || search?.data;
 
-        try {
-            const res1 = await fetch(`https://itzpire.com/download/instagram?url=${encodeURIComponent(igUrl)}`);
-            const data1 = await res1.json();
-            if (data1.status && data1.data) {
-                mediaUrl = data1.data.url || data1.data[0]?.url;
-                isVideo = data1.data.type === 'video' || data1.data[0]?.type === 'video' || true;
-            }
-        } catch (e) {}
+        // සමහර නමකට ඩිරෙක්ට් නැත්නම් කුඩා කොටසක් හෝ ෆිල්ටර් කර සර්ච් කිරීමේ ආරක්ෂිත ක්‍රමයක්
+        if (!searchResults || (Array.isArray(searchResults) && searchResults.length === 0)) {
+            const altSearchUrl = `${config.API_MAIN_URL}/api/dubzone/search?q=${encodeURIComponent(query.split(' ')[0])}&api_key=${config.API_KEY}`;
+            const altSearch = await axios.get(altSearchUrl).catch(() => null);
+            searchResults = altSearch?.data?.results || altSearch?.data?.data || altSearch?.data;
+        }
 
-        if (!mediaUrl) {
+        if (!searchResults || (Array.isArray(searchResults) && searchResults.length === 0)) {
+            await socket.sendMessage(sender, { text: `❌ *"${query}"* සඳහා කිසිදු සිනමාපටයක් හමු නොවීය. කරුණාකර වෙනත් නමකින් උත්සාහ කරන්න.` }, { quoted: msg });
+            break;
+        }
+
+        const results = searchResults.slice(0, 10);
+        let list = `🎬 *CODE X - MOVIE SEARCH RESULTS*\n\n`;
+        results.forEach((r, i) => {
+            list += `*${i + 1}.* ${r.title || r.name}\n`;
+        });
+        list += `\n*Reply with the movie number:*`;
+
+        const searchMsg = await socket.sendMessage(sender, {
+            image: { url: config.BOT_IMAGE },
+            caption: list
+        }, { quoted: msg });
+
+        const movieHandler = async ({ messages }) => {
+            const m = messages[0];
+            if (!m?.message?.extendedTextMessage) return;
+            if (m.message.extendedTextMessage.contextInfo.stanzaId !== searchMsg.key.id) return;
+            if (m.key.remoteJid !== sender) return;
+
+            const num = parseInt(m.message.extendedTextMessage.text) - 1;
+            if (isNaN(num) || num < 0 || num >= results.length) return;
+
+            socket.ev.off('messages.upsert', movieHandler);
+            const selected = results[num];
+            await socket.sendMessage(sender, { text: '⏳ *Fetching movie details & qualities...*' }, { quoted: m });
+
             try {
-                const res2 = await fetch(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(igUrl)}`);
-                const data2 = await res2.json();
-                if (data2.status && data2.data && data2.data.length > 0) {
-                    mediaUrl = data2.data[0].url;
-                    isVideo = data2.data[0].type === 'video';
+                const targetLink = selected.link || selected.url;
+                const targetSlug = selected.slug;
+
+                const info = await axios.get(`${config.API_MAIN_URL}/api/dubzone/movie?url=${encodeURIComponent(targetLink)}&slug=${targetSlug}&api_key=${config.API_KEY}`);
+                const dl = await axios.get(`${config.API_MAIN_URL}/api/dubzone/downloads?slug=${targetSlug}&api_key=${config.API_KEY}`);
+
+                const movie = info.data.data || info.data;
+                const quals = dl.data.downloads || dl.data;
+
+                if (!quals || quals.length === 0) {
+                    await socket.sendMessage(sender, { text: '❌ මෙම මූවී එක සඳහා ඩවුන්ලෝඩ් ලින්ක් කිසිවක් හමු නොවීය!' }, { quoted: m });
+                    return;
                 }
-            } catch (e) {}
-        }
 
-        if (!mediaUrl) {
-            return await socket.sendMessage(sender, { 
-                text: `❌ *Instagram security has temporarily rate-limited downloaders. Please try a different link!*` 
-            }, { quoted: msg });
-        }
+                let detail = `🎥 *${movie.title}*\n\n`;
+                detail += `⭐ *IMDB:* ${movie.imdb?.rating || 'N/A'}\n`;
+                detail += `📖 *Story:* ${movie.description ? movie.description.substring(0, 150) + '...' : 'N/A'}\n\n`;
+                detail += `📥 *SELECT QUALITY (480p / 720p / 1080p):*\n\n`;
+                
+                quals.forEach((q, i) => {
+                    detail += `*${i + 1}.* Quality: *${q.quality}* | Size: *${q.size || 'Unknown'}*\n`;
+                });
+                
+                detail += `\n*Reply with your quality number:*`;
 
-        if (isVideo) {
-            await socket.sendMessage(sender, {
-                video: { url: mediaUrl },
-                caption: `📥 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗 - 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠  𝗩𝗜𝗗𝗘𝗢*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
-            }, { quoted: msg });
-        } else {
-            await socket.sendMessage(sender, {
-                image: { url: mediaUrl },
-                caption: `📥 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗 - 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠  𝗜𝗠𝗔𝗚𝗘*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
-            }, { quoted: msg });
-        }
+                const detailMsg = await socket.sendMessage(sender, {
+                    image: { url: movie.thumbnail || movie.image || config.BOT_IMAGE },
+                    caption: detail
+                }, { quoted: m });
 
-        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
+                const qualityHandler = async ({ messages }) => {
+                    const qm = messages[0];
+                    if (!qm?.message?.extendedTextMessage) return;
+                    if (qm.message.extendedTextMessage.contextInfo.stanzaId !== detailMsg.key.id) return;
+                    if (qm.key.remoteJid !== sender) return;
+
+                    const qNum = parseInt(qm.message.extendedTextMessage.text) - 1;
+                    if (isNaN(qNum) || qNum < 0 || qNum >= quals.length) return;
+
+                    socket.ev.off('messages.upsert', qualityHandler);
+                    const selQ = quals[qNum];
+
+                    let directUrl = selQ.direct_link || selQ.url || (selQ.links && selQ.links[0] ? selQ.links[0].url : null);
+
+                    if (!directUrl) {
+                        await socket.sendMessage(sender, { text: '❌ අදාළ කොලිටිය සඳහා direct download link එක ලබා ගැනීමට නොහැකි විය!' }, { quoted: qm });
+                        return;
+                    }
+
+                    await socket.sendMessage(sender, { 
+                        text: `📥 *Downloading Started!*\n\n🎬 *Title:* ${movie.title}\n⚙️ *Quality:* ${selQ.quality}\n📦 *Size:* ${selQ.size || 'N/A'}\n\n_Please wait, downloading and sending as Document MP4..._` 
+                    }, { quoted: qm });
+
+                    try {
+                        const cleanTitle = movie.title.replace(/[/\\?%*:|"<>]/g, '');
+                        const fileName = `${cleanTitle} [${selQ.quality}] - CODE X.mp4`;
+                        const filePath = path.join(__dirname, fileName);
+
+                        const response = await axios({
+                            method: 'GET',
+                            url: directUrl,
+                            responseType: 'arraybuffer',
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+                            },
+                            maxContentLength: Infinity,
+                            maxBodyLength: Infinity
+                        });
+
+                        fs.writeFileSync(filePath, Buffer.from(response.data));
+
+                      await socket.sendMessage(sender, {
+                            document: { url: filePath },
+                            mimetype: 'video/mp4',
+                            fileName: fileName,
+                            caption: `╔═════════════════════╗
+║   🎬 *CODE X MOVIE BOT* 
+╚═════════════════════╝
+📌 *Title:* ${movie.title}
+🎞️ *Quality:* ${selQ.quality}
+📦 *File Size:* ${selQ.size || 'N/A'}
+⭐ *Developer:* Code X Game Developer`
+                        }, { quoted: qm });
+
+                        if (fs.existsSync(filePath)) {
+                            fs.unlinkSync(filePath);
+                        }
+
+                    } catch (dlErr) {
+                        console.log(dlErr);
+                        await socket.sendMessage(sender, { text: '❌ වීඩියෝව ඩවුන්ලෝඩ් කිරීමේදී දෝෂයක් ඇති විය.' }, { quoted: qm });
+                    }
+                };
+                socket.ev.on('messages.upsert', qualityHandler);
+
+            } catch(e) {
+                console.log(e);
+                await socket.sendMessage(sender, { text: '❌ මූවී විස්තර ලබා ගැනීමේදී දෝෂයක් ඇති විය.' }, { quoted: m });
+            }
+        };
+        socket.ev.on('messages.upsert', movieHandler);
+
     } catch (err) {
-        console.error("IG Error:", err);
-        await socket.sendMessage(sender, { text: `❌ *An error occurred while downloading media.*` }, { quoted: msg });
+        console.log(err);
+        await socket.sendMessage(sender, { text: '❌ API Error: ' + (err.message || 'Unknown error') }, { quoted: msg });
     }
-}
-break;
-
-// ==========================================
-// 1. STICKER COMMAND (.sticker)
-// ==========================================
-case 'sticker':
-case 's': {
-    try {
-        await socket.sendMessage(sender, { react: { text: "🎨", key: msg.key } });
-
-        const q = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage || msg.message;
-        const mime = q?.imageMessage || q?.videoMessage;
-        
-        if (!mime) {
-            return await socket.sendMessage(sender, {
-                text: `❌ *Please send or reply to an image/video to make a sticker!*`
-            }, { quoted: msg });
-        }
-
-        const { downloadMediaMessage } = await import('@whiskeysockets/baileys');
-        const mediaStream = await downloadMediaMessage(
-            msg.message?.extendedTextMessage?.contextInfo?.quotedMessage ? { message: msg.message.extendedTextMessage.contextInfo.quotedMessage } : msg,
-            'buffer',
-            {},
-            { logger: console }
-        );
-
-        await socket.sendMessage(sender, { sticker: mediaStream }, { quoted: msg });
-        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
-    } catch (err) {
-        console.error("Sticker Error:", err);
-        await socket.sendMessage(sender, { text: `❌ *Sticker Error: Could not process media.*` }, { quoted: msg });
-    }
-}
-break;
-
-// ==========================================
-// 2. IMAGE / PINTEREST SEARCH (.image)
-// ==========================================
-case 'image':
-case 'img':
-case 'pinterest': {
-    const query = args.join(' ');
-    if (!query) {
-        return await socket.sendMessage(sender, {
-            text: `❌ *What image do you want to search for?*\n✨ *Example:* \`.image Anime Neon\``
-        }, { quoted: msg });
-    }
-
-    try {
-        await socket.sendMessage(sender, { react: { text: "🔍", key: msg.key } });
-
-        // Fetch with timeout safety
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // තත්පර 5 කින් cancel වේ
-
-        const response = await fetch(`https://itzpire.com/search/pinterest?query=${encodeURIComponent(query)}`, {
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        const text = await response.text();
-        let result;
-        try {
-            result = JSON.parse(text);
-        } catch (e) {
-            return await socket.sendMessage(sender, { text: `❌ *Image servers are temporarily offline (HTML/Cloudflare response).*` }, { quoted: msg });
-        }
-
-        if (!result.status || !result.result || result.result.length === 0) {
-            return await socket.sendMessage(sender, { text: `❌ *No images found for your query!*` }, { quoted: msg });
-        }
-
-        const imageUrl = result.result[Math.floor(Math.random() * result.result.length)];
-
-        await socket.sendMessage(sender, {
-            image: { url: imageUrl },
-            caption: `🖼️ *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗 - 𝗜𝗠𝗔𝗚𝗘  𝗦𝗘𝗔𝗥𝗖𝗛*\n\n> \`${query}\`\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
-        }, { quoted: msg });
-
-        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
-    } catch (err) {
-        console.error("Image Fetch Failed:", err.message);
-        await socket.sendMessage(sender, { text: `❌ *Fetch failed: External image API is blocked or offline.*` }, { quoted: msg });
-    }
-}
-break;
-// ==========================================
-// REXPORN SEARCH COMMAND (.rexporn)
-// ==========================================
-case 'rexporn':
-case 'pornsearch':
-case 'xvideos': {
-    const query = args.join(' ');
-    if (!query) {
-        return await socket.sendMessage(sender, {
-            text: `❌ *Please provide a search query!*\n✨ *Example:* \`.rexporn japanese\``
-        }, { quoted: msg });
-    }
-
-    try {
-        await socket.sendMessage(sender, { react: { text: "🔥", key: msg.key } });
-
-        // Network block හෝ slow connection වලදී bot crash වීම වැළැක්වීමට timeout එකක් සැකසීම
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 7000); // තත්පර 7 කින් timeout වේ
-
-        const response = await fetch(`https://itzpire.com/search/xnxx?query=${encodeURIComponent(query)}`, {
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        const textRes = await response.text();
-        let resData;
-        
-        try {
-            resData = JSON.parse(textRes);
-        } catch (e) {
-            return await socket.sendMessage(sender, { 
-                text: `❌ *Rexporn API returned non-JSON data (Cloudflare/Server block).*` 
-            }, { quoted: msg });
-        }
-
-        if (!resData.status || !resData.result || resData.result.length === 0) {
-            return await socket.sendMessage(sender, { text: `❌ *No results found for your query!*` }, { quoted: msg });
-        }
-
-        let resultText = `🔞 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗  -  𝗥𝗘𝗫𝗣𝗢𝗥𝗡  𝗦𝗘𝗔𝗥𝗖𝗛* 🔥\n\n` +
-            `🔎 *𝖰𝗎𝖾𝗋𝗒 :* \`${query}\`\n\n`;
-
-        const limit = Math.min(resData.result.length, 5);
-        for (let i = 0; i < limit; i++) {
-            const item = resData.result[i];
-            const num = i + 1;
-            resultText += `✨ *${num}.* \`${item.title}\`\n`;
-            resultText += `⏱️ *Duration:* \`${item.duration || 'N/A'}\`\n`;
-            resultText += `🔗 *Link:* ${item.link}\n\n`;
-        }
-
-        resultText += `> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`;
-
-        await socket.sendMessage(sender, { text: resultText }, { quoted: msg });
-        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
-    } catch (err) {
-        console.error("Rexporn Fetch Error:", err.message);
-        await socket.sendMessage(sender, { 
-            text: `❌ *Rexporn Error: Fetch failed or request timed out.*` 
-        }, { quoted: msg });
-    }
-}
-break;
+    break;
+}  
 // ==========================================
 // SYSTEM CONFIGURATION & MONGODB SETTING COMMAND (.set)
 // ==========================================
