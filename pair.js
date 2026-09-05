@@ -1057,390 +1057,175 @@ ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`
         }, { quoted: msg });
     }
     
-    break;
-                case 'sinhalasub':
+    break;case 'movie':
+case 'sinhalasub': {
     if (!args.length) {
         await socket.sendMessage(sender, {
-             image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE},
-            caption: formatMessage(
-                '❌ ERROR',
-                '*කරුණාකර චිත්‍රපටයේ නම ලබාදෙන්න! උදා: .sinhalasub spider*',
-                `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
-            )
+            text: '❌ ERROR\n\n*චිත්‍රපටයේ නම ඇතුළත් කරන්න.*\nඋදා: .movie Spiderman'
         }, { quoted: msg });
         break;
     }
 
-    const movieQuery55 = args.join(' ');
-   
-    await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 2000) + 2000));
+    const query = args.join(' ');
+    const API_KEY = 'lakiya_2f3b6c382d1236ad7a08d56331fb679935d51dfc846df2c254093fd1fff9494e';
+    const BASE_URL = 'https://api-siteh-22e22e4cb068.herokuapp.com';
 
- 
-    let sinhalasubSelectionListener = null;
-    let sinhalasubDownloadListener = null;
-    let sinhalasubSelectionTimeout = null;
-    let sinhalasubDownloadTimeout = null;
-    
- 
-    let sinhalasubMasterTimeout = null;
-    const clearAllSinhalasubListeners = () => {
-        console.log('🧹 Clearing all Sinhalasub listeners');
-        
-       
-        if (sinhalasubSelectionListener) {
-            socket.ev.off('messages.upsert', sinhalasubSelectionListener);
-            sinhalasubSelectionListener = null;
-        }
-        if (sinhalasubSelectionTimeout) {
-            clearTimeout(sinhalasubSelectionTimeout);
-            sinhalasubSelectionTimeout = null;
-        }
-        
-     
-        if (sinhalasubDownloadListener) {
-            socket.ev.off('messages.upsert', sinhalasubDownloadListener);
-            sinhalasubDownloadListener = null;
-        }
-        if (sinhalasubDownloadTimeout) {
-            clearTimeout(sinhalasubDownloadTimeout);
-            sinhalasubDownloadTimeout = null;
-        }
-        
-       
-        if (sinhalasubMasterTimeout) {
-            clearTimeout(sinhalasubMasterTimeout);
-            sinhalasubMasterTimeout = null;
-        }
-    };
+    await socket.sendMessage(sender, { text: '🔍 Searching movie on SinhalaSub...' }, { quoted: msg });
 
     try {
-        const searchResponse = await axios.get(`${config.API_MAIN_URL}/sinhalasub/search?query=${encodeURIComponent(movieQuery55)}&api_key=${config.API_KEY}`);
-        const searchData = searchResponse.data;
+        // 1. Search Request
+        const searchRes = await axios.get(`${BASE_URL}/sinhalasub/search`, {
+            params: { query, api_key: API_KEY },
+            timeout: 20000
+        });
 
-        if (!searchData.status || !searchData.data?.results || searchData.data.results.length === 0) {
+        const results = searchRes.data?.data?.results;
+        if (!results || results.length === 0) {
             await socket.sendMessage(sender, {
-                 image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE},
-                caption: formatMessage(
-                    '❌ NO RESULTS',
-                    '*චිත්‍රපට හමුවෙන්නේ නැත! 😞*',
-                    `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
-                )
+                text: '❌ ප්‍රතිඵල කිසිවක් හමු නොවීය. වෙනත් නමක් සෙවීමට උත්සාහ කරන්න.'
             }, { quoted: msg });
             break;
         }
 
-        const movies = searchData.data.results.slice(0, 115);
-        let listText = `🎀 *𝗦𝗘𝗔𝗥𝗖𝗛 : _${movieQuery55}_*
-╭──────●➤
-*🔢 ʀᴇᴘʟʏ ʙᴇʟᴏᴡ ɴᴜᴍʙᴇʀ*
-╰──────────●➤
-╭──────●➤\n`;
-
-        movies.forEach((movie, index) => {
-            listText += `*🧩 ${index + 1} ┃❭❭ ${movie.title}*\n`;
+        // පළමු ප්‍රතිඵල 10 පමණක් තෝරාගැනීම
+        const movieList = results.slice(0, 10);
+        let listText = `🎬 *SINHALASUB SEARCH RESULTS*\n\n`;
+        movieList.forEach((m, idx) => {
+            listText += `*${idx + 1}.* ${m.title}\n🔹 Language: ${m.language} | ${m.quality}\n\n`;
         });
+        listText += `👉 *අදාළ චිත්‍රපටය තෝරාගැනීමට අංකය Reply කරන්න.* (උදා: 1)`;
 
-        listText += `╰──────────●➤\n> ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`;
-
-        const sentMsg = await socket.sendMessage(sender, {
-            image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE},
+        const searchPromptMsg = await socket.sendMessage(sender, {
+            image: { url: movieList[0].poster },
             caption: listText
         }, { quoted: msg });
 
-        const messageID = sentMsg.key.id;
+        // Step 1 Listener: Movie එක තෝරාගැනීම
+        const movieSelectListener = async (mUpdate) => {
+            const mek = mUpdate.messages?.[0];
+            if (!mek?.message) return;
 
-      
-        sinhalasubMasterTimeout = setTimeout(() => {
-            clearAllSinhalasubListeners();
-            console.log('🧹 Sinhalasub master timeout - All listeners cleared after 3 minutes');
-        }, 180000);
+            const ctx = mek.message.extendedTextMessage?.contextInfo;
+            if (!ctx || ctx.stanzaId !== searchPromptMsg.key.id) return;
 
-       
-        const handleSelection = async ({ messages: replyMessages }) => {
-            const replyMek = replyMessages[0];
-            if (!replyMek?.message) return;
+            const selectedIndex = parseInt((mek.message.conversation || mek.message.extendedTextMessage?.text || '').trim()) - 1;
+            if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= movieList.length) return;
 
-            const messageType = replyMek.message.conversation || replyMek.message.extendedTextMessage?.text;
-            const isReplyToSentMsg = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === messageID;
+            socket.ev.off('messages.upsert', movieSelectListener);
+            const selectedMovie = movieList[selectedIndex];
 
-            if (isReplyToSentMsg && sender === replyMek.key.remoteJid) {
-               
-                if (sinhalasubSelectionTimeout) {
-                    clearTimeout(sinhalasubSelectionTimeout);
-                    sinhalasubSelectionTimeout = null;
-                }
-                
-               
-                sinhalasubSelectionTimeout = setTimeout(() => {
-                    if (sinhalasubSelectionListener) {
-                        socket.ev.off('messages.upsert', sinhalasubSelectionListener);
-                        sinhalasubSelectionListener = null;
-                        console.log('🧹 Sinhalasub selection listener timeout');
+            await socket.sendMessage(sender, { react: { text: '⏳', key: mek.key } });
+
+            try {
+                // 2. Info Request
+                const infoRes = await axios.get(`${BASE_URL}/sinhalasub/info`, {
+                    params: { url: selectedMovie.url, api_key: API_KEY },
+                    timeout: 20000
+                });
+
+                const movieData = infoRes.data?.data?.movie;
+                const rawDownloads = infoRes.data?.data?.downloads || [];
+
+                // Pixeldrain හෝ DLServer වැනි direct-friendly servers පෙරීම (Duplicates ඉවත් කරමින්)
+                const validDownloads = [];
+                const seenQualities = new Set();
+
+                for (const dl of rawDownloads) {
+                    const identifier = `${dl.quality}_${dl.server}`;
+                    if (!seenQualities.has(identifier)) {
+                        seenQualities.add(identifier);
+                        validDownloads.push(dl);
                     }
-                    sinhalasubSelectionTimeout = null;
-                }, 120000);
-
-                const choice = parseInt(messageType) - 1;
-                if (isNaN(choice) || choice < 0 || choice >= movies.length) {
-                    await socket.sendMessage(sender, {
-                         image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE},
-                        caption: formatMessage(
-                            '❌ INVALID SELECTION',
-                            `*වැරදි අංකයක්! 1-${movies.length} අතර තෝරන්න! 😕*`,
-                            `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
-                        )
-                    }, { quoted: replyMek });
-                    return;
                 }
 
-                const selectedMovie = movies[choice];
-                
-                await socket.sendMessage(sender, { 
-                    text: '📽️ 𝙁𝙚𝙩𝙘𝙝𝙞𝙣𝙜 𝙙𝙚𝙩𝙖𝙞𝙡𝙨...' 
-                }, { quoted: replyMek });
+                if (validDownloads.length === 0) {
+                    throw new Error('බාගත කිරීමේ සබැඳි හමු නොවීය.');
+                }
 
-                
-                await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 2000) + 2000));
+                let detailsText = `🎬 *${movieData.title}*\n\n`;
+                detailsText += `⭐ *Rating:* ${movieData.rating || 'N/A'}\n`;
+                detailsText += `⏳ *Runtime:* ${movieData.runtime || 'N/A'}\n`;
+                detailsText += `📅 *Year:* ${movieData.year || 'N/A'}\n`;
+                detailsText += `🎭 *Genres:* ${movieData.genres?.join(', ') || 'N/A'}\n\n`;
+                detailsText += `*Available Download Options:*\n`;
 
-                try {
-                    const infoResponse = await axios.get(`${config.API_MAIN_URL}/sinhalasub/info?url=${encodeURIComponent(selectedMovie.url)}&api_key=${config.API_KEY}`);
-                    const infoData = infoResponse.data;
+                validDownloads.forEach((dl, i) => {
+                    detailsText += `*${i + 1}.* ${dl.quality} (${dl.size}) - [${dl.server}]\n`;
+                });
+                detailsText += `\n📥 *බාගත කිරීමට අවශ්‍ය අංකය Reply කරන්න.* (උදා: 1)`;
 
-                    if (!infoData.status || !infoData.data) {
-                        throw new Error('Failed to fetch movie details');
-                    }
+                const detailsMsg = await socket.sendMessage(sender, {
+                    image: { url: movieData.poster },
+                    caption: detailsText
+                }, { quoted: mek });
 
-                    const movieInfo = infoData.data.movie;
-                    const downloads = infoData.data.downloads || [];
+                // Step 2 Listener: Download Link එක තෝරාගැනීම
+                const downloadSelectListener = async (dUpdate) => {
+                    const dMek = dUpdate.messages?.[0];
+                    if (!dMek?.message) return;
 
-                    
-                    const videoDownloads = downloads.filter(d => d.server === 'pixeldrain');
+                    const dCtx = dMek.message.extendedTextMessage?.contextInfo;
+                    if (!dCtx || dCtx.stanzaId !== detailsMsg.key.id) return;
 
-                    if (videoDownloads.length === 0) {
+                    const dlIndex = parseInt((dMek.message.conversation || dMek.message.extendedTextMessage?.text || '').trim()) - 1;
+                    if (isNaN(dlIndex) || dlIndex < 0 || dlIndex >= validDownloads.length) return;
+
+                    socket.ev.off('messages.upsert', downloadSelectListener);
+                    const chosenLink = validDownloads[dlIndex];
+
+                    await socket.sendMessage(sender, { react: { text: '⬇️', key: dMek.key } });
+
+                    try {
+                        // 3. Direct Download URL Request (download2 endpoint එක භාවිතා කර ඇත)
+                        const dlRes = await axios.get(`${BASE_URL}/sinhalasub/download2`, {
+                            params: { url: chosenLink.link_page, api_key: API_KEY },
+                            timeout: 25000
+                        });
+
+                        const directUrl = dlRes.data?.data?.download;
+                        if (!directUrl) throw new Error('Direct Download Link එක ලබා ගැනීමට නොහැකි විය.');
+
                         await socket.sendMessage(sender, {
-                             image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE},
-                            caption: formatMessage(
-                                '❌ NO DOWNLOADS',
-                                '*Pixeldrain බාගත කිරීම් නොමැත!*',
-                                `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
-                            )
-                        }, { quoted: replyMek });
-                        return;
+                            text: `✅ *DOWNLOAD READY*\n\n` +
+                                  `🎬 *Title:* ${movieData.title}\n` +
+                                  `📊 *Quality:* ${chosenLink.quality}\n` +
+                                  `📦 *Size:* ${chosenLink.size}\n\n` +
+                                  `🔗 *Direct Download Link:*\n${directUrl}\n\n` +
+                                  `_බ්‍රවුසරය හෝ Download Manager එකක් මඟින් බාගත කරගන්න._`
+                        }, { quoted: dMek });
+
+                        await socket.sendMessage(sender, { react: { text: '✅', key: dMek.key } });
+
+                    } catch (dErr) {
+                        await socket.sendMessage(sender, {
+                            text: `❌ Download Link Error: ${dErr.message}`
+                        }, { quoted: dMek });
+                        await socket.sendMessage(sender, { react: { text: '❌', key: dMek.key } });
                     }
+                };
 
-                    const castPreview = movieInfo.cast?.slice(0, 5).join(', ') + (movieInfo.cast?.length > 5 ? '...' : '');
-                    
-                    const detailsCaption = formatMessage(
-                        `🍀 *𝗧ɪᴛʟᴇ : ${movieInfo.title}`,
-                        `▫️📅 *𝗥ᴇʟᴇᴀꜱᴇ 𝗬ᴇᴀʀ ➟ ${movieInfo.year || 'N/A'}*
-▫️🥇 *𝗜𝗺𝗱ʙ 𝗥ᴀᴛɪɴɢ ➟ ${movieInfo.rating || 'N/A'}/10*
-▫️📊 *𝗤ᴜᴀʟɪᴛʏ ➟ ${movieInfo.quality || 'N/A'}*
-▫️⏳ *𝗗ᴜʀᴀᴛɪᴏɴ ➟ ${movieInfo.runtime || 'N/A'}*
-▫️🔠 *𝗟ᴀɴɢᴜᴀɢᴇ ➟ ${movieInfo.language || 'N/A'}*
-▫️🎭 *𝗚ᴇɴʀᴇꜱ ➟ ${movieInfo.genres?.join(', ') || 'N/A'}*
-▫️🙅 *𝗗ɪʀᴇᴄᴛᴏʀ ➟ ${movieInfo.director?.slice(0,2).join(', ') || 'N/A'}*
-▫️👥 *𝗖ᴀꜱᴛ ➟ ${castPreview || 'N/A'}*
-▫️👨‍💻 *𝗦ᴜʙᴛɪᴛʟᴇ ➟ ${movieInfo.subtitle?.author || 'Sinhala'} (${movieInfo.subtitle?.site || 'Baiscope'})*
-▫️📖 *sᴛᴏʀʏ ➟ ${movieInfo.description?.substring(0, 150) || 'No description'}...*
-▫️🔗 *Jᴏɪɴ ➟ ${sessionConfig.MGROUP_LINK || config.MGROUP_LINK}*`,
-                        `${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`
-                    );
+                socket.ev.on('messages.upsert', downloadSelectListener);
+                setTimeout(() => socket.ev.off('messages.upsert', downloadSelectListener), 180000);
 
-                    const infoMsg = await socket.sendMessage(sender, {
-                        image: { url: movieInfo.poster || selectedMovie.poster || sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
-                        caption: detailsCaption
-                    }, { quoted: replyMek });
-
-                    
-                    await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 2000) + 2000));
-
-                    const downloadOptionsText = `*⬇️🎀 𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗 𝗢𝗣𝗧𝗜𝗢𝗡𝗦*
-*Reply with number 👇*
-
-${videoDownloads.map((d, i) => 
-`*🔰 ${i + 1} ┃ 📥 ${d.quality || 'N/A'} • ${d.size || 'N/A'}*`
-).join('\n')}
-
-${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
-
-                    const downloadMsg = await socket.sendMessage(sender, {
-                        text: downloadOptionsText
-                    }, { quoted: infoMsg });
-
-                    const infoMsgID = downloadMsg.key.id;
-
-                   
-                    const handleDownload = async ({ messages: downloadMessages }) => {
-                        const downloadMek = downloadMessages[0];
-                        if (!downloadMek?.message) return;
-
-                        const downloadChoice = downloadMek.message.conversation || downloadMek.message.extendedTextMessage?.text;
-                        const isReplyToInfoMsg = downloadMek.message.extendedTextMessage?.contextInfo?.stanzaId === infoMsgID;
-
-                        if (isReplyToInfoMsg && sender === downloadMek.key.remoteJid) {
-                         
-                            if (sinhalasubDownloadTimeout) {
-                                clearTimeout(sinhalasubDownloadTimeout);
-                                sinhalasubDownloadTimeout = null;
-                            }
-                            
-                          
-                            sinhalasubDownloadTimeout = setTimeout(() => {
-                                if (sinhalasubDownloadListener) {
-                                    socket.ev.off('messages.upsert', sinhalasubDownloadListener);
-                                    sinhalasubDownloadListener = null;
-                                    console.log('🧹 Sinhalasub download listener timeout');
-                                }
-                                sinhalasubDownloadTimeout = null;
-                            }, 120000);
-
-                            const choiceNum = parseInt(downloadChoice) - 1;
-                            
-                            if (isNaN(choiceNum) || choiceNum < 0 || choiceNum >= videoDownloads.length) {
-                                await socket.sendMessage(sender, {
-                                     image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE},
-                                    caption: formatMessage(
-                                        '❌ INVALID SELECTION',
-                                        `*වැරදි අංකයක්! 1-${videoDownloads.length} අතර තෝරන්න!*`,
-                                        `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
-                                    )
-                                }, { quoted: downloadMek });
-                                return;
-                            }
-
-                            const selectedDownload = videoDownloads[choiceNum];
-                            
-                            await socket.sendMessage(sender, { 
-                                text: `⏳ 𝙂𝙚𝙩𝙩𝙞𝙣𝙜 𝙙𝙤𝙬𝙣𝙡𝙤𝙖𝙙 𝙡𝙞𝙣𝙠...` 
-                            }, { quoted: downloadMek });
-
-                          
-                            await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 2000) + 2000));
-
-                            try {
-                               
-                                const downloadResponse = await axios.get(`${config.API_MAIN_URL}/sinhalasub/download2?url=${encodeURIComponent(selectedDownload.link_page)}&api_key=${config.API_KEY}`);
-                                const downloadData = downloadResponse.data;
-
-                                if (!downloadData.status || !downloadData.data?.download) {
-                                    throw new Error('Failed to get download URL');
-                                }
-
-                                const finalDownloadUrl = downloadData.data.download;
-                                const fileInfo = downloadData.data.file_info || {};
-                                
-                                
-                                let fileName = fileInfo.name || `${movieInfo.title} [${selectedDownload.quality || 'Unknown'}].mp4`;
-                                const mimeType = fileInfo.mimeType || 'video/mp4';
-                                
-                                console.log('Download URL:', finalDownloadUrl);
-                                console.log('File Name:', fileName);
-                                console.log('Mime Type:', mimeType);
-                                
-                                await socket.sendMessage(sender, { react: { text: '📥', key: downloadMek.key } });
-
-                             
-
-                               
-                                let sizeText = 'N/A';
-                                if (fileInfo.size) {
-                                    const sizeInMB = fileInfo.size / 1024 / 1024;
-                                    if (sizeInMB > 1024) {
-                                        sizeText = (sizeInMB / 1024).toFixed(2) + ' GB';
-                                    } else {
-                                        sizeText = sizeInMB.toFixed(2) + ' MB';
-                                    }
-                                }
-
-                               
-                                await socket.sendMessage(sender, {
-                                    document: { url: finalDownloadUrl },
-                                    mimetype: mimeType,
-                                    fileName: fileName,
-                                    caption: formatMessage(
-                                        `🍀 ${movieInfo.title}`,
-                                        `\`❚█${sessionConfig.MOVIE_CAPTION || config.MOVIE_CAPTION}█❚\`
-
-\`❪${selectedDownload.quality || 'Unknown'}❫\``,
-                                        `${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`
-                                    )
-                                }, { quoted: downloadMek });
-
-                                await socket.sendMessage(sender, { react: { text: '✅', key: downloadMek.key } });
-                                
-                               
-                                clearAllSinhalasubListeners();
-
-                            } catch (downloadError) {
-                                console.error('Download link error:', downloadError);
-                                await socket.sendMessage(sender, {
-                                     image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE},
-                                    caption: formatMessage(
-                                        '❌ DOWNLOAD ERROR',
-                                        `*Download link එක ලබාගැනීමේ දෝෂයක්.*\nError: ${downloadError.message}`,
-                                        `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
-                                    )
-                                }, { quoted: downloadMek });
-                            }
-                        }
-                    };
-
-                   
-                    sinhalasubDownloadListener = handleDownload;
-                    socket.ev.on('messages.upsert', handleDownload);
-
-                   
-                    sinhalasubDownloadTimeout = setTimeout(() => {
-                        if (sinhalasubDownloadListener) {
-                            socket.ev.off('messages.upsert', sinhalasubDownloadListener);
-                            sinhalasubDownloadListener = null;
-                            console.log('🧹 Sinhalasub download listener timeout - cleaned up');
-                        }
-                        sinhalasubDownloadTimeout = null;
-                    }, 120000);
-
-                } catch (infoError) {
-                    console.error('Movie info error:', infoError);
-                    await socket.sendMessage(sender, {
-                         image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE},
-                        caption: formatMessage(
-                            '❌ ERROR',
-                            `*Movie details ලබාගැනීමේ දෝෂයක්:* ${infoError.message}`,
-                            `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
-                        )
-                    }, { quoted: replyMek });
-                }
+            } catch (infoErr) {
+                await socket.sendMessage(sender, {
+                    text: `❌ Info Error: ${infoErr.message}`
+                }, { quoted: mek });
+                await socket.sendMessage(sender, { react: { text: '❌', key: mek.key } });
             }
         };
 
-       
-        sinhalasubSelectionListener = handleSelection;
-        socket.ev.on('messages.upsert', handleSelection);
+        socket.ev.on('messages.upsert', movieSelectListener);
+        setTimeout(() => socket.ev.off('messages.upsert', movieSelectListener), 180000);
 
-       
-        sinhalasubSelectionTimeout = setTimeout(() => {
-            if (sinhalasubSelectionListener) {
-                socket.ev.off('messages.upsert', sinhalasubSelectionListener);
-                sinhalasubSelectionListener = null;
-                console.log('🧹 Sinhalasub selection listener timeout - cleaned up');
-            }
-            sinhalasubSelectionTimeout = null;
-        }, 120000);
-
-    } catch (error) {
-        console.error('Movie command error:', error);
-       
-        clearAllSinhalasubListeners();
+    } catch (err) {
         await socket.sendMessage(sender, {
-             image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE},
-            caption: formatMessage(
-                '❌ ERROR',
-                `*දෝෂයක් ඇතිවුණා:* ${error.message || 'Unknown error'}`,
-                `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
-            )
+            text: '❌ Search Error: ' + err.message
         }, { quoted: msg });
     }
+
     break;
+}
                  
     break;    case 'menu':
                case 'help':     {
