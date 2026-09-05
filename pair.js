@@ -1460,7 +1460,198 @@ case 'sinhalacartoon': {
                                       `_Direct Link එක ක්ලික් කර Browser එකෙන් හෝ Download Manager එකකින් ඩවුන්ලෝඩ් කරගන්න._`
                             }, { quoted: epMek });
 
-                            await socket.sendMessage(sender, { react: { text: '✅', key: epMek.key } });
+case 'cartoon':
+case 'sinhalacartoon': {
+    if (!args.length) {
+        await socket.sendMessage(sender, {
+            image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+            caption: formatMessage(
+                '❌ ERROR',
+                '*කරුණාකර කාටූනයේ නම ලබාදෙන්න! උදා:.cartoon Ben 10*',
+                `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+            )
+        }, { quoted: msg });
+        break;
+    }
+
+    const cartoonQuery = args.join(' ');
+    const API_BASE = 'https://api.chamindu.site/api/v1/cartoons/sinhalacartoons';
+    const API_KEY = 'chama_api_11230a80e5eed3c1b80bfcc5d1773ec9';
+
+    let cartoonSelectionListener = null;
+    let cartoonEpisodeListener = null;
+    let cartoonMasterTimeout = null;
+
+    const clearAllCartoonListeners = () => {
+        if (cartoonSelectionListener) {
+            socket.ev.off('messages.upsert', cartoonSelectionListener);
+            cartoonSelectionListener = null;
+        }
+        if (cartoonEpisodeListener) {
+            socket.ev.off('messages.upsert', cartoonEpisodeListener);
+            cartoonEpisodeListener = null;
+        }
+        if (cartoonMasterTimeout) {
+            clearTimeout(cartoonMasterTimeout);
+            cartoonMasterTimeout = null;
+        }
+    };
+
+    // command eka adala wita pahala listeners clear karanna
+    clearAllCartoonListeners();
+
+    try {
+        await socket.sendMessage(sender, { text: '🔍 Searching cartoons on SinhalaCartoons...' }, { quoted: msg });
+
+        // 1. Search Request
+        const searchRes = await axios.get(`${API_BASE}/search`, {
+            params: { q: cartoonQuery, api_key: API_KEY },
+            timeout: 20000
+        });
+
+        const searchData = searchRes.data;
+        if (!searchData.status ||!searchData.data || searchData.data.length === 0) {
+            await socket.sendMessage(sender, {
+                image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+                caption: formatMessage(
+                    '❌ NO RESULTS',
+                    '*කිසිදු කාටූනයක් හමු නොවීය!*',
+                    `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                )
+            }, { quoted: msg });
+            break;
+        }
+
+        const cartoonList = searchData.data.slice(0, 20);
+        let listText = `🧸 *𝗦𝗜𝗡𝗛𝗔𝗟𝗔 𝗖𝗔𝗥𝗧𝗢𝗢𝗡 𝗦𝗘𝗔𝗥𝗖𝗛 : _${cartoonQuery}_*\n╭──────●➤\n*🔢 ʀᴇᴘʟʏ ʙᴇʟᴏᴡ ɴᴜᴍʙᴇʀ*\n╰──────────●➤\n╭──────●➤\n`;
+
+        cartoonList.forEach((item, index) => {
+            listText += `*🧩 ${index + 1} ┃❭❭ ${item.title}*\n ↳ (${item.quality || 'HD'} | ⭐ ${item.rating || 'N/A'})\n`;
+        });
+        listText += `╰──────────●➤\n> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
+
+        const searchMsg = await socket.sendMessage(sender, {
+            image: { url: cartoonList[0].image || sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+            caption: listText
+        }, { quoted: msg });
+
+        const searchMsgID = searchMsg.key.id;
+
+        cartoonMasterTimeout = setTimeout(() => {
+            clearAllCartoonListeners();
+            socket.sendMessage(sender, { text: '⏰ කාලය ඉවරයි. ආපහු command එක ගහන්න.' }).catch(()=>{});
+        }, 240000);
+
+        // Step 1: Cartoon එක තෝරාගැනීම
+        const handleCartoonSelection = async ({ messages }) => {
+            const replyMek = messages?.[0];
+            if (!replyMek?.message) return;
+
+            const text = (replyMek.message.conversation || replyMek.message.extendedTextMessage?.text || '').trim();
+            const isReply = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === searchMsgID;
+
+            if (isReply && sender === replyMek.key.remoteJid) {
+                const choice = parseInt(text) - 1;
+                if (isNaN(choice) || choice < 0 || choice >= cartoonList.length) {
+                    await socket.sendMessage(sender, {
+                        text: `❌ කරුණාකර 1 - ${cartoonList.length} අතර අංකයක් ලබාදෙන්න!`
+                    }, { quoted: replyMek });
+                    return;
+                }
+
+                socket.ev.off('messages.upsert', handleCartoonSelection);
+                cartoonSelectionListener = null;
+
+                const chosenCartoon = cartoonList[choice];
+                await socket.sendMessage(sender, { text: '⏳ Fetching cartoon details & episodes...' }, { quoted: replyMek });
+
+                try {
+                    // 2. Info Request
+                    const infoRes = await axios.get(`${API_BASE}/infodl`, {
+                        params: { q: chosenCartoon.link, api_key: API_KEY },
+                        timeout: 20000
+                    });
+
+                    const cartoonData = infoRes.data?.data;
+                    const allDownloads = cartoonData?.downloads || [];
+
+                    if (!cartoonData || allDownloads.length === 0) {
+                        throw new Error('බාගත කිරීමේ links හෝ episodes හමු නොවීය.');
+                    }
+
+                    // Direct MP4 Download links පමණක් පෙරීම
+                    const directDownloads = allDownloads.filter(d => d.link?.endsWith('.mp4') ||!d.name?.includes('Telegram'));
+                    const finalDownloads = directDownloads.length > 0? directDownloads : allDownloads;
+
+                    let infoText = `🍀 *${cartoonData.title}*\n\n`;
+                    infoText += `⭐ *IMDb:* ${cartoonData.imdb || 'N/A'}\n`;
+                    infoText += `🗣️ *Language:* ${cartoonData.language || 'Sinhala'}\n`;
+                    infoText += `🎭 *Genres:* ${cartoonData.genres?.join(', ') || 'Cartoon'}\n\n`;
+                    infoText += `*Available Episodes / Links:*\n`;
+
+                    finalDownloads.forEach((dl, i) => {
+                        infoText += `*${i + 1}.* ${dl.name}\n`;
+                    });
+                    infoText += `\n👉 *බාගත කිරීමට අදාළ Episode අංකය Reply කරන්න.*`;
+
+                    const infoMsg = await socket.sendMessage(sender, {
+                        image: { url: cartoonData.image || chosenCartoon.image },
+                        caption: infoText
+                    }, { quoted: replyMek });
+
+                    const infoMsgID = infoMsg.key.id;
+
+                    // Step 2: Episode එක තෝරා DIRECT MP4 SEND කිරීම
+                    const handleEpisodeSelection = async ({ messages: epMessages }) => {
+                        const epMek = epMessages?.[0];
+                        if (!epMek?.message) return;
+
+                        const epChoiceText = (epMek.message.conversation || epMek.message.extendedTextMessage?.text || '').trim();
+                        const isEpReply = epMek.message.extendedTextMessage?.contextInfo?.stanzaId === infoMsgID;
+
+                        if (isEpReply && sender === epMek.key.remoteJid) {
+                            const epIdx = parseInt(epChoiceText) - 1;
+                            if (isNaN(epIdx) || epIdx < 0 || epIdx >= finalDownloads.length) {
+                                await socket.sendMessage(sender, {
+                                    text: `❌ කරුණාකර 1 - ${finalDownloads.length} අතර Episode අංකයක් ලබාදෙන්න!`
+                                }, { quoted: epMek });
+                                return;
+                            }
+
+                            clearAllCartoonListeners();
+                            const selectedEpisode = finalDownloads[epIdx];
+
+                            await socket.sendMessage(sender, { react: { text: '📥', key: epMek.key } });
+                            await socket.sendMessage(sender, {
+                                text: `⏳ *${selectedEpisode.name}* download වෙනවා... ටිකක් වෙලා යයි.`
+                            }, { quoted: epMek });
+
+                            try {
+                                // File eka buffer ekata ganna
+                                const videoRes = await axios.get(selectedEpisode.link, {
+                                    responseType: 'arraybuffer',
+                                    timeout: 300000 // 5 min. loku file walata
+                                });
+
+                                const videoBuffer = Buffer.from(videoRes.data);
+                                const fileName = `${cartoonData.title} - ${selectedEpisode.name}.mp4`.replace(/[\\/:*?"<>|]/g, "");
+
+                                // DIRECT DOCUMENT SEND
+                                await socket.sendMessage(sender, {
+                                    document: videoBuffer,
+                                    mimetype: 'video/mp4',
+                                    fileName: fileName,
+                                    caption: `🎬 *${cartoonData.title}*\n📌 *${selectedEpisode.name}*\n\n${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                                }, { quoted: epMek });
+
+                                await socket.sendMessage(sender, { react: { text: '✅', key: epMek.key } });
+
+                            } catch (downloadErr) {
+                                await socket.sendMessage(sender, {
+                                    text: `❌ Download Error: File eka ganna bari wuna.\nReason: ${downloadErr.message}`
+                                }, { quoted: epMek });
+                                await socket.sendMessage(sender, { react: { text: '❌', key: epMek.key } });
+                            }
                         }
                     };
 
@@ -1485,7 +1676,6 @@ case 'sinhalacartoon': {
     }
     break;
 }
-
 case 'anime': {
     if (!args.length) {
         await socket.sendMessage(sender, {
