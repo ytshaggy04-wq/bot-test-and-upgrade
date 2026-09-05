@@ -46,7 +46,7 @@ const config = {
     PREFIX: '.',
     OWNER_NUMBERS: ['94703830GGGG990'],
     BOT_NAME: "TEST-BOT",
-    AIR_FOOTER: "Bᴏᴛ ᴠ2.0.0",
+    AIR_FOOTER: "ꜱʜᴀɢɢY-xᴍᴅ ᴠ1.2🎥",
     MODE: 'public',
     MAX_RETRIES: 3
 };
@@ -373,9 +373,9 @@ Failed to fetch TikTok video! Please try again later.`
 
 🔢 Reply with a number:
 
-*1 ║❯❯ No Watermark*
-*2 ║❯❯ With Watermark*
-*3 ║❯❯ Audio Only*`;
+*1 ║❯❯ No Watermark ☊*
+*2 ║❯❯ With Watermark ☊*
+*3 ║❯❯ Audio Only ☊*`;
 
         const sentMessage = await socket.sendMessage(sender, {
             image: { url: tiktokData.cover || config.SITHIJA_IMAGE_PATH },
@@ -482,7 +482,7 @@ case 'cinesubz':
             image:  { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
             caption: formatMessage(
                 '❌ ERROR',
-                '*කරුණාකර චිත්‍රපටයේ හෝ TV series එකේ නම ලබාදෙන්න! උදා: .cinesubz spider*',
+                '*කරුණාකර චිත්‍රපටයේ හෝ TV series එකේ නම ලබාදෙන්න! උදා: .cinesubz batman*',
                 `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
             )
         }, { quoted: msg });
@@ -501,7 +501,7 @@ case 'cinesubz':
                 image:  { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
                 caption: formatMessage(
                     '❌ NO RESULTS',
-                    '*Cinesubz හි චිත්‍රපට හමුවෙන්නේ නැත! 😞*',
+                    '*cinesubz හි චිත්‍රපට හමුවෙන්නේ නැත! 😞*',
                     `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
                 )
             }, { quoted: msg });
@@ -509,7 +509,7 @@ case 'cinesubz':
         }
 
         const cinezubResults = searchData.results.slice(0, 25);
-        let listText = `☘️ *𝗧𝗩-𝗦𝗘𝗥𝗜𝗘𝗦 : _𝗦𝗘𝗔𝗥𝗖𝗛 𝗥𝗘𝗦𝗨𝗟𝗧𝗦_* 🔍
+        let listText = `☘️ *𝗠𝗢𝗩𝗜𝗘 : _𝗦𝗘𝗔𝗥𝗖𝗛 𝗥𝗘𝗦𝗨𝗟𝗧𝗦_* 🔍
 ╭──────●➤
 🔎 *𝗤𝘂𝗲𝗿𝘆 ➟* _${cinezubQuerytv}_
 📊 *Status ➟* _Results Found_
@@ -522,7 +522,7 @@ case 'cinesubz':
 
         cinezubResults.forEach((item, index) => {
             const type = item.link.includes('/tvshows/') ? '📺 TV Series' : '🎬 Movie';
-            listText += `*♦️ ${index + 1} ║❯❯ ${type} | ${item.title}*\n`;
+            listText += `*🍟${index + 1} ║❯❯ ${type} | ${item.title}*\n`;
         });
 
         listText += `╰──────────●➤\n> ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`;
@@ -675,7 +675,7 @@ case 'cinesubz':
 ╰──────────●➤\n\n`;
 
                                 selectedSeason.episodes.forEach((ep, idx) => {
-                                    episodesText += `*♦️${idx + 1} ║❯❯ 📺 Episode ${ep.episode}: ${ep.title}*\n`;
+                                    episodesText += `*⭐${idx + 1} ║❯❯ 📺 Episode ${ep.episode}: ${ep.title}*\n`;
                                 });
 
                                 episodesText += `\n> ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`;
@@ -738,7 +738,7 @@ case 'cinesubz':
 
                                             episodeDownloadLinks.forEach((link, idx) => {
                                                 const quality = link.meta || link.type || `Quality ${idx + 1}`;
-                                                qualityText += `♦️ *${idx + 1} ║❯❯ 📥 ${quality}*\n`;
+                                                qualityText += `🔥 *${idx + 1} ║❯❯ 📥 ${quality}*\n`;
                                             });
 
                                             qualityText += `\n${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
@@ -1443,7 +1443,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
     break;
                  
     break;    case 'menu':
-               case 'alive':     {
+               case 'help':     {
     try {
         const pushName = msg.pushName || 'User';
         const date = new Date();
@@ -1464,7 +1464,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 *┃ \`🐸 ${greetings}\`*
 *┃ \`🧩 𝚃𝚒𝚖𝚎\` : ${formattedTime}*
 *┃ \`🦊 𝙳𝚊𝚝𝚎\` : ${formattedDate}*
-*┃ \`🤡 𝙱𝚘𝚝 𝙽𝚊𝚖𝚎:\` ɢʜᴏsᴛ*
+*┃ \`🤡 𝙱𝚘𝚝 𝙽𝚊𝚖𝚎:\` 𝖲ʜᴀɢɢY-xᴍᴅ ⭐*
 *┃ \`🐞 𝙿𝚕𝚊𝚝𝚏𝚘𝚛𝚖:\` Linux*
 *╰────────●●►*    
 ╭─  ♡  ᴄᴏᴍᴍᴀɴᴅꜱ  ♡  ─╮
@@ -1472,17 +1472,26 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 🎬  𝗠𝗼𝘃𝗶𝗲 & 𝗗𝗼𝘄𝗻𝗹𝗼𝗮𝗱
   • .cinesubz    — Movie dl
   • .dubzone     — Movie dl
-  • .sinhalasub — Movie dl
-  • .song            — Music dl
-  • .tiktok           —Tiktok dl
+  • .sinhalasub  — Movie dl
+  • .anime       — Anime dl
+  • .scartoon    — Cartoon dl
+  • .song        — Music dl
+  • .tiktok      — Tiktok dl
+  • .ig          — Insta video dl
+  • .fb          — Fb video dl
 
 ⚙️  𝗚𝗲𝗻𝗲𝗿𝗮𝗹
   • .alive       — status
   • .menu        — menu
-  • .schedule    — custom masej
-  • .ai          — discussing with ai
+  • .help        — menu
   • .set         — settings
   • .system      — info
+  • .ping        — system info
+  • .bots        — active session
+
+  ⚙️  𝗢𝘁𝗵𝗲𝗿
+• .ai           — Conversation 
+• .schedule    — custom masej
 
 ╰─  © 𝚂ʜᴀɢY-xᴍᴅ  ─╯
 > ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
@@ -1758,219 +1767,6 @@ case 'bots': {
 }
 break;
 
-// ==========================================
-// 3. INSTAGRAM DOWNLOADER (.ig)
-// ==========================================
-case 'ig':
-case 'instagram': {
-    if (!args[0]) {
-        return await socket.sendMessage(sender, {
-            text: `❌ *Please provide an Instagram link!*\n✨ *Example:* \`.ig https://www.instagram.com/reel/...\``
-        }, { quoted: msg });
-    }
-
-    let igUrl = args[0].split("?")[0];
-    try {
-        await socket.sendMessage(sender, { react: { text: "⬇️", key: msg.key } });
-
-        let mediaUrl = null;
-        let isVideo = true;
-
-        try {
-            const res1 = await fetch(`https://itzpire.com/download/instagram?url=${encodeURIComponent(igUrl)}`);
-            const data1 = await res1.json();
-            if (data1.status && data1.data) {
-                mediaUrl = data1.data.url || data1.data[0]?.url;
-                isVideo = data1.data.type === 'video' || data1.data[0]?.type === 'video' || true;
-            }
-        } catch (e) {}
-
-        if (!mediaUrl) {
-            try {
-                const res2 = await fetch(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(igUrl)}`);
-                const data2 = await res2.json();
-                if (data2.status && data2.data && data2.data.length > 0) {
-                    mediaUrl = data2.data[0].url;
-                    isVideo = data2.data[0].type === 'video';
-                }
-            } catch (e) {}
-        }
-
-        if (!mediaUrl) {
-            return await socket.sendMessage(sender, { 
-                text: `❌ *Instagram security has temporarily rate-limited downloaders. Please try a different link!*` 
-            }, { quoted: msg });
-        }
-
-        if (isVideo) {
-            await socket.sendMessage(sender, {
-                video: { url: mediaUrl },
-                caption: `📥 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗 - 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠  𝗩𝗜𝗗𝗘𝗢*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
-            }, { quoted: msg });
-        } else {
-            await socket.sendMessage(sender, {
-                image: { url: mediaUrl },
-                caption: `📥 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗 - 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠  𝗜𝗠𝗔𝗚𝗘*\n\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
-            }, { quoted: msg });
-        }
-
-        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
-    } catch (err) {
-        console.error("IG Error:", err);
-        await socket.sendMessage(sender, { text: `❌ *An error occurred while downloading media.*` }, { quoted: msg });
-    }
-}
-break;
-
-// ==========================================
-// 1. STICKER COMMAND (.sticker)
-// ==========================================
-case 'sticker':
-case 's': {
-    try {
-        await socket.sendMessage(sender, { react: { text: "🎨", key: msg.key } });
-
-        const q = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage || msg.message;
-        const mime = q?.imageMessage || q?.videoMessage;
-        
-        if (!mime) {
-            return await socket.sendMessage(sender, {
-                text: `❌ *Please send or reply to an image/video to make a sticker!*`
-            }, { quoted: msg });
-        }
-
-        const { downloadMediaMessage } = await import('@whiskeysockets/baileys');
-        const mediaStream = await downloadMediaMessage(
-            msg.message?.extendedTextMessage?.contextInfo?.quotedMessage ? { message: msg.message.extendedTextMessage.contextInfo.quotedMessage } : msg,
-            'buffer',
-            {},
-            { logger: console }
-        );
-
-        await socket.sendMessage(sender, { sticker: mediaStream }, { quoted: msg });
-        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
-    } catch (err) {
-        console.error("Sticker Error:", err);
-        await socket.sendMessage(sender, { text: `❌ *Sticker Error: Could not process media.*` }, { quoted: msg });
-    }
-}
-break;
-
-// ==========================================
-// 2. IMAGE / PINTEREST SEARCH (.image)
-// ==========================================
-case 'image':
-case 'img':
-case 'pinterest': {
-    const query = args.join(' ');
-    if (!query) {
-        return await socket.sendMessage(sender, {
-            text: `❌ *What image do you want to search for?*\n✨ *Example:* \`.image Anime Neon\``
-        }, { quoted: msg });
-    }
-
-    try {
-        await socket.sendMessage(sender, { react: { text: "🔍", key: msg.key } });
-
-        // Fetch with timeout safety
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // තත්පර 5 කින් cancel වේ
-
-        const response = await fetch(`https://itzpire.com/search/pinterest?query=${encodeURIComponent(query)}`, {
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        const text = await response.text();
-        let result;
-        try {
-            result = JSON.parse(text);
-        } catch (e) {
-            return await socket.sendMessage(sender, { text: `❌ *Image servers are temporarily offline (HTML/Cloudflare response).*` }, { quoted: msg });
-        }
-
-        if (!result.status || !result.result || result.result.length === 0) {
-            return await socket.sendMessage(sender, { text: `❌ *No images found for your query!*` }, { quoted: msg });
-        }
-
-        const imageUrl = result.result[Math.floor(Math.random() * result.result.length)];
-
-        await socket.sendMessage(sender, {
-            image: { url: imageUrl },
-            caption: `🖼️ *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗 - 𝗜𝗠𝗔𝗚𝗘  𝗦𝗘𝗔𝗥𝗖𝗛*\n\n> \`${query}\`\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
-        }, { quoted: msg });
-
-        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
-    } catch (err) {
-        console.error("Image Fetch Failed:", err.message);
-        await socket.sendMessage(sender, { text: `❌ *Fetch failed: External image API is blocked or offline.*` }, { quoted: msg });
-    }
-}
-break;
-// ==========================================
-// REXPORN SEARCH COMMAND (.rexporn)
-// ==========================================
-case 'rexporn':
-case 'pornsearch':
-case 'xvideos': {
-    const query = args.join(' ');
-    if (!query) {
-        return await socket.sendMessage(sender, {
-            text: `❌ *Please provide a search query!*\n✨ *Example:* \`.rexporn japanese\``
-        }, { quoted: msg });
-    }
-
-    try {
-        await socket.sendMessage(sender, { react: { text: "🔥", key: msg.key } });
-
-        // Network block හෝ slow connection වලදී bot crash වීම වැළැක්වීමට timeout එකක් සැකසීම
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 7000); // තත්පර 7 කින් timeout වේ
-
-        const response = await fetch(`https://itzpire.com/search/xnxx?query=${encodeURIComponent(query)}`, {
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        const textRes = await response.text();
-        let resData;
-        
-        try {
-            resData = JSON.parse(textRes);
-        } catch (e) {
-            return await socket.sendMessage(sender, { 
-                text: `❌ *Rexporn API returned non-JSON data (Cloudflare/Server block).*` 
-            }, { quoted: msg });
-        }
-
-        if (!resData.status || !resData.result || resData.result.length === 0) {
-            return await socket.sendMessage(sender, { text: `❌ *No results found for your query!*` }, { quoted: msg });
-        }
-
-        let resultText = `🔞 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗  -  𝗥𝗘𝗫𝗣𝗢𝗥𝗡  𝗦𝗘𝗔𝗥𝗖𝗛* 🔥\n\n` +
-            `🔎 *𝖰𝗎𝖾𝗋𝗒 :* \`${query}\`\n\n`;
-
-        const limit = Math.min(resData.result.length, 5);
-        for (let i = 0; i < limit; i++) {
-            const item = resData.result[i];
-            const num = i + 1;
-            resultText += `✨ *${num}.* \`${item.title}\`\n`;
-            resultText += `⏱️ *Duration:* \`${item.duration || 'N/A'}\`\n`;
-            resultText += `🔗 *Link:* ${item.link}\n\n`;
-        }
-
-        resultText += `> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`;
-
-        await socket.sendMessage(sender, { text: resultText }, { quoted: msg });
-        await socket.sendMessage(sender, { react: { text: "✅", key: msg.key } });
-    } catch (err) {
-        console.error("Rexporn Fetch Error:", err.message);
-        await socket.sendMessage(sender, { 
-            text: `❌ *Rexporn Error: Fetch failed or request timed out.*` 
-        }, { quoted: msg });
-    }
-}
-break;
                    case 'news':
     case 'siyatha': {
         try {
