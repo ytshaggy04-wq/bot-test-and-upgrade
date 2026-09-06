@@ -1829,7 +1829,7 @@ case 'mflix': {
         await socket.sendMessage(sender, { text: `❌ Error: ${e.message}` }, { quoted: msg });
     }
     break;
-
+}
 // ==========================================
 // 3. PORNHUB COMMAND (FIXED)
 // ==========================================
@@ -1947,7 +1947,7 @@ case 'ph': {
     }
     break;
 }
-                    }
+                    
 case 'sinama':
 case 'sinamalka': {
     if (!args.length) {
