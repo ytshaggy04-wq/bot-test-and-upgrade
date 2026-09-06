@@ -1829,20 +1829,7 @@ case 'mflix': {
         await socket.sendMessage(sender, { text: `❌ Error: ${e.message}` }, { quoted: msg });
     }
     break;
-}
-case 'sinama':
-case 'sinamalka': {
-    if (!args.length) {
-        await socket.sendMessage(sender, {
-            image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
-            caption: formatMessage(
-                '❌ ERROR',
-                '*කරුණාකර චිත්‍රපටයේ නම ලබාදෙන්න! උදා: .sinama Marco*',
-                `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
-            )
-        }, { quoted: msg });
-        break;
-    }
+
 // ==========================================
 // 3. PORNHUB COMMAND (FIXED)
 // ==========================================
@@ -1960,6 +1947,20 @@ case 'ph': {
     }
     break;
 }
+                    }
+case 'sinama':
+case 'sinamalka': {
+    if (!args.length) {
+        await socket.sendMessage(sender, {
+            image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+            caption: formatMessage(
+                '❌ ERROR',
+                '*කරුණාකර චිත්‍රපටයේ නම ලබාදෙන්න! උදා: .sinama Marco*',
+                `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+            )
+        }, { quoted: msg });
+        break;
+    }
     const sinamaQuery = args.join(' ');
     const API_BASE = 'https://api.chamindu.site/api/v1/movies/subz';
     const API_KEY = 'chama_api_11230a80e5eed3c1b80bfcc5d1773ec9';
