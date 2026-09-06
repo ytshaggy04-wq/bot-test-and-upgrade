@@ -1508,7 +1508,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
     }
 }
 // ==========================================
-// CINESUBZ & BAISCOPE FULL FIXED MOVIE COMMAND
+// CODE X GAME DEVELOPER - ULTIMATE MOVIE FIX
 // ==========================================
 case 'baiscope':
 case 'baiscopes':
@@ -1581,17 +1581,11 @@ case 'cinesubz': {
                     const movieData = infoRes.data?.data || infoRes.data;
                     const rawDownloads = movieData?.downloads || movieData?.links || movieData?.result || [];
                     
-                    // UsersDrive වැනි HTML අඩవి වල ලින්ක්ස් සම්පූර්ණයෙන්ම පෙරළා ඉවත් කර Direct ලින්ක් පමණක් තෝරා ගැනීම
-                    const validDownloads = rawDownloads.filter(dl => {
-                        const link = dl.link || dl.direct_link || dl.url || '';
-                        return link && 
-                               !link.includes('usersdrive.com') && 
-                               !link.includes('mega.nz') && 
-                               !link.includes('uptobox.com');
-                    });
+                    // කිසිදු ලින්ක් එකක් මඟහරින්නේ නැත - API එකෙන් එන සියලුම ලින්ක් ලබා දෙයි
+                    const validDownloads = rawDownloads.filter(dl => (dl.link || dl.direct_link || dl.url));
 
                     if (!movieData || validDownloads.length === 0) {
-                        await socket.sendMessage(sender, { text: '❌ මෙම මුවී එක සඳහා සෘජු ඩවුන්ලෝඩ් ලින්ක් (Direct Links) හමු නොවීය.' }, { quoted: replyMek });
+                        await socket.sendMessage(sender, { text: '❌ මෙම මුවී එක සඳහා ඩවුන්ලෝඩ් ලින්ක් හමු නොවීය.' }, { quoted: replyMek });
                         return;
                     }
 
@@ -1625,7 +1619,7 @@ case 'cinesubz': {
                             const cleanTitle = (movieData.title || chosenMovie.title || 'Movie').replace(/[\\/:*?"<>|]/g, '').trim();
 
                             await socket.sendMessage(sender, { react: { text: '⬇️', key: dlMek.key } });
-                            await socket.sendMessage(sender, { text: `⏳ *Downloading Video File as Document...*` }, { quoted: dlMek });
+                            await socket.sendMessage(sender, { text: `⏳ *Processing & Sending Video Document...*` }, { quoted: dlMek });
 
                             try {
                                 let resolvedUrl = targetLink;
@@ -1641,27 +1635,34 @@ case 'cinesubz': {
                                     resolvedUrl = redirectCheck.request?.res?.responseUrl || targetLink;
                                 } catch (e) {}
 
-                                // සම්පූර්ණ වීඩියෝ බෆර් එක ඩවුන්ලෝඩ් කරගැනීම
+                                // Large file handling with streaming buffer
                                 const fileBufferRes = await axios.get(resolvedUrl, {
                                     responseType: 'arraybuffer',
-                                    timeout: 300000, // විනාඩි 5ක කල් ඉකුත්වීම (ලොකු ෆයිල් සඳහා)
+                                    timeout: 300000,
                                     maxContentLength: Infinity,
                                     maxBodyLength: Infinity,
                                     headers: { 
                                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                                        'Accept': 'video/webm,video/ogg,video/mp4;q=0.9,image/webp,*/*;q=0.8',
+                                        'Accept': '*/*',
                                         'Connection': 'keep-alive'
                                     }
                                 });
 
                                 const videoBuffer = Buffer.from(fileBufferRes.data);
 
-                                // වීඩියෝ ෆයිල් එක නිවැරදි .mp4 Document එකක් ලෙස යැවීම
+                                // Check if buffer is too small (meaning it fetched an HTML error page instead of video)
+                                if (videoBuffer.length < 500000) { // Less than 500KB cannot be a movie
+                                    await socket.sendMessage(sender, { 
+                                        text: `❌ මේක ඩිරෙක්ට් වීඩියෝ ලින්ක් එකක් නොවේ (හෝ සර්වර් එකෙන් බ්ලොක් කර ඇත).\n🔗 *Link:* ${resolvedUrl}` 
+                                    }, { quoted: dlMek });
+                                    return;
+                                }
+
                                 await socket.sendMessage(sender, {
                                     document: videoBuffer,
                                     mimetype: 'video/mp4',
                                     fileName: `${cleanTitle}_[${exactQuality}].mp4`,
-                                    caption: `✅ *${movieData.title || chosenMovie.title}* (${selectedName} - ${exactQuality})\n> SHAGGY XMD MOVIE BOT`
+                                    caption: `✅ *${movieData.title || chosenMovie.title}* (${selectedName} - ${exactQuality})\n> CODE X GAME DEVELOPER`
                                 }, { quoted: dlMek });
 
                                 await socket.sendMessage(sender, { react: { text: '✅', key: dlMek.key } });
