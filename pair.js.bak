@@ -1508,7 +1508,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
     }
 }
 // ==========================================
-// 1. BAISCOPE & BAISCOPES COMMAND (FIXED)
+// 1. BAISCOPE / BAISCOPES COMMAND (FIXED)
 // ==========================================
 case 'baiscope':
 case 'baiscopes': {
@@ -1533,8 +1533,8 @@ case 'baiscopes': {
         await socket.sendMessage(sender, { text: '🔍 Searching movies on Baiscope...' }, { quoted: msg });
 
         const [res1, res2] = await Promise.allSettled([
-            axios.get(`${API_BASE_1}/search`, { params: { q: baiscopeQuery, api_key: API_KEY }, timeout: 45000, headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } }),
-            axios.get(`${API_BASE_2}/search`, { params: { q: baiscopeQuery, api_key: API_KEY }, timeout: 45000, headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } })
+            axios.get(`${API_BASE_1}/search`, { params: { q: baiscopeQuery, api_key: API_KEY }, timeout: 45000, headers: { 'User-Agent': 'Mozilla/5.0' } }),
+            axios.get(`${API_BASE_2}/search`, { params: { q: baiscopeQuery, api_key: API_KEY }, timeout: 45000, headers: { 'User-Agent': 'Mozilla/5.0' } })
         ]);
 
         let combinedList = [];
@@ -1581,13 +1581,11 @@ case 'baiscopes': {
                     const infoRes = await axios.get(`${infoApiBase}/infodl`, {
                         params: { q: chosenMovie.link, api_key: API_KEY },
                         timeout: 45000,
-                        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+                        headers: { 'User-Agent': 'Mozilla/5.0' }
                     });
 
                     const movieData = infoRes.data?.data;
                     const rawDownloads = movieData?.downloads || [];
-
-                    // බැලුම් හෙළීම සහ නුසුදුසු ලින්ක් (UsersDrive, Mega ආදිය) පෙරීම
                     const validDownloads = rawDownloads.filter(dl => {
                         const link = dl.link || dl.direct_link || '';
                         return link && !link.includes('usersdrive.com') && !link.includes('mega.nz');
@@ -1625,25 +1623,33 @@ case 'baiscopes': {
                             const cleanTitle = movieData.title.replace(/[\\/:*?"<>|]/g, '').trim();
 
                             await socket.sendMessage(sender, { react: { text: '⬇️', key: dlMek.key } });
-                            await socket.sendMessage(sender, { text: `⏳ *Resolving & Sending as Document:* ${selectedName}...` }, { quoted: dlMek });
+                            await socket.sendMessage(sender, { text: `⏳ *Downloading & Sending as Document:* ${selectedName}...` }, { quoted: dlMek });
 
                             try {
-                                // Redirects (TinyURL ආදී ඒවා) පසුපස ගොස් අවසාන සැබෑ ලින්ක් එක ලබාගැනීම
+                                // Redirects පසුපස ගොස් අවසාන ලින්ක් එක ලබාගැනීම
                                 let resolvedUrl = targetLink;
                                 try {
                                     const redirectCheck = await axios.get(targetLink, {
                                         maxRedirects: 10,
                                         timeout: 20000,
-                                        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+                                        headers: { 'User-Agent': 'Mozilla/5.0' }
                                     });
                                     resolvedUrl = redirectCheck.request?.res?.responseUrl || targetLink;
-                                } catch (redirErr) {
-                                    // සමහර විට head/get වලදී direct stream url එක ලැබී තිබිය හැක
-                                }
+                                } catch (e) {}
 
-                                // Document එකක් ලෙස යැවීම
+                                // බෆර් එකක් ලෙස ෆයිල් එක ලබාගැනීම (403 වැළැක්වීමට සහ ස්ථාවරව යැවීමට)
+                                const fileBufferRes = await axios.get(resolvedUrl, {
+                                    responseType: 'arraybuffer',
+                                    timeout: 120000,
+                                    maxContentLength: Infinity,
+                                    maxBodyLength: Infinity,
+                                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+                                });
+
+                                const videoBuffer = Buffer.from(fileBufferRes.data);
+
                                 await socket.sendMessage(sender, {
-                                    document: { url: resolvedUrl },
+                                    document: videoBuffer,
                                     mimetype: 'video/mp4',
                                     fileName: `${cleanTitle} [${selectedName.replace(/[^a-zA-Z0-9]/g, '_')}]HD.mp4`,
                                     caption: `✅ *${movieData.title}* (${selectedName})\n> ${config.BOT_FOOTER || ''}`
@@ -1651,7 +1657,7 @@ case 'baiscopes': {
 
                                 await socket.sendMessage(sender, { react: { text: '✅', key: dlMek.key } });
                             } catch (err) {
-                                await socket.sendMessage(sender, { text: `❌ ෆයිල් එක ඩවුන්ලෝඩ් කර යැවීමේ දෝෂයක් (403/Blocked): ${err.message}\n\n🔗 Link: ${targetLink}` }, { quoted: dlMek });
+                                await socket.sendMessage(sender, { text: `❌ ෆයිල් එක ඩවුන්ලෝඩ් කර යැවීමේ දෝෂයක්: ${err.message}` }, { quoted: dlMek });
                             }
                         }
                     };
@@ -1671,7 +1677,7 @@ case 'baiscopes': {
 }
 
 // ==========================================
-// 2. MFLIX COMMAND (FIXED WITH FULL LOGIC)
+// 2. MFLIX COMMAND (FIXED)
 // ==========================================
 case 'mflix': {
     if (!args.length) {
@@ -1695,7 +1701,7 @@ case 'mflix': {
         const searchRes = await axios.get(`${MFLIX_API}/search`, {
             params: { q: mflixQuery, api_key: API_KEY },
             timeout: 30000,
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+            headers: { 'User-Agent': 'Mozilla/5.0' }
         });
 
         const mList = searchRes.data?.data || searchRes.data?.results || [];
@@ -1735,7 +1741,7 @@ case 'mflix': {
                     const infoRes = await axios.get(`${MFLIX_API}/infodl`, {
                         params: { q: chosen.link || chosen.url, api_key: API_KEY },
                         timeout: 45000,
-                        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+                        headers: { 'User-Agent': 'Mozilla/5.0' }
                     });
 
                     const mData = infoRes.data?.data || infoRes.data;
@@ -1774,7 +1780,7 @@ case 'mflix': {
                             const cleanTitle = (chosen.title || 'Movie').replace(/[\\/:*?"<>|]/g, '').trim();
 
                             await socket.sendMessage(sender, { react: { text: '⬇️', key: dlMek.key } });
-                            await socket.sendMessage(sender, { text: `⏳ *Sending as Document:* ${selectedName}...` }, { quoted: dlMek });
+                            await socket.sendMessage(sender, { text: `⏳ *Downloading & Sending as Document:* ${selectedName}...` }, { quoted: dlMek });
 
                             try {
                                 let resolvedUrl = targetLink;
@@ -1782,13 +1788,23 @@ case 'mflix': {
                                     const redirectCheck = await axios.get(targetLink, {
                                         maxRedirects: 10,
                                         timeout: 20000,
-                                        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+                                        headers: { 'User-Agent': 'Mozilla/5.0' }
                                     });
                                     resolvedUrl = redirectCheck.request?.res?.responseUrl || targetLink;
                                 } catch (e) {}
 
+                                const fileBufferRes = await axios.get(resolvedUrl, {
+                                    responseType: 'arraybuffer',
+                                    timeout: 120000,
+                                    maxContentLength: Infinity,
+                                    maxBodyLength: Infinity,
+                                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+                                });
+
+                                const videoBuffer = Buffer.from(fileBufferRes.data);
+
                                 await socket.sendMessage(sender, {
-                                    document: { url: resolvedUrl },
+                                    document: videoBuffer,
                                     mimetype: 'video/mp4',
                                     fileName: `${cleanTitle} [${selectedName.replace(/[^a-zA-Z0-9]/g, '_')}]HD.mp4`,
                                     caption: `✅ *${chosen.title || 'Movie'}* (${selectedName})\n> ${config.BOT_FOOTER || ''}`
@@ -1796,7 +1812,7 @@ case 'mflix': {
 
                                 await socket.sendMessage(sender, { react: { text: '✅', key: dlMek.key } });
                             } catch (err) {
-                                await socket.sendMessage(sender, { text: `❌ ඩවුන්ලෝඩ් කිරීමේ දෝෂයක්: ${err.message}\n\n🔗 Link: ${targetLink}` }, { quoted: dlMek });
+                                await socket.sendMessage(sender, { text: `❌ ඩවුන්ලෝඩ් කිරීමේ දෝෂයක්: ${err.message}` }, { quoted: dlMek });
                             }
                         }
                     };
@@ -1814,20 +1830,32 @@ case 'mflix': {
     }
     break;
 }
-// ==========================================
-// PORNHUB SEARCH & DIRECT MP4 DOCUMENT COMMAND
-// ==========================================
-case 'phsearch':
-case 'pornhub': {
+case 'sinama':
+case 'sinamalka': {
     if (!args.length) {
-        await socket.sendMessage(sender, { text: '❌ කරුණාකර සෙවිය යුතු වචනයක් ලබාදෙන්න! උදා: .phsearch japanese' }, { quoted: msg });
+        await socket.sendMessage(sender, {
+            image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+            caption: formatMessage(
+                '❌ ERROR',
+                '*කරුණාකර චිත්‍රපටයේ නම ලබාදෙන්න! උදා: .sinama Marco*',
+                `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+            )
+        }, { quoted: msg });
+        break;
+    }
+// ==========================================
+// 3. PORNHUB COMMAND (FIXED)
+// ==========================================
+case 'pornhub':
+case 'ph': {
+    if (!args.length) {
+        await socket.sendMessage(sender, { text: '❌ කරුණාකර සෙවිය යුතු නම ලබාදෙන්න! උදා: .pornhub small' }, { quoted: msg });
         break;
     }
 
-    const query = args.join(' ');
-    const API_KEY = 'chama_api_11230a80e5eed3c1b80bfcc5d1773ec9';
-    const SEARCH_API = 'https://api.chamindu.site/api/adult/pornhub/search';
-    const DL_API = 'https://api.chamindu.site/api/adult/pornhub/dl';
+    const phQuery = args.join(' ');
+    const API_KEY = 'chama_api_d51661e320bf77b785a6ca86a43687f3';
+    const PH_API = 'https://api.chamindu.site/api/v1/adult/pornhub'; // හෝ අදාළ API එපයින්ට් එක
 
     let phListner = null, phDlListner = null, phTimeout = null;
     const clearPhListeners = () => {
@@ -1838,22 +1866,22 @@ case 'pornhub': {
 
     try {
         await socket.sendMessage(sender, { text: '🔍 Searching on Pornhub...' }, { quoted: msg });
-        const res = await axios.get(SEARCH_API, {
-            params: { q: query, page: 1, api_key: API_KEY },
+        const searchRes = await axios.get(`${PH_API}/search`, {
+            params: { q: phQuery, api_key: API_KEY },
             timeout: 30000,
             headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
         });
 
-        const results = res.data?.results || [];
-        if (!results.length) {
+        const phList = searchRes.data?.data || searchRes.data?.results || [];
+        if (!phList.length) {
             await socket.sendMessage(sender, { text: '❌ කිසිදු ප්‍රතිඵලයක් හමු නොවීය!' }, { quoted: msg });
             break;
         }
 
-        const phList = results.slice(0, 15);
-        let txt = `🔞 *PORNHUB SEARCH : _${query}_*\n╭──────●➤\n*🔢 ʀᴇ𝗽𝗹ʏ ʙ𝗲𝗹𝗼𝘄 ɴᴜᴍ𝗯𝙚𝗥*\n╰──────────●➤\n`;
-        phList.forEach((item, i) => {
-            txt += `*🧩 ${i + 1} ┃❭❭ ${item.title}*\n    ↳ (⏱️ ${item.duration})\n`;
+        const results = phList.slice(0, 10);
+        let txt = `🔞 *PORNHUB SEARCH : _${phQuery}_*\n╭──────●➤\n*🔢 ʀᴇ𝗽𝗹ʏ ʙ𝗲𝗹𝗼𝘄 ɴᴜᴍ𝗯𝙚𝗥*\n╰──────────●➤\n`;
+        results.forEach((item, i) => {
+            txt += `*🧩 ${i + 1} ┃❭❭ ${item.title}*\n    ↳ (⏱️ ${item.duration || 'N/A'})\n`;
         });
 
         const searchMsg = await socket.sendMessage(sender, { text: txt }, { quoted: msg });
@@ -1868,44 +1896,59 @@ case 'pornhub': {
             
             if (replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === sMsgId && sender === replyMek.key.remoteJid) {
                 const choice = parseInt(text) - 1;
-                if (isNaN(choice) || choice < 0 || choice >= phList.length) {
-                    await socket.sendMessage(sender, { text: `❌ 1 - ${phList.length} අතර අංකයක් දෙන්න!` }, { quoted: replyMek });
+                if (isNaN(choice) || choice < 0 || choice >= results.length) {
+                    await socket.sendMessage(sender, { text: `❌ 1 - ${results.length} අතර අංකයක් දෙන්න!` }, { quoted: replyMek });
                     return;
                 }
 
                 clearPhListeners();
-                const chosenVideo = phList[choice];
+                const chosen = results[choice];
                 await socket.sendMessage(sender, { text: '⏳ Fetching video file...' }, { quoted: replyMek });
 
                 try {
-                    const dlRes = await axios.get(DL_API, {
-                        params: { url: chosenVideo.url, api_key: API_KEY },
-                        timeout: 30000,
+                    const infoRes = await axios.get(`${PH_API}/download`, {
+                        params: { q: chosen.link || chosen.url, api_key: API_KEY },
+                        timeout: 45000,
                         headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
                     });
 
-                    const dlData = dlRes.data;
-                    const videoLink = dlData?.raw_link || dlData?.download_url;
+                    const vData = infoRes.data?.data || infoRes.data;
+                    const streamUrl = vData?.url || vData?.download || vData?.link;
 
-                    if (!videoLink) {
+                    if (!streamUrl) {
                         await socket.sendMessage(sender, { text: '❌ මෙම වීඩියෝව සඳහා ඩවුන්ලෝඩ් ලින්ක් ලබාගත නොහැකි විය.' }, { quoted: replyMek });
                         return;
                     }
 
-                    const cleanTitle = chosenVideo.title.replace(/[\\/:*?"<>|]/g, '').trim();
-                    await socket.sendMessage(sender, { react: { text: '⬇️', key: replyMek.key } });
+                    const cleanTitle = (chosen.title || 'video').replace(/[\\/:*?"<>|]/g, '').trim();
 
-                    // ලිංක් පෙන්නන්නේ නැතුව කෙලින්ම Document (MP4) එකක් විදිහට යවයි
+                    await socket.sendMessage(sender, { react: { text: '⬇️', key: replyMek.key } });
+                    await socket.sendMessage(sender, { text: `⏳ *Downloading & Sending as Document...*` }, { quoted: replyMek });
+
+                    // Pornhub CDN වලට අත්‍යවශ්‍ය Referer සහ Headers සමග Buffer ලබාගැනීම
+                    const fileBufferRes = await axios.get(streamUrl, {
+                        responseType: 'arraybuffer',
+                        timeout: 120000,
+                        maxContentLength: Infinity,
+                        maxBodyLength: Infinity,
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                            'Referer': 'https://www.pornhub.com/'
+                        }
+                    });
+
+                    const videoBuffer = Buffer.from(fileBufferRes.data);
+
                     await socket.sendMessage(sender, {
-                        document: { url: videoLink },
+                        document: videoBuffer,
                         mimetype: 'video/mp4',
-                        fileName: `${cleanTitle}.mp4`
+                        fileName: `${cleanTitle}.mp4`,
+                        caption: `✅ *${chosen.title}*\n> ${config.BOT_FOOTER || ''}`
                     }, { quoted: replyMek });
 
                     await socket.sendMessage(sender, { react: { text: '✅', key: replyMek.key } });
 
                 } catch (err) {
-                    clearPhListeners();
                     await socket.sendMessage(sender, { text: `❌ Download Error: ${err.message}` }, { quoted: replyMek });
                 }
             }
@@ -1913,25 +1956,10 @@ case 'pornhub': {
         socket.ev.on('messages.upsert', phListner);
     } catch (e) {
         clearPhListeners();
-        await socket.sendMessage(sender, { text: `❌ API Error: ${e.message}` }, { quoted: msg });
+        await socket.sendMessage(sender, { text: `❌ Error: ${e.message}` }, { quoted: msg });
     }
     break;
-}                    
-                
-case 'sinama':
-case 'sinamalka': {
-    if (!args.length) {
-        await socket.sendMessage(sender, {
-            image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
-            caption: formatMessage(
-                '❌ ERROR',
-                '*කරුණාකර චිත්‍රපටයේ නම ලබාදෙන්න! උදා: .sinama Marco*',
-                `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
-            )
-        }, { quoted: msg });
-        break;
-    }
-
+}
     const sinamaQuery = args.join(' ');
     const API_BASE = 'https://api.chamindu.site/api/v1/movies/subz';
     const API_KEY = 'chama_api_11230a80e5eed3c1b80bfcc5d1773ec9';
