@@ -1507,12 +1507,12 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
         console.error(e);
     }
 }
-// ==========================================
-// CODE X GAME DEVELOPER - ULTIMATE WORKING FIX
+                                        // ==========================================
+// CODE X GAME DEVELOPER - SEPARATE TIMERS FIX
 // ==========================================
 case 'baiscope':
 case 'baiscopes':
-case 'cine': {
+case 'cinesubz': {
     if (!args.length) {
         await socket.sendMessage(sender, { text: '❌ කරුණාකර සෙවිය යුතු චිත්‍රපටයේ නම ලබාදෙන්න!' }, { quoted: msg });
         break;
@@ -1522,16 +1522,17 @@ case 'cine': {
     const API_KEY = 'chama_api_11230a80e5eed3c1b80bfcc5d1773ec9';
     const API_BASE = 'https://api.chamindu.site/api/v1/movies/baiscope'; 
 
-    let sListner = null, dlListner = null, mTimeout = null;
+    let sListner = null, dlListner = null, sTimeout = null, dlTimeout = null;
     
     const clearListeners = () => {
         if (sListner) { socket.ev.off('messages.upsert', sListner); sListner = null; }
         if (dlListner) { socket.ev.off('messages.upsert', dlListner); dlListner = null; }
-        if (mTimeout) { clearTimeout(mTimeout); mTimeout = null; }
+        if (sTimeout) { clearTimeout(sTimeout); sTimeout = null; }
+        if (dlTimeout) { clearTimeout(dlTimeout); dlTimeout = null; }
     };
 
     try {
-        await socket.sendMessage(sender, { text: '🔍 Searching movies and checking details...' }, { quoted: msg });
+        await socket.sendMessage(sender, { text: '🔍 Searching movies...' }, { quoted: msg });
 
         const searchRes = await axios.get(`${API_BASE}/search`, { 
             params: { q: query, api_key: API_KEY }, 
@@ -1554,10 +1555,11 @@ case 'cine': {
         const searchMsg = await socket.sendMessage(sender, { text: listText }, { quoted: msg });
         const searchMsgID = searchMsg?.key?.id;
 
-        mTimeout = setTimeout(() => {
+        // Search එකට විනාඩි 1ක ටයිමර් එකක් (60 තත්පර)
+        sTimeout = setTimeout(() => {
             clearListeners();
-            socket.sendMessage(sender, { text: '⏰ කාලය අවසන් වී ඇත. කරුණාකර නැවත උත්සාහ කරන්න.' }, { quoted: msg }).catch(() => {});
-        }, 120000);
+            socket.sendMessage(sender, { text: '⏰ සෙවුම් කාලය අවසන් වී ඇත. කරුණාකර නැවත උත්සාහ කරන්න.' }, { quoted: msg }).catch(() => {});
+        }, 60000);
 
         sListner = async ({ messages }) => {
             try {
@@ -1575,9 +1577,12 @@ case 'cine': {
                     return;
                 }
 
-                clearListeners();
+                // Search එක ක්ලියර් කරලා ටයිමර් එක නවත්වන්න
+                if (sTimeout) clearTimeout(sTimeout);
+                if (sListner) { socket.ev.off('messages.upsert', sListner); sListner = null; }
+
                 const chosenMovie = results[choice];
-                await socket.sendMessage(sender, { text: '⏳ Fetching download options and quality check...' }, { quoted: replyMek });
+                await socket.sendMessage(sender, { text: '⏳ Fetching download options...' }, { quoted: replyMek });
 
                 const infoRes = await axios.get(`${API_BASE}/infodl`, {
                     params: { q: chosenMovie.link || chosenMovie.url, api_key: API_KEY },
@@ -1603,6 +1608,12 @@ case 'cine': {
 
                 const infoMsg = await socket.sendMessage(sender, { text: infoText }, { quoted: replyMek });
                 const infoMsgID = infoMsg?.key?.id;
+
+                // Download තෝරන්න විනාඩි 2ක් (තත්පර 120ක්) දෙනවා
+                dlTimeout = setTimeout(() => {
+                    clearListeners();
+                    socket.sendMessage(sender, { text: '⏰ ඩවුන්ලෝඩ් කාලය අවසන් වී ඇත.' }, { quoted: msg }).catch(() => {});
+                }, 120000);
 
                 dlListner = async ({ messages: dlMessages }) => {
                     try {
