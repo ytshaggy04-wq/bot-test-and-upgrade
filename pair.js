@@ -1508,175 +1508,204 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
     }
 }
                                         
-           // ==========================================
-// CODE X GAME DEVELOPER - INSTANT FETCH FIX
-// ==========================================
-case 'baiscope':
-case 'baiscopes':
-case 'cinesubz': {
+ case 'baiscopes':
+case 'movie': {
     if (!args.length) {
-        await socket.sendMessage(sender, { text: '❌ කරුණාකර සෙවිය යුතු චිත්‍රපටයේ නම ලබාදෙන්න!' }, { quoted: msg });
+        await socket.sendMessage(sender, {
+            image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+            caption: formatMessage(
+                '❌ ERROR',
+                '*please movie name! ex: .baiscopes Batman*',
+                `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+            )
+        }, { quoted: msg });
         break;
     }
 
-    const query = args.join(' ');
+    const baiscopeQuery = args.join(' ');
+    const API_BASE = 'https://api.chamindu.site/api/v1/movies/baiscopes';
     const API_KEY = 'chama_api_11230a80e5eed3c1b80bfcc5d1773ec9';
-    const API_BASE = 'https://api.chamindu.site/api/v1/movies/baiscope'; 
 
-    let sListner = null, dlListner = null, sTimeout = null, dlTimeout = null;
-    
-    const clearListeners = () => {
-        if (sListner) { socket.ev.off('messages.upsert', sListner); sListner = null; }
-        if (dlListner) { socket.ev.off('messages.upsert', dlListner); dlListner = null; }
-        if (sTimeout) { clearTimeout(sTimeout); sTimeout = null; }
-        if (dlTimeout) { clearTimeout(dlTimeout); dlTimeout = null; }
+    let baiscopesSelectionListener = null;
+    let baiscopesEpisodeListener = null;
+    let baiscopesMasterTimeout = null;
+
+    const clearAllbaiscopesListeners = () => {
+        if (baiscopesSelectionListener) {
+            socket.ev.off('messages.upsert', baiscopesSelectionListener);
+            baiscopesSelectionListener = null;
+        }
+        if (baiscopesEpisodeListener) {
+            socket.ev.off('messages.upsert', baiscopesEpisodeListener);
+            baiscopesEpisodeListener = null;
+        }
+        if (baiscopesMasterTimeout) {
+            clearTimeout(baiscopesMasterTimeout);
+            baiscopesMasterTimeout = null;
+        }
     };
 
     try {
-        await socket.sendMessage(sender, { text: '🔍 Searching movies...' }, { quoted: msg });
+        await socket.sendMessage(sender, { text: '🔍 Searching movies on baiscopes.lk...' }, { quoted: msg });
 
-        const searchRes = await axios.get(`${API_BASE}/search`, { 
-            params: { q: query, api_key: API_KEY }, 
-            timeout: 45000, 
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } 
+        const searchRes = await axios.get(`${API_BASE}/search`, {
+            params: { q: baiscopeQuery, api_key: API_KEY },
+            timeout: 20000
         });
 
-        const movieList = searchRes.data?.data || searchRes.data?.results || [];
-        if (movieList.length === 0) {
-            await socket.sendMessage(sender, { text: '❌ කිසිදු ප්‍රතිඵලයක් හමු නොවීය!' }, { quoted: msg });
+        const searchData = searchRes.data;
+        if (!searchData.status || !searchData.data || searchData.data.length === 0) {
+            await socket.sendMessage(sender, {
+                image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+                caption: formatMessage(
+                    '❌ NO RESULTS',
+                    '*Not Found To Movie!*',
+                    `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                )
+            }, { quoted: msg });
             break;
         }
 
-        const results = movieList.slice(0, 15);
-        let listText = `🎬 *MOVIE SEARCH & QUALITY DETAILS : _${query}_*\n╭──────●➤\n*🔢 ʀᴇ𝗽𝗹ʏ ʙ𝗲𝗹𝗼𝘄 ɴᴜᴍ𝗯𝙚𝗥*\n╰──────────●➤\n`;
-        results.forEach((item, index) => {
-            listText += `*🧩 ${index + 1} ┃❭❭ ${item.title || item.name}*\n    ↳ (Quality: ${item.quality || 'HD'} | ⭐ Rating: ${item.rating || 'N/A'})\n`;
+        const baiscopesList = searchData.data.slice(0, 20);
+        let listText = `🧸 *baiscopes.lk : _${baiscopeQuery}_*\n╭──────●➤\n*🔢 ʀᴇ𝗽𝗹ʏ ʙᴇʟ𝗼𝘄 ɴᴜᴍʙᴇ🇷*\n╰──────────●➤\n╭──────●➤\n`;
+
+        baiscopesList.forEach((item, index) => {
+            listText += `*🧩 ${index + 1} ┃❭❭ ${item.title}*\n    ↳ (${item.quality || 'HD'} | ⭐ ${item.rating || 'N/A'})\n`;
         });
+        listText += `╰──────────●➤\n> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 
-        const searchMsg = await socket.sendMessage(sender, { text: listText }, { quoted: msg });
-        const searchMsgID = searchMsg?.key?.id;
+        const searchMsg = await socket.sendMessage(sender, {
+            image: { url: baiscopesList[0].image || sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+            caption: listText
+        }, { quoted: msg });
 
-        sTimeout = setTimeout(() => {
-            clearListeners();
-            socket.sendMessage(sender, { text: '⏰ සෙවුම් කාලය අවසන් වී ඇත.' }, { quoted: msg }).catch(() => {});
-        }, 60000);
+        const searchMsgID = searchMsg.key.id;
 
-        sListner = async ({ messages }) => {
-            try {
-                const replyMek = messages?.[0];
-                if (!replyMek?.message || replyMek.key.fromMe) return;
-                
-                const contextInfo = replyMek.message.extendedTextMessage?.contextInfo || replyMek.message.imageMessage?.contextInfo;
-                if (!contextInfo || contextInfo.stanzaId !== searchMsgID || sender !== replyMek.key.remoteJid) return;
+        baiscopesMasterTimeout = setTimeout(() => {
+            clearAllbaiscopesListeners();
+        }, 120000);
 
-                const text = (replyMek.message.conversation || replyMek.message.extendedTextMessage?.text || '').trim();
+        const handlebaiscopesSelection = async ({ messages }) => {
+            const replyMek = messages?.[0];
+            if (!replyMek?.message || replyMek.key.remoteJid !== sender) return;
+
+            const text = (replyMek.message.conversation || replyMek.message.extendedTextMessage?.text || '').trim();
+            const isReply = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === searchMsgID;
+
+            if (isReply) {
                 const choice = parseInt(text) - 1;
-
-                if (isNaN(choice) || choice < 0 || choice >= results.length) {
-                    await socket.sendMessage(sender, { text: `❌ 1 - ${results.length} අතර අංකයක් දෙන්න!` }, { quoted: replyMek });
+                if (isNaN(choice) || choice < 0 || choice >= baiscopesList.length) {
+                    await socket.sendMessage(sender, {
+                        text: `❌ කරුණාකර 1 - ${baiscopesList.length} අතර අංකයක් ලබාදෙන්න!`
+                    }, { quoted: replyMek });
                     return;
                 }
 
-                if (sTimeout) clearTimeout(sTimeout);
-                if (sListner) { socket.ev.off('messages.upsert', sListner); sListner = null; }
-
-                const chosenMovie = results[choice];
-                
-                // 🌟 අංකය දුන් වහාම ක්ෂණිකව මැසේජ් එක යවයි (ටිකක්වත් පමාවෙන්නේ නැත)
-                await socket.sendMessage(sender, { text: '⚡ Fetching download info...' }, { quoted: replyMek });
-
-                const infoRes = await axios.get(`${API_BASE}/infodl`, {
-                    params: { q: chosenMovie.link || chosenMovie.url, api_key: API_KEY },
-                    timeout: 45000,
-                    headers: { 'User-Agent': 'Mozilla/5.0' }
-                });
-
-                const movieData = infoRes.data?.data || infoRes.data;
-                const rawDownloads = movieData?.downloads || movieData?.links || movieData?.result || [];
-                const validDownloads = rawDownloads.filter(dl => (dl.link || dl.direct_link || dl.url));
-
-                if (!movieData || validDownloads.length === 0) {
-                    await socket.sendMessage(sender, { text: '❌ මෙම මුවී එක සඳහා ඩවුන්ලෝඩ් ලින්ක් හමු නොවීය.' }, { quoted: replyMek });
-                    return;
+                if (baiscopesSelectionListener) {
+                    socket.ev.off('messages.upsert', baiscopesSelectionListener);
+                    baiscopesSelectionListener = null;
                 }
 
-                let infoText = `✨ *${movieData.title || chosenMovie.title || 'Movie'}* ✨\n\n📥 *AVAILABLE QUALITIES & SIZES:*\n╭──────────────────●➤\n`;
-                validDownloads.forEach((dl, i) => {
-                    const exactQuality = dl.quality || dl.resolution || 'MP4 / HD';
-                    infoText += `*┃ ${i + 1} ❭❭ ${dl.name || 'Movie File'} [${exactQuality}] (${dl.size || 'N/A'})*\n`;
-                });
-                infoText += `╰──────────────────●➤\n\n👉 *ඔබට අවශ්‍ය ගුණාත්මකභාවයේ (Quality) අංකය Reply කරන්න.*`;
+                const chosenbaiscopes = baiscopesList[choice];
+                await socket.sendMessage(sender, { text: '⏳ Fetching movie details & episodes...' }, { quoted: replyMek });
 
-                const infoMsg = await socket.sendMessage(sender, { text: infoText }, { quoted: replyMek });
-                const infoMsgID = infoMsg?.key?.id;
+                try {
+                    const infoRes = await axios.get(`${API_BASE}/infodl`, {
+                        params: { q: chosenbaiscopes.link, api_key: API_KEY },
+                        timeout: 20000
+                    });
 
-                // 🌟 ලින්ක් ටික පෙන්නුවාට පස්සේ ෆයිල් එක ඩවුන්ලෝඩ් කරලා සෙන්ඩ් කරන්න විනාඩි 3ක (180000ms) කාලයක් දෙනවා
-                dlTimeout = setTimeout(() => {
-                    clearListeners();
-                    socket.sendMessage(sender, { text: '⏰ ඩවුන්ලෝඩ් කාලය අවසන් වී ඇත.' }, { quoted: msg }).catch(() => {});
-                }, 180000);
+                    const baiscopesData = infoRes.data?.data;
+                    const allDownloads = baiscopesData?.downloads || [];
 
-                dlListner = async ({ messages: dlMessages }) => {
-                    try {
-                        const dlMek = dlMessages?.[0];
-                        if (!dlMek?.message || dlMek.key.fromMe) return;
-
-                        const dlContextInfo = dlMek.message.extendedTextMessage?.contextInfo || dlMek.message.imageMessage?.contextInfo;
-                        if (!dlContextInfo || dlContextInfo.stanzaId !== infoMsgID || sender !== dlMek.key.remoteJid) return;
-
-                        const dlChoiceText = (dlMek.message.conversation || dlMek.message.extendedTextMessage?.text || '').trim();
-                        const dlIdx = parseInt(dlChoiceText) - 1;
-
-                        if (isNaN(dlIdx) || dlIdx < 0 || dlIdx >= validDownloads.length) {
-                            await socket.sendMessage(sender, { text: `❌ නිවැරදි අංකයක් ලබාදෙන්න!` }, { quoted: dlMek });
-                            return;
-                        }
-
-                        clearListeners();
-                        const selectedDl = validDownloads[dlIdx];
-                        let targetLink = selectedDl.link || selectedDl.direct_link || selectedDl.url;
-                        const selectedName = selectedDl.name || 'Movie File';
-                        const exactQuality = selectedDl.quality || selectedDl.resolution || 'MP4';
-
-                        await socket.sendMessage(sender, { react: { text: '📥', key: dlMek.key } });
-                        await socket.sendMessage(sender, { text: `🚀 Downloading MP4 file, please wait...` }, { quoted: dlMek });
-
-                        try {
-                            await socket.sendMessage(sender, { 
-                                video: { url: targetLink }, 
-                                caption: `✅ *${movieData.title || chosenMovie.title}*\n📦 *Quality:* ${exactQuality}\n\n> CODE X GAME DEVELOPER`,
-                                mimetype: 'video/mp4'
-                            }, { quoted: dlMek });
-                        } catch (sendErr) {
-                            await socket.sendMessage(sender, { 
-                                document: { url: targetLink }, 
-                                mimetype: 'video/mp4',
-                                fileName: `${movieData.title || 'Movie'}_${exactQuality}.mp4`,
-                                caption: `✅ *${movieData.title || chosenMovie.title}*\n> CODE X GAME DEVELOPER`
-                            }, { quoted: dlMek });
-                        }
-
-                        await socket.sendMessage(sender, { react: { text: '✅', key: dlMek.key } });
-                    } catch (dlErr) {
-                        clearListeners();
-                        await socket.sendMessage(sender, { text: `❌ Error: ${dlErr.message}` }, { quoted: dlMek });
+                    if (!baiscopesData || allDownloads.length === 0) {
+                        throw new Error('බාගත කිරීමේ links හෝ episodes හමු නොවීය.');
                     }
-                };
 
-                socket.ev.on('messages.upsert', dlListner);
-            } catch (innerErr) {
-                clearListeners();
-                await socket.sendMessage(sender, { text: `❌ Error: ${innerErr.message}` }, { quoted: msg });
+                    const directDownloads = allDownloads.filter(d => d.link?.endsWith('.mp4') || !d.name?.includes('Telegram'));
+                    const finalDownloads = directDownloads.length > 0 ? directDownloads : allDownloads;
+
+                    let infoText = `🍀 *${baiscopesData.title}*\n\n`;
+                    infoText += `⭐ *IMDb:* ${baiscopesData.imdb || 'N/A'}\n`;
+                    infoText += `🗣️ *Language:* ${baiscopesData.language || 'Sinhala sub'}\n`;
+                    infoText += `🎭 *Genres:* ${baiscopesData.genres?.join(', ') || 'baiscopes'}\n\n`;
+                    infoText += `*Available Episodes / Links:*\n`;
+
+                    finalDownloads.forEach((dl, i) => {
+                        infoText += `*${i + 1}.* ${dl.name}\n`;
+                    });
+                    infoText += `\n👉 *බාගත කිරීමට අදාළ Episode අංකය Reply කරන්න.*`;
+
+                    const infoMsg = await socket.sendMessage(sender, {
+                        image: { url: chosenbaiscopes.image || sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+                        caption: infoText
+                    }, { quoted: replyMek });
+
+                    const infoMsgID = infoMsg.key.id;
+
+                    const handleEpisodeSelection = async ({ messages: epMessages }) => {
+                        const epMek = epMessages?.[0];
+                        if (!epMek?.message || epMek.key.remoteJid !== sender) return;
+
+                        const epChoiceText = (epMek.message.conversation || epMek.message.extendedTextMessage?.text || '').trim();
+                        const isEpReply = epMek.message.extendedTextMessage?.contextInfo?.stanzaId === infoMsgID;
+
+                        if (isEpReply) {
+                            const epIdx = parseInt(epChoiceText) - 1;
+                            if (isNaN(epIdx) || epIdx < 0 || epIdx >= finalDownloads.length) {
+                                await socket.sendMessage(sender, { 
+                                    text: `❌ කරුණාකර 1 - ${finalDownloads.length} අතර Episode අංකයක් ලබාදෙන්න!` 
+                                }, { quoted: epMek });
+                                return;
+                            }
+
+                            clearAllbaiscopesListeners();
+                            const selectedEpisode = finalDownloads[epIdx];
+
+                            await socket.sendMessage(sender, { react: { text: '📥', key: epMek.key } });
+
+                            await socket.sendMessage(sender, { 
+                                text: `⏳ *Downloading Episode:* ${selectedEpisode.name}\n_කරුණාකර ටික වේලාවක් රැඳී සිටින්න, වීඩියෝව ඩවුන්ලෝඩ් වෙමින් පවතී..._` 
+                            }, { quoted: epMek });
+
+                            try {
+                                await socket.sendMessage(sender, {
+                                    document: { url: selectedEpisode.link },
+                                    mimetype: 'video/mp4',
+                                    fileName: `${baiscopesData.title} - ${selectedEpisode.name}.mp4`,
+                                    caption: `✅ *MOVIE DOWNLOADED*\n\n🎬 *Series:* ${baiscopesData.title}\n📌 *Episode:* ${selectedEpisode.name}\n> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                                }, { quoted: epMek });
+
+                                await socket.sendMessage(sender, { react: { text: '✅', key: epMek.key } });
+                            } catch (uploadErr) {
+                                await socket.sendMessage(sender, { 
+                                    text: `❌ වීඩියෝව යැවීමේදී දෝෂයක් ඇති විය: ${uploadErr.message}\n\n🔗 Direct Link එක: ${selectedEpisode.link}` 
+                                }, { quoted: epMek });
+                            }
+                        }
+                    };
+
+                    baiscopesEpisodeListener = handleEpisodeSelection;
+                    socket.ev.on('messages.upsert', handleEpisodeSelection);
+
+                } catch (infoErr) {
+                    clearAllbaiscopesListeners();
+                    await socket.sendMessage(sender, { text: `❌ Movie Info Error: ${infoErr.message}` }, { quoted: replyMek });
+                }
             }
         };
 
-        socket.ev.on('messages.upsert', sListner);
-    } catch (e) {
-        clearListeners();
-        await socket.sendMessage(sender, { text: `❌ Error: ${e.message}` }, { quoted: msg });
+        baiscopesSelectionListener = handlebaiscopesSelection;
+        socket.ev.on('messages.upsert', handlebaiscopesSelection);
+
+    } catch (err) {
+        clearAllbaiscopesListeners();
+        await socket.sendMessage(sender, {
+            text: `❌ Error: ${err.message}`
+        }, { quoted: msg });
     }
     break;
-                    }         
+}     
 case 'mflix': {
     if (!args.length) {
         await socket.sendMessage(sender, {
