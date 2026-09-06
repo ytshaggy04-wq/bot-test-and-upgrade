@@ -1549,7 +1549,6 @@ case 'baiscopes': {
     try {
         await socket.sendMessage(sender, { text: '🔍 Searching movies on Baiscope & Baiscopes.lk...' }, { quoted: msg });
 
-        // API දෙකෙන්ම එකවර සර්ච් කර ප්‍රතිඵල එකතු කිරීම
         const [res1, res2] = await Promise.allSettled([
             axios.get(`${API_BASE_1}/search`, { params: { q: baiscopeQuery, api_key: API_KEY }, timeout: 45000, headers: { 'User-Agent': 'Mozilla/5.0' } }),
             axios.get(`${API_BASE_2}/search`, { params: { q: baiscopeQuery, api_key: API_KEY }, timeout: 45000, headers: { 'User-Agent': 'Mozilla/5.0' } })
@@ -1634,7 +1633,6 @@ case 'baiscopes': {
                         throw new Error('බාගත කිරීමේ links හෝ විස්තර හමු නොවීය.');
                     }
 
-                    // Details Formatting
                     let infoText = `✨ *${movieData.title}* ✨\n\n`;
                     infoText += `⭐ *IMDb:* ${movieData.imdb || 'N/A'}\n`;
                     infoText += `🎬 *Director:* ${movieData.director || 'N/A'}\n`;
@@ -1695,7 +1693,7 @@ case 'baiscopes': {
                                 return;
                             }
 
-                            // UsersDrive හෝ වෙනත් වෙබ් ලින්ක් එකක් නම් (Direct file නෙවී නම්) Text එකක් ලෙස යැවීම
+                            // UsersDrive හෝ වෙනත් Web Page ලින්ක් එකක් නම් (Direct වීඩියෝ ෆයිල් එකක් නොවේ නම්)
                             if (finalLink.includes('usersdrive.com') || !finalLink.startsWith('http')) {
                                 await socket.sendMessage(sender, {
                                     text: `🔗 *DOWNLOAD LINK*\n\n` +
@@ -1709,27 +1707,53 @@ case 'baiscopes': {
                             }
 
                             await socket.sendMessage(sender, { react: { text: '⬇️', key: dlMek.key } });
-
                             await socket.sendMessage(sender, { 
-                                text: `⏳ *Downloading Movie:* ${selectedName}\n_කරුණාකර ටික වේලාවක් රැඳී සිටින්න, MP4 ෆයිල් එක ඩවුන්ලෝඩ් වෙමින් පවතී..._` 
+                                text: `⏳ *Checking File Size:* ${selectedName}\n_ෆයිල් ප්‍රමාණය පරීක්ෂා කරමින් පවතී..._` 
                             }, { quoted: dlMek });
 
                             try {
-                                const mimetype = 'video/mp4';
-                                const ext = '.mp4';
+                                // Head Request එකක් යවා ෆයිල් එකේ සයිස් එක බැලීම (Bytes වලින්)
+                                const headRes = await axios.head(finalLink, { timeout: 15000, headers: { 'User-Agent': 'Mozilla/5.0' } });
+                                const fileSize = parseInt(headRes.headers['content-length'] || '0', 10);
+                                const twoGB = 2 * 1024 * 1024 * 1024; // 2GB in Bytes
+
+                                // සයිස් එක 2GB ට වැඩි නම් හෝ content-length නොලැබුනේ නම් Link එක ලෙස යැවීම
+                                if (fileSize > twoGB || fileSize === 0) {
+                                    await socket.sendMessage(sender, {
+                                        text: `⚠️ *මෙම චිත්‍රපටයේ ප්‍රමාණය 2GB ට වඩා වැඩියි (သို့မဟုတ် සයිස් එක ගණනය කළ නොහැක).* එම නිසා Direct Link එක ලබා දී ඇත:\n\n` +
+                                              `🎬 *Title:* ${movieData.title}\n` +
+                                              `📦 *Quality:* ${selectedName}\n\n` +
+                                              `\`\`\`${finalLink}\`\`\`\n\n` +
+                                              `> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                                    }, { quoted: dlMek });
+                                    await socket.sendMessage(sender, { react: { text: '✅', key: dlMek.key } });
+                                    return;
+                                }
+
+                                // 2GB ට අඩු නම් Document (MP4) එක ලෙස යැවීම
+                                await socket.sendMessage(sender, { 
+                                    text: `⏳ *Downloading Movie:* ${selectedName}\n_ෆයිල් එක 2GB ට අඩු බැවින් ඩවුන්ලෝඩ් වෙමින් පවතී, කරුණාකර රැඳී සිටින්න..._` 
+                                }, { quoted: dlMek });
 
                                 await socket.sendMessage(sender, {
                                     document: { url: finalLink },
-                                    mimetype: mimetype,
-                                    fileName: `${cleanTitle} [${selectedName.replace(/[^a-zA-Z0-9]/g, '_')}]${ext}`,
+                                    mimetype: 'video/mp4',
+                                    fileName: `${cleanTitle} [${selectedName.replace(/[^a-zA-Z0-9]/g, '_')}].mp4`,
                                     caption: `✅ *MOVIE DOWNLOADED SUCCESSFUL*\n\n🎬 *Title:* ${movieData.title}\n📦 *Quality:* ${selectedName}\n> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
                                 }, { quoted: dlMek });
 
                                 await socket.sendMessage(sender, { react: { text: '✅', key: dlMek.key } });
+
                             } catch (uploadErr) {
+                                // ඩවුන්ලෝඩ් කිරීමේදී හෝ සයිස් බැලීමේදී දෝෂයක් ආවොත් Direct Link එක යැවීම
                                 await socket.sendMessage(sender, { 
-                                    text: `❌ ෆයිල් එක යැවීමේදී දෝෂයක් ඇති විය: ${uploadErr.message}\n\n🔗 Direct Link එක: ${finalLink}` 
+                                    text: `🔗 *DIRECT DOWNLOAD LINK*\n*(ফයිල් එක සෘජුව යැවීමේදී දෝෂයක් ඇති විය, එබැවින් ලින්ක් එක ලබා දී ඇත)*\n\n` +
+                                          `🎬 *Title:* ${movieData.title}\n` +
+                                          `📦 *Quality:* ${selectedName}\n\n` +
+                                          `\`\`\`${finalLink}\`\`\`\n\n` +
+                                          `> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}` 
                                 }, { quoted: dlMek });
+                                await socket.sendMessage(sender, { react: { text: '✅', key: dlMek.key } });
                             }
                         }
                     };
