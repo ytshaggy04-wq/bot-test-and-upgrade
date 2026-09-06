@@ -1512,15 +1512,14 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 // ==========================================
 case 'baiscope':
 case 'baiscopes':
-case 'cinesubz': {
+case 'cine': {
     if (!args.length) {
         await socket.sendMessage(sender, { text: '❌ කරුණාකර සෙවිය යුතු චිත්‍රපටයේ නම ලබාදෙන්න!' }, { quoted: msg });
         break;
     }
 
     const query = args.join(' ');
-    // සියලුම API Keys සහ සවිස්තරාත්මක කොටස් මෙහි ඇතුළත් කර ඇත
-    const API_KEY = 'chama_api_11230a80e5eed3c1b80bfcc5d1773ec9';[cite: 1]
+    const API_KEY = 'chama_api_11230a80e5eed3c1b80bfcc5d1773ec9';
     const API_BASE = 'https://api.chamindu.site/api/v1/movies/baiscope'; 
 
     let sListner = null, dlListner = null, mTimeout = null;
@@ -1630,7 +1629,6 @@ case 'cinesubz': {
                         await socket.sendMessage(sender, { react: { text: '📥', key: dlMek.key } });
                         await socket.sendMessage(sender, { text: `🚀 Downloading MP4 file, please wait...` }, { quoted: dlMek });
 
-                        // MP4 හෝ Document ලෙස සෘජුව යැවීම හෝ ලින්ක් එක ලබාදීම
                         try {
                             await socket.sendMessage(sender, { 
                                 video: { url: targetLink }, 
@@ -1638,7 +1636,6 @@ case 'cinesubz': {
                                 mimetype: 'video/mp4'
                             }, { quoted: dlMek });
                         } catch (sendErr) {
-                            // Video ලෙස යැවීමට නොහැකි වුවහොත් Document එකක් ලෙස හෝ Link එකක් ලෙස යැවීම
                             await socket.sendMessage(sender, { 
                                 document: { url: targetLink }, 
                                 mimetype: 'video/mp4',
