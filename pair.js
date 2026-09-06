@@ -1508,7 +1508,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
     }
 }
 // ==========================================
-// CINESUBZ & BAISCOPE MOVIE COMMAND (FIXED QUALITY & 403)
+// CINESUBZ & BAISCOPE FULL FIXED MOVIE COMMAND
 // ==========================================
 case 'baiscope':
 case 'baiscopes':
@@ -1580,14 +1580,21 @@ case 'cinesubz': {
 
                     const movieData = infoRes.data?.data || infoRes.data;
                     const rawDownloads = movieData?.downloads || movieData?.links || movieData?.result || [];
-                    const validDownloads = rawDownloads.filter(dl => (dl.link || dl.direct_link || dl.url));
+                    
+                    // UsersDrive වැනි HTML අඩవి වල ලින්ක්ස් සම්පූර්ණයෙන්ම පෙරළා ඉවත් කර Direct ලින්ක් පමණක් තෝරා ගැනීම
+                    const validDownloads = rawDownloads.filter(dl => {
+                        const link = dl.link || dl.direct_link || dl.url || '';
+                        return link && 
+                               !link.includes('usersdrive.com') && 
+                               !link.includes('mega.nz') && 
+                               !link.includes('uptobox.com');
+                    });
 
                     if (!movieData || validDownloads.length === 0) {
-                        await socket.sendMessage(sender, { text: '❌ මෙම මුවී එක සඳහා ඩවුන්ලෝඩ් ලින්ක් හමු නොවීය.' }, { quoted: replyMek });
+                        await socket.sendMessage(sender, { text: '❌ මෙම මුවී එක සඳහා සෘජු ඩවුන්ලෝඩ් ලින්ක් (Direct Links) හමු නොවීය.' }, { quoted: replyMek });
                         return;
                     }
 
-                    // සර්වර් එකෙන් එන නියම Quality එක (SD, HD, 480p ආදී ලෙස) ලැයිස්තුවේ පෙන්වීම
                     let infoText = `✨ *${movieData.title || chosenMovie.title || 'Movie'}* ✨\n\n📥 *DOWNLOAD OPTIONS:*\n╭──────────────────●➤\n`;
                     validDownloads.forEach((dl, i) => {
                         const exactQuality = dl.quality || dl.resolution || 'SD/HD';
@@ -1618,7 +1625,7 @@ case 'cinesubz': {
                             const cleanTitle = (movieData.title || chosenMovie.title || 'Movie').replace(/[\\/:*?"<>|]/g, '').trim();
 
                             await socket.sendMessage(sender, { react: { text: '⬇️', key: dlMek.key } });
-                            await socket.sendMessage(sender, { text: `⏳ *Downloading & Sending as Document...*` }, { quoted: dlMek });
+                            await socket.sendMessage(sender, { text: `⏳ *Downloading Video File as Document...*` }, { quoted: dlMek });
 
                             try {
                                 let resolvedUrl = targetLink;
@@ -1634,21 +1641,22 @@ case 'cinesubz': {
                                     resolvedUrl = redirectCheck.request?.res?.responseUrl || targetLink;
                                 } catch (e) {}
 
+                                // සම්පූර්ණ වීඩියෝ බෆර් එක ඩවුන්ලෝඩ් කරගැනීම
                                 const fileBufferRes = await axios.get(resolvedUrl, {
                                     responseType: 'arraybuffer',
-                                    timeout: 180000,
+                                    timeout: 300000, // විනාඩි 5ක කල් ඉකුත්වීම (ලොකු ෆයිල් සඳහා)
                                     maxContentLength: Infinity,
                                     maxBodyLength: Infinity,
                                     headers: { 
                                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                                        'Accept': 'video/webm,video/ogg,video/mp4;q=0.9,image/webp,*/*;q=0.8',
                                         'Connection': 'keep-alive'
                                     }
                                 });
 
                                 const videoBuffer = Buffer.from(fileBufferRes.data);
 
-                                // මෙහිදී Auto HD වෙනුවට අදාළ ෆයිල් එකේ සැබෑ Quality එක (SD / 720p වගේ) ෆයිල් නමට එකතු වේ
+                                // වීඩියෝ ෆයිල් එක නිවැරදි .mp4 Document එකක් ලෙස යැවීම
                                 await socket.sendMessage(sender, {
                                     document: videoBuffer,
                                     mimetype: 'video/mp4',
@@ -1658,7 +1666,7 @@ case 'cinesubz': {
 
                                 await socket.sendMessage(sender, { react: { text: '✅', key: dlMek.key } });
                             } catch (err) {
-                                await socket.sendMessage(sender, { text: `❌ DOWNLOAD ERROR:\nෆයිල් එක ලබාගැනීමේ දෝෂයක්: ${err.message}` }, { quoted: dlMek });
+                                await socket.sendMessage(sender, { text: `❌ DOWNLOAD ERROR:\nෆයිල් එක ඩවුන්ලෝඩ් කිරීමේ දෝෂයක්: ${err.message}` }, { quoted: dlMek });
                             }
                         }
                     };
