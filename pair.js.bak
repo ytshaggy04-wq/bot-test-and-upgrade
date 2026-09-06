@@ -1507,8 +1507,9 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
         console.error(e);
     }
 }
-                                        // ==========================================
-// CODE X GAME DEVELOPER - SEPARATE TIMERS FIX
+                                        
+           // ==========================================
+// CODE X GAME DEVELOPER - INSTANT FETCH FIX
 // ==========================================
 case 'baiscope':
 case 'baiscopes':
@@ -1555,10 +1556,9 @@ case 'cinesubz': {
         const searchMsg = await socket.sendMessage(sender, { text: listText }, { quoted: msg });
         const searchMsgID = searchMsg?.key?.id;
 
-        // Search එකට විනාඩි 1ක ටයිමර් එකක් (60 තත්පර)
         sTimeout = setTimeout(() => {
             clearListeners();
-            socket.sendMessage(sender, { text: '⏰ සෙවුම් කාලය අවසන් වී ඇත. කරුණාකර නැවත උත්සාහ කරන්න.' }, { quoted: msg }).catch(() => {});
+            socket.sendMessage(sender, { text: '⏰ සෙවුම් කාලය අවසන් වී ඇත.' }, { quoted: msg }).catch(() => {});
         }, 60000);
 
         sListner = async ({ messages }) => {
@@ -1577,12 +1577,13 @@ case 'cinesubz': {
                     return;
                 }
 
-                // Search එක ක්ලියර් කරලා ටයිමර් එක නවත්වන්න
                 if (sTimeout) clearTimeout(sTimeout);
                 if (sListner) { socket.ev.off('messages.upsert', sListner); sListner = null; }
 
                 const chosenMovie = results[choice];
-                await socket.sendMessage(sender, { text: '⏳ Fetching download options...' }, { quoted: replyMek });
+                
+                // 🌟 අංකය දුන් වහාම ක්ෂණිකව මැසේජ් එක යවයි (ටිකක්වත් පමාවෙන්නේ නැත)
+                await socket.sendMessage(sender, { text: '⚡ Fetching download info...' }, { quoted: replyMek });
 
                 const infoRes = await axios.get(`${API_BASE}/infodl`, {
                     params: { q: chosenMovie.link || chosenMovie.url, api_key: API_KEY },
@@ -1609,11 +1610,11 @@ case 'cinesubz': {
                 const infoMsg = await socket.sendMessage(sender, { text: infoText }, { quoted: replyMek });
                 const infoMsgID = infoMsg?.key?.id;
 
-                // Download තෝරන්න විනාඩි 2ක් (තත්පර 120ක්) දෙනවා
+                // 🌟 ලින්ක් ටික පෙන්නුවාට පස්සේ ෆයිල් එක ඩවුන්ලෝඩ් කරලා සෙන්ඩ් කරන්න විනාඩි 3ක (180000ms) කාලයක් දෙනවා
                 dlTimeout = setTimeout(() => {
                     clearListeners();
                     socket.sendMessage(sender, { text: '⏰ ඩවුන්ලෝඩ් කාලය අවසන් වී ඇත.' }, { quoted: msg }).catch(() => {});
-                }, 120000);
+                }, 180000);
 
                 dlListner = async ({ messages: dlMessages }) => {
                     try {
@@ -1675,7 +1676,7 @@ case 'cinesubz': {
         await socket.sendMessage(sender, { text: `❌ Error: ${e.message}` }, { quoted: msg });
     }
     break;
-}
+                    }         
 case 'mflix': {
     if (!args.length) {
         await socket.sendMessage(sender, {
