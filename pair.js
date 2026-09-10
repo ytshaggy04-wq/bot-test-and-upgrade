@@ -2216,6 +2216,232 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
         }, { quoted: msg });
     }
     break; 
+
+   case 'dinka':
+case 'dinkamovies':
+case 'dinkamovieslk': {
+    if (!args.length) {
+        await socket.sendMessage(sender, {
+            image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+            caption: formatMessage(
+                '🎬 DINKAMOVIES SEARCH',
+                '*කරුණාකර චිත්‍රපටයේ හෝ කාටූනයේ නම ලබාදෙන්න!*\n\n*📌 Usage:* `.dinka ben 10`\n*📌 Usage:* `.dinka avatar`',
+                `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+            )
+        }, { quoted: msg });
+        break;
+    }
+
+    const dinkaQuery = args.join(' ');
+    const DINKA_API_BASE = 'https://api.chamindu.site/api/v1/movie/dinkamovies';
+    const DINKA_API_KEY = 'chama_api_11230a80e5eed3c1b80bfcc5d1773ec9';
+
+    let dinkaSelectionListener = null;
+    let dinkaOptionListener = null;
+    let dinkaMasterTimeout = null;
+
+    const clearAllDinkaListeners = () => {
+        if (dinkaSelectionListener) {
+            socket.ev.off('messages.upsert', dinkaSelectionListener);
+            dinkaSelectionListener = null;
+        }
+        if (dinkaOptionListener) {
+            socket.ev.off('messages.upsert', dinkaOptionListener);
+            dinkaOptionListener = null;
+        }
+        if (dinkaMasterTimeout) {
+            clearTimeout(dinkaMasterTimeout);
+            dinkaMasterTimeout = null;
+        }
+    };
+
+    try {
+        await socket.sendMessage(sender, {
+            text: '🔍 *DinkaMovies* හි සොයමින් පවතී...'
+        }, { quoted: msg });
+
+        const searchRes = await axios.get(`${DINKA_API_BASE}/search`, {
+            params: { q: dinkaQuery, api_key: DINKA_API_KEY },
+            timeout: 20000
+        });
+
+        const searchData = searchRes.data;
+        if (!searchData.status || !searchData.data || searchData.data.length === 0) {
+            await socket.sendMessage(sender, {
+                image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+                caption: formatMessage(
+                    '❌ NO RESULTS',
+                    `*"${dinkaQuery}"* සඳහා කිසිදු ප්‍රතිඵලයක් හමු නොවීය!`,
+                    `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                )
+            }, { quoted: msg });
+            break;
+        }
+
+        const dinkaList = searchData.data.slice(0, 20);
+        let listText = `🎬 *𝗗𝗜𝗡𝗞𝗔𝗠𝗢𝗩𝗜𝗘𝗦 𝗦𝗘𝗔𝗥𝗖𝗛 : _${dinkaQuery}_*\n╭──────●➤\n*🔢 ʀᴇ𝗽𝗹ʏ ʙᴇʟ𝗼ᴡ ɴᴜᴍʙᴇʀ*\n╰──────────●➤\n╭──────●➤\n`;
+
+        dinkaList.forEach((item, index) => {
+            listText += `*🍿 ${index + 1} ┃❭❭ ${item.title}*\n    ↳ (📅 ${item.year || 'N/A'})\n`;
+        });
+        listText += `╰──────────●➤\n> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
+
+        const searchMsg = await socket.sendMessage(sender, {
+            image: { url: dinkaList[0].poster || sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+            caption: listText
+        }, { quoted: msg });
+
+        const searchMsgID = searchMsg.key.id;
+
+        dinkaMasterTimeout = setTimeout(() => {
+            clearAllDinkaListeners();
+        }, 120000);
+
+        // --- STEP 1: Content Selection ---
+        const handleDinkaSelection = async ({ messages }) => {
+            const replyMek = messages?.[0];
+            if (!replyMek?.message || replyMek.key.remoteJid !== sender) return;
+
+            const text = (replyMek.message.conversation || replyMek.message.extendedTextMessage?.text || '').trim();
+            const isReply = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === searchMsgID;
+
+            if (!isReply) return;
+
+            const choice = parseInt(text) - 1;
+            if (isNaN(choice) || choice < 0 || choice >= dinkaList.length) {
+                await socket.sendMessage(sender, {
+                    text: `❌ කරුණාකර 1 - ${dinkaList.length} අතර අංකයක් ලබාදෙන්න!`
+                }, { quoted: replyMek });
+                return;
+            }
+
+            if (dinkaSelectionListener) {
+                socket.ev.off('messages.upsert', dinkaSelectionListener);
+                dinkaSelectionListener = null;
+            }
+
+            const chosenItem = dinkaList[choice];
+            await socket.sendMessage(sender, {
+                text: `⏳ *"${chosenItem.title}"* තොරතුරු සහ links ලබා ගනිමින්...`
+            }, { quoted: replyMek });
+
+            try {
+                const infoRes = await axios.get(`${DINKA_API_BASE}/infodl`, {
+                    params: { q: chosenItem.url, api_key: DINKA_API_KEY },
+                    timeout: 20000
+                });
+
+                const mediaData = infoRes.data?.data;
+                const downloads = mediaData?.downloads || [];
+
+                if (!mediaData || downloads.length === 0) {
+                    throw new Error('බාගත කිරීමේ links හෝ episodes හමු නොවීය.');
+                }
+
+                const isTv = mediaData.type === 'tv_series' || downloads[0].episode !== undefined;
+                let infoText = `🎬 *${mediaData.title}*\n\n`;
+                if (mediaData.genres?.length) infoText += `🎭 *Genres:* ${mediaData.genres.join(', ')}\n`;
+                if (isTv) {
+                    infoText += `📺 *Type:* TV Series / Animation\n`;
+                    infoText += `🔢 *Total Episodes:* ${downloads.length}\n\n`;
+                    infoText += `*Available Episodes:*\n╭──────●➤\n`;
+                    downloads.forEach((dl, i) => {
+                        infoText += `*${i + 1}.* ${dl.title || dl.name || `Episode ${i + 1}`}\n`;
+                    });
+                } else {
+                    infoText += `🎥 *Type:* Movie\n\n`;
+                    infoText += `*Available Qualities:*\n╭──────●➤\n`;
+                    downloads.forEach((dl, i) => {
+                        infoText += `*${i + 1}.* ${dl.quality || 'Direct Download'} ${dl.size ? `┃ 📦 ${dl.size}` : ''}\n`;
+                    });
+                }
+                infoText += `╰──────────●➤\n\n👉 *බාගත කිරීමට අදාළ අංකය Reply කරන්න.*`;
+
+                const infoMsg = await socket.sendMessage(sender, {
+                    image: { url: mediaData.poster || chosenItem.poster || sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+                    caption: infoText
+                }, { quoted: replyMek });
+
+                const infoMsgID = infoMsg.key.id;
+
+                // --- STEP 2: Episode / Quality Selection & Download ---
+                const handleOptionSelection = async ({ messages: optMessages }) => {
+                    const optMek = optMessages?.[0];
+                    if (!optMek?.message || optMek.key.remoteJid !== sender) return;
+
+                    const optText = (optMek.message.conversation || optMek.message.extendedTextMessage?.text || '').trim();
+                    const isOptReply = optMek.message.extendedTextMessage?.contextInfo?.stanzaId === infoMsgID;
+
+                    if (!isOptReply) return;
+
+                    const optIdx = parseInt(optText) - 1;
+                    if (isNaN(optIdx) || optIdx < 0 || optIdx >= downloads.length) {
+                        await socket.sendMessage(sender, {
+                            text: `❌ කරුණාකර 1 - ${downloads.length} අතර අංකයක් ලබාදෙන්න!`
+                        }, { quoted: optMek });
+                        return;
+                    }
+
+                    clearAllDinkaListeners();
+
+                    const selectedOption = downloads[optIdx];
+                    let downloadUrl = selectedOption.direct_link || selectedOption.download_link || selectedOption.link;
+
+                    const cleanTitle = (mediaData.title || chosenItem.title).replace(/[^a-zA-Z0-9 ]/g, '').trim().substring(0, 50);
+                    const optLabel = (selectedOption.title || selectedOption.quality || `Part_${optIdx + 1}`).replace(/[^a-zA-Z0-9 ]/g, '').trim();
+                    const fileName = `${cleanTitle} - ${optLabel}.mp4`;
+
+                    // Google Drive / dl.dinkamovieslk links auto-proxy via API proxy for direct streaming
+                    if (downloadUrl.includes('drive.google.com') || downloadUrl.includes('dl.dinkamovieslk.app')) {
+                        downloadUrl = `https://api.chamindu.site/api/v1/download/proxy?url=${encodeURIComponent(downloadUrl)}&filename=${encodeURIComponent(fileName)}&api_key=${DINKA_API_KEY}`;
+                    }
+
+                    await socket.sendMessage(sender, { react: { text: '📥', key: optMek.key } });
+
+                    await socket.sendMessage(sender, {
+                        text: `⏳ *Downloading:* ${selectedOption.title || selectedOption.quality || mediaData.title}\n_කරුණාකර ටික වේලාවක් රැඳී සිටින්න, වීඩියෝව ඩවුන්ලෝඩ් වෙමින් පවතී..._`
+                    }, { quoted: optMek });
+
+                    try {
+                        await socket.sendMessage(sender, {
+                            document: { url: downloadUrl },
+                            mimetype: 'video/mp4',
+                            fileName: fileName,
+                            caption: `✅ *DINKAMOVIES DOWNLOADED*\n\n🎬 *Title:* ${mediaData.title}\n📌 *Option:* ${selectedOption.title || selectedOption.quality || 'Direct'}\n> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                        }, { quoted: optMek });
+
+                        await socket.sendMessage(sender, { react: { text: '✅', key: optMek.key } });
+
+                    } catch (uploadErr) {
+                        await socket.sendMessage(sender, {
+                            text: `❌ Upload Error: ${uploadErr.message}\n\n🔗 *Direct Link:* ${downloadUrl}`
+                        }, { quoted: optMek });
+                        await socket.sendMessage(sender, { react: { text: '❌', key: optMek.key } });
+                    }
+                };
+
+                dinkaOptionListener = handleOptionSelection;
+                socket.ev.on('messages.upsert', handleOptionSelection);
+
+            } catch (infoErr) {
+                clearAllDinkaListeners();
+                await socket.sendMessage(sender, {
+                    text: `❌ DinkaMovies Info Error: ${infoErr.message}`
+                }, { quoted: replyMek });
+            }
+        };
+
+        dinkaSelectionListener = handleDinkaSelection;
+        socket.ev.on('messages.upsert', handleDinkaSelection);
+
+    } catch (err) {
+        clearAllDinkaListeners();
+        await socket.sendMessage(sender, {
+            text: `❌ DinkaMovies Error: ${err.message}`
+        }, { quoted: msg });
+    }
+    break;
+}                 
   case 'rexporn':
 case 'rxporn':
 case 'rp': {
