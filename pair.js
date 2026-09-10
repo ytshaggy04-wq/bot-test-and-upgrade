@@ -2217,7 +2217,430 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
     }
     break; 
                                                         
+case 'anime':
+    if (!args.length) {
+        await socket.sendMessage(sender, {
+            image:  { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+            caption: formatMessage(
+                '❌ ERROR',
+                '*කරුණාකර ඇනිමේ එකේ නම ලබාදෙන්න! උදා: .anime naruto*',
+                `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+            )
+        }, { quoted: msg });
+        break;
+    }
 
+    const animehave = args.join(' ');
+    await socket.sendMessage(sender, { text: '🎬 𝙎𝙚𝙖𝙧𝙘𝙝𝙞𝙣𝙜 𝙖𝙣𝙞𝙢𝙚 𝙤𝙣 𝘼𝙣𝙞𝙢𝙚𝙃𝙚𝙖𝙫𝙚𝙣...' });
+
+   
+    await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 2000) + 2000));
+
+    
+    let animeSelectionListener = null;
+    let animeEpisodeListener = null;
+    let animeSelectionTimeout = null;
+    let animeEpisodeTimeout = null;
+    let animeMasterTimeout = null;
+    const clearAllAnimeListeners = () => {
+       
+        
+        
+        if (animeSelectionListener) {
+            socket.ev.off('messages.upsert', animeSelectionListener);
+            animeSelectionListener = null;
+        }
+        if (animeSelectionTimeout) {
+            clearTimeout(animeSelectionTimeout);
+            animeSelectionTimeout = null;
+        }
+        
+       
+        if (animeEpisodeListener) {
+            socket.ev.off('messages.upsert', animeEpisodeListener);
+            animeEpisodeListener = null;
+        }
+        if (animeEpisodeTimeout) {
+            clearTimeout(animeEpisodeTimeout);
+            animeEpisodeTimeout = null;
+        }
+        
+       
+        if (animeMasterTimeout) {
+            clearTimeout(animeMasterTimeout);
+            animeMasterTimeout = null;
+        }
+    };
+
+    try {
+        
+        const searchResponse = await axios.get(`${config.API_MAIN_URL}/animeheaven/search?query=${encodeURIComponent(animehave)}&api_key=${config.API_KEY}`);
+        const searchData = searchResponse.data;
+
+        if (!searchData.status || !searchData.data?.results || searchData.data.results.length === 0) {
+            await socket.sendMessage(sender, {
+                image:  { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+                caption: formatMessage(
+                    '❌ NO RESULTS',
+                    '*ඇනිමේ හමුවෙන්නේ නැත! 😞*',
+                    `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                )
+            }, { quoted: msg });
+            break;
+        }
+
+     
+        const uniqueResults = [];
+        const seenIds = new Set();
+        for (const item of searchData.data.results) {
+            if (!seenIds.has(item.anime_id)) {
+                seenIds.add(item.anime_id);
+                uniqueResults.push(item);
+            }
+        }
+        
+        const animeResults = uniqueResults.slice(0, 25);
+        
+       
+        let listText = `☘️ *𝗔𝗡𝗜𝗠𝗘 𝗛𝗘𝗔𝗩𝗘𝗡 𝗦𝗘𝗔𝗥𝗖𝗛 : _${animehave}_*
+╭──────●➤
+*🔢 ʀᴇᴘʟʏ ʙᴇʟᴏᴡ ɴᴜᴍʙᴇʀ*
+╰──────────●➤\n*╭──────●➤*\n`;
+        animeResults.forEach((item, index) => {
+            listText += `*🤡 ${index + 1} ║❯❯ ${item.title}*\n`;
+        });
+
+        listText += `╰──────────●➤\n${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
+        
+        const bannerUrl = config.ANIME_H;
+        
+        const sentMsg = await socket.sendMessage(sender, {
+            image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE},
+            caption: listText
+        }, { quoted: msg });
+
+        const messageID = sentMsg.key.id;
+
+       
+        animeMasterTimeout = setTimeout(() => {
+            clearAllAnimeListeners();
+            console.log('🧹 Anime master timeout - All listeners cleared after 3 minutes');
+        }, 180000);
+
+        
+        const handleAnimeSelection = async ({ messages: replyMessages }) => {
+            const replyMek = replyMessages[0];
+            if (!replyMek?.message) return;
+
+            const messageType = replyMek.message.conversation || replyMek.message.extendedTextMessage?.text;
+            const isReplyToSentMsg = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === messageID;
+
+            if (isReplyToSentMsg && sender === replyMek.key.remoteJid) {
+                
+                if (animeSelectionTimeout) {
+                    clearTimeout(animeSelectionTimeout);
+                    animeSelectionTimeout = null;
+                }
+                
+               
+                animeSelectionTimeout = setTimeout(() => {
+                    if (animeSelectionListener) {
+                        socket.ev.off('messages.upsert', animeSelectionListener);
+                        animeSelectionListener = null;
+                        console.log('🧹 Anime selection listener timeout');
+                    }
+                    animeSelectionTimeout = null;
+                }, 120000);
+
+                const choice = parseInt(messageType) - 1;
+                if (isNaN(choice) || choice < 0 || choice >= animeResults.length) {
+                    await socket.sendMessage(sender, {
+                        image:  { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+                        caption: formatMessage(
+                            '❌ INVALID SELECTION',
+                            `*වැරදි අංකයක්! 1-${animeResults.length} අතර තෝරන්න! 😕*`,
+                            `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                        )
+                    }, { quoted: replyMek });
+                    return;
+                }
+
+                const selectedItem = animeResults[choice];
+                
+                await socket.sendMessage(sender, { 
+                    text: '📽️ 𝙁𝙚𝙩𝙘𝙝𝙞𝙣𝙜 𝙖𝙣𝙞𝙢𝙚 𝙙𝙚𝙩𝙖𝙞𝙡𝙨...' 
+                }, { quoted: replyMek });
+
+               
+                await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 2000) + 2000));
+
+                try {
+                    
+                    const detailsResponse = await axios.get(`${config.API_MAIN_URL}/animeheaven/info?url=${encodeURIComponent(selectedItem.url)}&api_key=${config.API_KEY}`);
+                    const detailsData = detailsResponse.data;
+
+                    if (!detailsData.status || !detailsData.anime) {
+                        throw new Error('Failed to fetch anime details');
+                    }
+
+                    const animeInfo = detailsData.anime;
+                    
+                    if (!animeInfo.episodeList || animeInfo.episodeList.length === 0) {
+                        await socket.sendMessage(sender, {
+                            image:  { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+                            caption: formatMessage(
+                                '❌ NO EPISODES',
+                                '*මෙම ඇනිමේ එක සඳහා කථාංග නොමැත!*',
+                                `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                            )
+                        }, { quoted: replyMek });
+                        return;
+                    }
+                    
+                 
+                    const animeTitle = animeInfo.title || selectedItem.title;
+                    const japaneseTitle = animeInfo.japaneseTitle || '';
+                    const description = animeInfo.description || 'No description available.';
+                    const fullDescription = description.length > 400 ? description.substring(0, 400) + '...' : description;
+                    
+                    
+                    const episodes = animeInfo.episodeList.sort((a, b) => a.episode - b.episode);
+                    const totalEpisodes = animeInfo.episodes || episodes.length;
+                    
+                  
+                    const tags = animeInfo.tags?.slice(0, 6).join(', ') || 'Anime';
+                    const year = animeInfo.year || 'N/A';
+                    const score = animeInfo.score || 'N/A';
+                    
+                   
+                    const detailsCaption = `☘️ *${animeTitle}*
+                    
+▫️🇯🇵 *𝗧ɪᴛʟᴇ ➟ ${japaneseTitle}*
+▫️⭐ *𝗦𝗰𝗼ʀᴇ / 𝗥ᴀᴛɪɴɢ ➟ ${score}/10*
+▫️🎭 *𝗚ᴇɴʀᴇꜱ / 𝗧ᴀɢꜱ ➟ ${tags}*
+▫️📅 *𝗥ᴇʟᴇᴀꜱᴇ 𝗬ᴇᴀʀ ➟ ${year}*
+▫️🔢 *𝗧ᴏᴛᴀʟ 𝗘ᴘɪꜱᴏᴅᴇꜱ ➟ ${totalEpisodes}*
+▫️📖 *Sᴛᴏʀʏ➟ ${fullDescription}*
+
+> ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`;
+
+                    const posterUrl = animeInfo.poster || selectedItem.thumbnail || sessionConfig.BOT_IMAGE || config.BOT_IMAGE;
+                    
+                   
+                    const infoMsg = await socket.sendMessage(sender, {
+                        image: { url: posterUrl },
+                        caption: detailsCaption
+                    }, { quoted: replyMek });
+
+                  
+                    await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 2000) + 2000));
+
+                
+                    const displayEpisodes = episodes.slice(0, 999);
+                    
+                    let episodeText = `*⬇️🍀 𝗘𝗣𝗜𝗦𝗢𝗗𝗘 𝗟𝗜𝗦𝗧 𝗢𝗣𝗧𝗜𝗢𝗡𝗦*
+                    
+_*Reply with NUMBER (1-${displayEpisodes.length}) to download single episode*_
+
+*╭──────●➤*
+${displayEpisodes.map((ep, idx) => {
+    const episodeNum = ep.episode || idx + 1;
+    const releasedDate = ep.releasedTime || '';
+    return `🎀${idx + 1}┃➤ Episode ${episodeNum}${releasedDate ? ` ┃ ${releasedDate}` : ''}`;
+}).join('\n')}
+╰──────────●➤
+
+${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
+
+                    const episodeMsg = await socket.sendMessage(sender, {
+                        text: episodeText
+                    }, { quoted: infoMsg });
+
+                    const episodeMsgID = episodeMsg.key.id;
+
+                   
+                    const downloadSingleAnimeEpisode = async (episodeData, episodeMek) => {
+                        try {
+                            const episodeNumToShow = episodeData.episode || (episodes.findIndex(ep => ep === episodeData) + 1);
+                            
+                            await socket.sendMessage(sender, { 
+                                text: `⏳ 𝙂𝙚𝙩𝙩𝙞𝙣𝙜 𝙙𝙤𝙬𝙣𝙡𝙤𝙖𝙙 𝙡𝙞𝙣𝙠 𝙛𝙤𝙧 𝙀𝙥𝙞𝙨𝙤𝙙𝙚 ${episodeNumToShow}...` 
+                            }, { quoted: episodeMek });
+
+                         
+                            await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 2000) + 2000));
+                            
+                            const downloadResponse = await axios.get(`${config.API_MAIN_URL}/animeheaven/get-link?gate_id=${episodeData.gateId}&api_key=${config.API_KEY}`);
+                            
+                            let videoUrl = null;
+                            
+                            if (downloadResponse.data && downloadResponse.data.status === true) {
+                                videoUrl = downloadResponse.data.downloadLink;
+                            }
+                            
+                            if (!videoUrl && downloadResponse.data && downloadResponse.data.url) {
+                                videoUrl = downloadResponse.data.url;
+                            }
+                            
+                            if (!videoUrl) {
+                                throw new Error('Failed to get download URL from API response');
+                            }
+                            
+                            const videoConfig = {
+                                url: videoUrl,
+                                headers: {
+                                    'Referer': 'https://animeheaven.me/'
+                                }
+                            };
+
+                            const fileName = `${animeTitle} - Episode ${episodeNumToShow}.mp4`;
+                            
+                            await socket.sendMessage(sender, {
+                                document: { url: videoUrl, ...videoConfig },
+                                mimetype: 'video/mp4',
+                                fileName: fileName,
+                                caption: formatMessage(
+                                    `🍀 ${animeTitle}`,
+                                    `📺 *Episode:* ${episodeNumToShow}`,
+                                    `${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`
+                                )
+                            }, { quoted: episodeMek });
+
+                            await socket.sendMessage(sender, { react: { text: '✅', key: episodeMek.key } });
+                            
+                           
+                            clearAllAnimeListeners();
+                            return true;
+                            
+                        } catch (error) {
+                            console.error(`Download error for episode ${episodeData.episode}:`, error);
+                            const episodeNumToShow = episodeData.episode || (episodes.findIndex(ep => ep === episodeData) + 1);
+                            await socket.sendMessage(sender, {
+                                image:  { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+                                caption: formatMessage(
+                                    '❌ DOWNLOAD FAILED',
+                                    `*Episode ${episodeNumToShow} download failed*\n${error.message}`,
+                                    `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                                )
+                            }, { quoted: episodeMek });
+                            return false;
+                        }
+                    };
+
+                  
+                    const handleAnimeEpisode = async ({ messages: episodeMessages }) => {
+                        const episodeMek = episodeMessages[0];
+                        if (!episodeMek?.message) return;
+
+                        const userInput = (episodeMek.message.conversation || episodeMek.message.extendedTextMessage?.text || '').trim().toLowerCase();
+                        const isReplyToEpisodeMsg = episodeMek.message.extendedTextMessage?.contextInfo?.stanzaId === episodeMsgID;
+
+                        if (isReplyToEpisodeMsg && sender === episodeMek.key.remoteJid) {
+                           
+                            if (animeEpisodeTimeout) {
+                                clearTimeout(animeEpisodeTimeout);
+                                animeEpisodeTimeout = null;
+                            }
+                            
+                            
+                            animeEpisodeTimeout = setTimeout(() => {
+                                if (animeEpisodeListener) {
+                                    socket.ev.off('messages.upsert', animeEpisodeListener);
+                                    animeEpisodeListener = null;
+                                    console.log('🧹 Anime episode listener timeout');
+                                }
+                                animeEpisodeTimeout = null;
+                            }, 120000);
+
+                            
+                            const selectedIndex = parseInt(userInput) - 1;
+                            
+                            if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= episodes.length) {
+                                await socket.sendMessage(sender, {
+                                    image:  { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+                                    caption: formatMessage(
+                                        '❌ INVALID INPUT',
+                                        `*කරුණාකර වලංගු අංකයක් ඇතුළත් කරන්න! (1-${episodes.length})*\n\nඋදා: \`1\` හෝ \`5\``,
+                                        `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                                    )
+                                }, { quoted: episodeMek });
+                                return;
+                            }
+                            
+                            const episodeData = episodes[selectedIndex];
+                            
+                            if (!episodeData) {
+                                await socket.sendMessage(sender, {
+                                    image:  { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+                                    caption: formatMessage(
+                                        '❌ INVALID EPISODE',
+                                        `*වැරදි අංකයක්! 1-${episodes.length} අතර තෝරන්න.*`,
+                                        `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                                    )
+                                }, { quoted: episodeMek });
+                                return;
+                            }
+
+                            await downloadSingleAnimeEpisode(episodeData, episodeMek);
+                            socket.ev.off('messages.upsert', handleAnimeEpisode);
+                            socket.ev.off('messages.upsert', handleAnimeSelection);
+                        }
+                    };
+
+                 
+                    animeEpisodeListener = handleAnimeEpisode;
+                    socket.ev.on('messages.upsert', handleAnimeEpisode);
+
+                    animeEpisodeTimeout = setTimeout(() => {
+                        if (animeEpisodeListener) {
+                            socket.ev.off('messages.upsert', animeEpisodeListener);
+                            animeEpisodeListener = null;
+                           
+                        }
+                        animeEpisodeTimeout = null;
+                    }, 120000);
+
+                } catch (detailsError) {
+                    console.error('Anime details error:', detailsError);
+                    await socket.sendMessage(sender, {
+                        image:  { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+                        caption: formatMessage(
+                            '❌ ERROR',
+                            `*Details ලබාගැනීමේ දෝෂයක්*\n${detailsError.message}`,
+                            `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                        )
+                    }, { quoted: replyMek });
+                }
+            }
+        };
+
+       
+        animeSelectionListener = handleAnimeSelection;
+        socket.ev.on('messages.upsert', handleAnimeSelection);
+
+        animeSelectionTimeout = setTimeout(() => {
+            if (animeSelectionListener) {
+                socket.ev.off('messages.upsert', animeSelectionListener);
+                animeSelectionListener = null;
+                console.log('🧹 Anime selection listener timeout');
+            }
+            animeSelectionTimeout = null;
+        }, 120000);
+
+    } catch (error) {
+        console.error('Anime command error:', error);
+       
+        clearAllAnimeListeners();
+        await socket.sendMessage(sender, {
+            image:  { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+            caption: formatMessage(
+                '❌ ERROR',
+                `*දෝෂයක් ඇතිවුණා:* ${error.message || 'Unknown error'}`,
+                `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+            )
+        }, { quoted: msg });
+    }
+    break;
  case 'movie':             
 case 'm': {
     const DEFAULT_FOOTER = `\n\n> 🎭 𝗖𝗛𝗔𝗠𝗔 𝗖𝗜𝗡𝗘 𝗛𝗨𝗕 🎭\n> 🧬 ᴘᴏᴡᴇʀᴇᴅ ʙʏ 🇨🇭𝗔𝗠𝗔 𝗧𝗘𝗖𝗛`;
