@@ -2216,7 +2216,219 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
         }, { quoted: msg });
     }
     break; 
-                                                        
+  case 'rexporn':
+case 'rxporn':
+case 'rp': {
+    if (!args.length) {
+        await socket.sendMessage(sender, {
+            image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+            caption: formatMessage(
+                '🔞 REXPORN SEARCH',
+                '*කරුණාකර search කිරීමට keyword එකක් දෙන්න!*\n\n*📌 Usage:* `.rexporn stepmom`\n*📌 Usage:* `.rexporn milf 18+`',
+                `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+            )
+        }, { quoted: msg });
+        break;
+    }
+
+    const rpQuery = args.join(' ');
+    const RP_API_BASE = 'https://api.chamindu.site/api/adult/rexporn';
+    const RP_API_KEY = 'chama_api_11230a80e5eed3c1b80bfcc5d1773ec9';
+
+    let rpSelectionListener = null;
+    let rpQualityListener = null;
+    let rpMasterTimeout = null;
+
+    const clearAllRPListeners = () => {
+        if (rpSelectionListener) {
+            socket.ev.off('messages.upsert', rpSelectionListener);
+            rpSelectionListener = null;
+        }
+        if (rpQualityListener) {
+            socket.ev.off('messages.upsert', rpQualityListener);
+            rpQualityListener = null;
+        }
+        if (rpMasterTimeout) {
+            clearTimeout(rpMasterTimeout);
+            rpMasterTimeout = null;
+        }
+    };
+
+    try {
+        await socket.sendMessage(sender, {
+            text: '🔍 *RexPorn* හි සොයමින්...'
+        }, { quoted: msg });
+
+        const searchRes = await axios.get(`${RP_API_BASE}/search`, {
+            params: { q: rpQuery, page: 1, api_key: RP_API_KEY },
+            timeout: 20000
+        });
+
+        const searchData = searchRes.data;
+        if (!searchData.success || !searchData.results || searchData.results.length === 0) {
+            await socket.sendMessage(sender, {
+                image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+                caption: formatMessage(
+                    '❌ NO RESULTS',
+                    `*"${rpQuery}"* සඳහා ප්‍රතිඵල හමු නොවීය!`,
+                    `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                )
+            }, { quoted: msg });
+            break;
+        }
+
+        const rpList = searchData.results.slice(0, 20);
+
+        let listText = `🔞 *𝗥𝗘𝗫𝗣𝗢𝗥𝗡 𝗦𝗘𝗔𝗥𝗖𝗛 : _${rpQuery}_*\n╭──────●➤\n*🔢 ʀᴇ𝗽𝗹ʏ ʙᴇʟ𝗼ᴡ ɴᴜᴍʙᴇʀ*\n╰──────────●➤\n╭──────●➤\n`;
+
+        rpList.forEach((item, index) => {
+            listText += `*🎬 ${index + 1} ┃❭❭ ${item.title}*\n    ↳ (⏱ ${item.duration || 'N/A'} | 🎞 ${item.quality || 'HD'})\n`;
+        });
+        listText += `╰──────────●➤\n> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
+
+        const searchMsg = await socket.sendMessage(sender, {
+            image: { url: rpList[0].thumbnail || sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+            caption: listText
+        }, { quoted: msg });
+
+        const searchMsgID = searchMsg.key.id;
+
+        rpMasterTimeout = setTimeout(() => {
+            clearAllRPListeners();
+        }, 120000);
+
+        const handleRPSelection = async ({ messages }) => {
+            const replyMek = messages?.[0];
+            if (!replyMek?.message || replyMek.key.remoteJid !== sender) return;
+
+            const text = (replyMek.message.conversation || replyMek.message.extendedTextMessage?.text || '').trim();
+            const isReply = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === searchMsgID;
+
+            if (!isReply) return;
+
+            const choice = parseInt(text) - 1;
+            if (isNaN(choice) || choice < 0 || choice >= rpList.length) {
+                await socket.sendMessage(sender, {
+                    text: `❌ කරුණාකර 1 - ${rpList.length} අතර අංකයක් ලබාදෙන්න!`
+                }, { quoted: replyMek });
+                return;
+            }
+
+            if (rpSelectionListener) {
+                socket.ev.off('messages.upsert', rpSelectionListener);
+                rpSelectionListener = null;
+            }
+
+            const chosenVideo = rpList[choice];
+            await socket.sendMessage(sender, {
+                text: `⏳ *"${chosenVideo.title}"* ගේ stream links ලබා ගනිමින්...`
+            }, { quoted: replyMek });
+
+            try {
+                const dlRes = await axios.get(`${RP_API_BASE}/dl`, {
+                    params: { url: chosenVideo.url, api_key: RP_API_KEY },
+                    timeout: 20000
+                });
+
+                const dlData = dlRes.data;
+                if (!dlData.success || !dlData.streams || dlData.streams.length === 0) {
+                    throw new Error('Stream links හමු නොවීය. ☹️');
+                }
+
+                const streams = dlData.streams;
+
+                let qualityText = `🔞 *${dlData.title}*\n\n`;
+                qualityText += `⏱ *Duration:* ${dlData.duration || 'N/A'}\n\n`;
+                qualityText += `*🎞 Available Qualities:*\n╭──────●➤\n`;
+
+                streams.forEach((s, i) => {
+                    const sizeMB = s.size_bytes ? (parseInt(s.size_bytes) / (1024 * 1024)).toFixed(0) + ' MB' : 'N/A';
+                    qualityText += `*${i + 1}.* ${s.label}  ┃  📦 ~${sizeMB}\n`;
+                });
+
+                qualityText += `╰──────────●➤\n\n👉 *Quality reply කරන්න (1 = Best)*\n> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
+
+                const qualityMsg = await socket.sendMessage(sender, {
+                    image: { url: dlData.thumbnail || chosenVideo.thumbnail || sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+                    caption: qualityText
+                }, { quoted: replyMek });
+
+                const qualityMsgID = qualityMsg.key.id;
+
+                const handleQualitySelection = async ({ messages: qMsgs }) => {
+                    const qMek = qMsgs?.[0];
+                    if (!qMek?.message || qMek.key.remoteJid !== sender) return;
+
+                    const qText = (qMek.message.conversation || qMek.message.extendedTextMessage?.text || '').trim();
+                    const isQReply = qMek.message.extendedTextMessage?.contextInfo?.stanzaId === qualityMsgID;
+
+                    if (!isQReply) return;
+
+                    const qIdx = parseInt(qText) - 1;
+                    if (isNaN(qIdx) || qIdx < 0 || qIdx >= streams.length) {
+                        await socket.sendMessage(sender, {
+                            text: `❌ කරුණාකර 1 - ${streams.length} අතර Quality අංකයක් ලබාදෙන්න!`
+                        }, { quoted: qMek });
+                        return;
+                    }
+
+                    clearAllRPListeners();
+
+                    const selectedStream = streams[qIdx];
+                    const downloadLink = selectedStream.download_url || selectedStream.stream_url;
+                    const sizeMB = selectedStream.size_bytes
+                        ? (parseInt(selectedStream.size_bytes) / (1024 * 1024)).toFixed(0) + ' MB'
+                        : 'N/A';
+
+                    await socket.sendMessage(sender, { react: { text: '📥', key: qMek.key } });
+
+                    await socket.sendMessage(sender, {
+                        text: `⏳ *Downloading:* ${dlData.title}\n📦 *Size:* ~${sizeMB} | 🎞 *Quality:* ${selectedStream.label}\n\n_කරුණාකර ටික වේලාවක් රැඳී සිටින්න..._`
+                    }, { quoted: qMek });
+
+                    const cleanTitle = dlData.title.replace(/[^a-zA-Z0-9 ]/g, '').trim().substring(0, 60);
+                    const fileName = `${cleanTitle}_${selectedStream.quality || 'HD'}.mp4`;
+
+                    try {
+                        await socket.sendMessage(sender, {
+                            document: { url: downloadLink },
+                            mimetype: 'video/mp4',
+                            fileName: fileName,
+                            caption: `✅ *🔞 REXPORN DOWNLOAD*\n\n🎬 *Title:* ${dlData.title}\n🎞 *Quality:* ${selectedStream.label}\n📦 *Size:* ~${sizeMB}\n⏱ *Duration:* ${dlData.duration || 'N/A'}\n> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                        }, { quoted: qMek });
+
+                        await socket.sendMessage(sender, { react: { text: '✅', key: qMek.key } });
+
+                    } catch (uploadErr) {
+                        await socket.sendMessage(sender, {
+                            text: `❌ Upload Error: ${uploadErr.message}\n\n🔗 *Direct Link:*\n${downloadLink}`
+                        }, { quoted: qMek });
+                        await socket.sendMessage(sender, { react: { text: '❌', key: qMek.key } });
+                    }
+                };
+
+                rpQualityListener = handleQualitySelection;
+                socket.ev.on('messages.upsert', handleQualitySelection);
+
+            } catch (dlErr) {
+                clearAllRPListeners();
+                await socket.sendMessage(sender, {
+                    text: `❌ Download Info Error: ${dlErr.message}`
+                }, { quoted: replyMek });
+            }
+        };
+
+        rpSelectionListener = handleRPSelection;
+        socket.ev.on('messages.upsert', handleRPSelection);
+
+    } catch (err) {
+        clearAllRPListeners();
+        await socket.sendMessage(sender, {
+            text: `❌ RexPorn Error: ${err.message}`
+        }, { quoted: msg });
+    }
+    break;
+}                                                      
 
  case 'movie':             
 case 'm': {
