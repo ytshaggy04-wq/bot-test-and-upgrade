@@ -1472,9 +1472,14 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 🎬  𝗠𝗼𝘃𝗶𝗲 & 𝗗𝗼𝘄𝗻𝗹𝗼𝗮𝗱
   • .cinesubz    — Movie dl
   • .sinhalasub  — Movie dl
+  • .cinetv      — Tv searies 
+  • .movie       — Movie dl
   • .anime       — Anime dl
   • .pupilmovie  — Sinhala Movie dl
+  • .dinka       — Sinhala dl
   • .scartoon    — Cartoon dl
+  • .rexporn     — Wal dl
+  • .wrestling   — Wwe dl
   • .song        — Music dl
   • .tiktok      — Tiktok dl
 
@@ -1489,6 +1494,8 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 
   ⚙️  𝗢𝘁𝗵𝗲𝗿
 • .ai           — Conversation 
+• .vv           — One viwe sv
+• .sdl          — Status vid dl 
 • .schedule    — custom masej
 
 ╰─  ᴍᴏʀᴇ ᴄᴍᴅ ᴢᴏᴏɴ..⚡  ─╯
@@ -1547,7 +1554,206 @@ case 'sdl': {
     }
     break;
 }
-                    case 'vv':
+case 'wrestling':
+case 'watchwrestling': {
+    if (!args.length) {
+        await socket.sendMessage(sender, {
+            image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+            caption: formatMessage(
+                '❌ ERROR',
+                '*කරුණාකර සෙවිය යුතු Wrestling Show එකේ නම ලබාදෙන්න! උදා: .wrestling Raw*',
+                `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+            )
+        }, { quoted: msg });
+        break;
+    }
+
+    const wrestlingQuery = args.join(' ');
+    const API_BASE = 'https://api.chamindu.site/api/v1/wrestling/watchwrestling';
+    const API_KEY = 'chama_api_11230a80e5eed3c1b80bfcc5d1773ec9';
+
+    let wrestlingSelectionListener = null;
+    let wrestlingDownloadListener = null;
+    let wrestlingMasterTimeout = null;
+
+    const clearAllWrestlingListeners = () => {
+        if (wrestlingSelectionListener) {
+            socket.ev.off('messages.upsert', wrestlingSelectionListener);
+            wrestlingSelectionListener = null;
+        }
+        if (wrestlingDownloadListener) {
+            socket.ev.off('messages.upsert', wrestlingDownloadListener);
+            wrestlingDownloadListener = null;
+        }
+        if (wrestlingMasterTimeout) {
+            clearTimeout(wrestlingMasterTimeout);
+            wrestlingMasterTimeout = null;
+        }
+    };
+
+    try {
+        await socket.sendMessage(sender, { text: '🔍 Searching shows on WatchWrestling...' }, { quoted: msg });
+
+        const searchRes = await axios.get(`${API_BASE}/search`, {
+            params: { q: wrestlingQuery, api_key: API_KEY },
+            timeout: 20000
+        });
+
+        const searchData = searchRes.data;
+        if (!searchData.status || !searchData.data || searchData.data.length === 0) {
+            await socket.sendMessage(sender, {
+                image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+                caption: formatMessage(
+                    '❌ NO RESULTS',
+                    '*කිසිදු Wrestling Show එකක් හමු නොවීය!*',
+                    `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                )
+            }, { quoted: msg });
+            break;
+        }
+
+        const showList = searchData.data.slice(0, 10);
+        let listText = `🤼 *𝗪𝗔𝗧𝗖𝗛𝗪𝗥𝗘𝗦𝗧𝗟𝗜𝗡𝗚 𝗦𝗘𝗔𝗥𝗖𝗛 : _${wrestlingQuery}_*\n╭──────●➤\n*🔢 ʀᴇ𝗽𝗹ʏ ʙᴇʟ𝗼w ɴᴜᴍʙᴇʀ*\n╰──────────●➤\n╭──────●➤\n`;
+
+        showList.forEach((item, index) => {
+            listText += `*🧩 ${index + 1} ┃❭❭ ${item.title}*\n    ↳ (📅 ${item.date || 'N/A'})\n`;
+        });
+        listText += `╰──────────●➤\n> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
+
+        const searchMsg = await socket.sendMessage(sender, {
+            image: { url: showList[0].image || sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+            caption: listText
+        }, { quoted: msg });
+
+        const searchMsgID = searchMsg.key.id;
+
+        wrestlingMasterTimeout = setTimeout(() => {
+            clearAllWrestlingListeners();
+        }, 120000);
+
+        const handleShowSelection = async ({ messages }) => {
+            const replyMek = messages?.[0];
+            if (!replyMek?.message || replyMek.key.remoteJid !== sender) return;
+
+            const text = (replyMek.message.conversation || replyMek.message.extendedTextMessage?.text || '').trim();
+            const isReply = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === searchMsgID;
+
+            if (isReply) {
+                const choice = parseInt(text) - 1;
+                if (isNaN(choice) || choice < 0 || choice >= showList.length) {
+                    await socket.sendMessage(sender, {
+                        text: `❌ කරුණාකර 1 - ${showList.length} අතර අංකයක් ලබාදෙන්න!`
+                    }, { quoted: replyMek });
+                    return;
+                }
+
+                if (wrestlingSelectionListener) {
+                    socket.ev.off('messages.upsert', wrestlingSelectionListener);
+                    wrestlingSelectionListener = null;
+                }
+
+                const chosenShow = showList[choice];
+                await socket.sendMessage(sender, { text: '⏳ Fetching show details & download sources...' }, { quoted: replyMek });
+
+                try {
+                    const infoRes = await axios.get(`${API_BASE}/info`, {
+                        params: { q: chosenShow.url, api_key: API_KEY },
+                        timeout: 20000
+                    });
+
+                    const showData = infoRes.data?.data;
+                    const allDownloads = showData?.downloads || [];
+
+                    if (!showData || allDownloads.length === 0) {
+                        throw new Error('බාගත කිරීමේ links හෝ streams හමු නොවීය.');
+                    }
+
+                    let infoText = `🔥 *${showData.title}*\n\n`;
+                    if (showData.show_info?.Date) infoText += `📅 *Date:* ${showData.show_info.Date}\n`;
+                    if (showData.show_info?.Location) infoText += `📍 *Location:* ${showData.show_info.Location}\n`;
+                    if (showData.show_info?.Broadcast) infoText += `📺 *Network:* ${showData.show_info.Broadcast}\n\n`;
+                    
+                    infoText += `*Available Download Sources / Qualities:*\n`;
+                    allDownloads.forEach((dl, i) => {
+                        infoText += `*${i + 1}.* [${dl.quality || 'HD'}] ${dl.label || dl.name}\n`;
+                    });
+                    infoText += `\n👉 *බාගත කිරීමට අදාළ Source අංකය Reply කරන්න.*`;
+
+                    const infoMsg = await socket.sendMessage(sender, {
+                        image: { url: showData.image || chosenShow.image },
+                        caption: infoText
+                    }, { quoted: replyMek });
+
+                    const infoMsgID = infoMsg.key.id;
+
+                    const handleDownloadSelection = async ({ messages: dlMessages }) => {
+                        const dlMek = dlMessages?.[0];
+                        if (!dlMek?.message || dlMek.key.remoteJid !== sender) return;
+
+                        const dlChoiceText = (dlMek.message.conversation || dlMek.message.extendedTextMessage?.text || '').trim();
+                        const isDlReply = dlMek.message.extendedTextMessage?.contextInfo?.stanzaId === infoMsgID;
+
+                        if (isDlReply) {
+                            const dlIdx = parseInt(dlChoiceText) - 1;
+                            if (isNaN(dlIdx) || dlIdx < 0 || dlIdx >= allDownloads.length) {
+                                await socket.sendMessage(sender, { 
+                                    text: `❌ කරුණාකර 1 - ${allDownloads.length} අතර අංකයක් ලබාදෙන්න!` 
+                                }, { quoted: dlMek });
+                                return;
+                            }
+
+                            clearAllWrestlingListeners();
+                            const selectedSource = allDownloads[dlIdx];
+
+                            await socket.sendMessage(sender, { react: { text: '📥', key: dlMek.key } });
+
+                            await socket.sendMessage(sender, { 
+                                text: `⏳ *Processing Download:* ${selectedSource.label || selectedSource.name}\n_කරුණාකර ටික වේලාවක් රැඳී සිටින්න, ෆိုင် එක සූදානම් වෙමින් පවතී..._` 
+                            }, { quoted: dlMek });
+
+                            try {
+                                const directLink = selectedSource.direct_link || selectedSource.url;
+
+                                // ගොනුවේ ප්‍රමාණය විශාල (GBs) විය හැකි නිසා හෝ direct video URL එකක් නම් document ලෙස යැවීම
+                                await socket.sendMessage(sender, {
+                                    document: { url: directLink },
+                                    mimetype: 'video/mp4',
+                                    fileName: `${showData.title} - ${selectedSource.quality || 'HD'}.mp4`,
+                                    caption: `✅ *WRESTLING SHOW DOWNLOADED*\n\n🤼 *Show:* ${showData.title}\n📌 *Quality:* ${selectedSource.quality || 'HD'}\n> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                                }, { quoted: dlMek });
+
+                                await socket.sendMessage(sender, { react: { text: '✅', key: dlMek.key } });
+                            } catch (uploadErr) {
+                                await socket.sendMessage(sender, { 
+                                    text: `❌ ගොනුව යැවීමේදී දෝෂයක් ඇති විය: ${uploadErr.message}\n\n🔗 Web/Stream Link එක: ${selectedSource.url}` 
+                                }, { quoted: dlMek });
+                            }
+                        }
+                    };
+
+                    wrestlingDownloadListener = handleDownloadSelection;
+                    socket.ev.on('messages.upsert', handleDownloadSelection);
+
+                } catch (infoErr) {
+                    clearAllWrestlingListeners();
+                    await socket.sendMessage(sender, { text: `❌ WatchWrestling Info Error: ${infoErr.message}` }, { quoted: replyMek });
+                }
+            }
+        };
+
+        wrestlingSelectionListener = handleShowSelection;
+        socket.ev.on('messages.upsert', handleShowSelection);
+
+    } catch (err) {
+        clearAllWrestlingListeners();
+        await socket.sendMessage(sender, {
+            text: `❌ Error: ${err.message}`
+        }, { quoted: msg });
+    }
+    break;
+}
+                    
+                case 'vv':
 case '❤️': {
     const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
     if (!quoted) {
