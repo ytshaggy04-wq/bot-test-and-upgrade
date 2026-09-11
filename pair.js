@@ -1516,6 +1516,281 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
     }
   break;                 
 }
+case 'hexrom':
+case 'rom':
+case 'game': {
+    if (!args.length) {
+        await socket.sendMessage(sender, {
+            image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+            caption: formatMessage(
+                '❌ ERROR',
+                '*කරුණාකර game එකේ නම ලබාදෙන්න! උදා: .hexrom God of War*',
+                `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+            )
+        }, { quoted: msg });
+        break;
+    }
+
+    const romQuery = args.join(' ');
+    const API_BASE = 'https://api.chamindu.site/api/v1/games/hexrom';
+    const API_KEY = 'chama_api_11230a80e5eed3c1b80bfcc5d1773ec9';
+
+    let romSelectionListener = null;
+    let romDownloadListener = null;
+    let romMasterTimeout = null;
+
+    const clearAllRomListeners = () => {
+        if (romSelectionListener) { socket.ev.off('messages.upsert', romSelectionListener); romSelectionListener = null; }
+        if (romDownloadListener)  { socket.ev.off('messages.upsert', romDownloadListener);  romDownloadListener  = null; }
+        if (romMasterTimeout)     { clearTimeout(romMasterTimeout); romMasterTimeout = null; }
+    };
+
+    const cleanRomTitle = (t = '') => t.replace(/\s*Rom\s*$/i, '').trim();
+
+    // ── Helper: Download file ────────────────
+    const downloadFile = async (url, outputPath) => {
+        const writer = fs.createWriteStream(outputPath);
+        const response = await axios({
+            url, method: 'GET',
+            responseType: 'stream',
+            timeout: 0,
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity
+        });
+        response.data.pipe(writer);
+        return new Promise((resolve, reject) => {
+            writer.on('finish', resolve);
+            writer.on('error', reject);
+        });
+    };
+
+    // ── Helper: Split file ───────────────────
+    const splitIntoParts = async (filePath, partSizeBytes) => {
+        const outputDir = filePath + '_parts';
+        await fs.ensureDir(outputDir);
+        const baseName = path.basename(filePath);
+        const outputPattern = path.join(outputDir, baseName + '.part');
+        const parts = await splitFile(filePath, outputPattern, partSizeBytes);
+        return parts;
+    };
+
+    // ── Helper: Delay ────────────────────────
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    try {
+        await socket.sendMessage(sender, { text: '🔍 Searching ROMs on HexRom...' }, { quoted: msg });
+
+        // ═══ STEP 1 : SEARCH ═══════════════════
+        const searchRes = await axios.get(`${API_BASE}/search`, {
+            params: { q: romQuery, api_key: API_KEY },
+            timeout: 20000
+        });
+
+        const searchData = searchRes.data;
+        if (!searchData.status || !searchData.data?.length) {
+            await socket.sendMessage(sender, {
+                image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+                caption: formatMessage('❌ NO RESULTS', '*කිසිදු ROM එකක් හමු නොවීය!*', `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`)
+            }, { quoted: msg });
+            break;
+        }
+
+        const romList = searchData.data.slice(0, 20);
+        let listText = `🎮 *𝗛𝗘𝗫𝗥𝗢𝗠 𝗦𝗘𝗔𝗥𝗖𝗛 : _${romQuery}_*\n╭──────●➤\n*🔢 ʀᴇ𝗽𝗹ʏ ʙᴇʟ𝗼𝘄 ɴᴜᴍʙᴇʀ*\n╰──────────●➤\n╭──────●➤\n`;
+        romList.forEach((item, index) => { listText += `*🕹️ ${index + 1} ┃❭❭ ${cleanRomTitle(item.title)}*\n`; });
+        listText += `╰──────────●➤\n> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
+
+        const searchMsg = await socket.sendMessage(sender, {
+            image: { url: romList[0].image || sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+            caption: listText
+        }, { quoted: msg });
+
+        const searchMsgID = searchMsg.key.id;
+        romMasterTimeout = setTimeout(clearAllRomListeners, 120000);
+
+        // ═══ STEP 2 : USER PICKS A ROM ═════════
+        const handleRomSelection = async ({ messages }) => {
+            const replyMek = messages?.[0];
+            if (!replyMek?.message || replyMek.key.remoteJid !== sender) return;
+
+            const text = (replyMek.message.conversation || replyMek.message.extendedTextMessage?.text || '').trim();
+            const isReply = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === searchMsgID;
+            if (!isReply) return;
+
+            const choice = parseInt(text) - 1;
+            if (isNaN(choice) || choice < 0 || choice >= romList.length) {
+                await socket.sendMessage(sender, { text: `❌ කරුණාකර 1 - ${romList.length} අතර අංකයක් ලබාදෙන්න!` }, { quoted: replyMek });
+                return;
+            }
+
+            if (romSelectionListener) { socket.ev.off('messages.upsert', romSelectionListener); romSelectionListener = null; }
+
+            const chosenRom = romList[choice];
+            await socket.sendMessage(sender, { text: '⏳ Fetching download links...' }, { quoted: replyMek });
+
+            try {
+                // ═══ STEP 3 : DOWNLOAD INFO API ════
+                const dlRes = await axios.get(`${API_BASE}/download`, {
+                    params: { q: chosenRom.link, api_key: API_KEY },
+                    timeout: 20000
+                });
+
+                const romData = dlRes.data?.data;
+                const allDownloads = romData?.downloads || [];
+                if (!romData || allDownloads.length === 0) throw new Error('බාගත කිරීමේ links හමු නොවීය.');
+
+                let infoText = `🎮 *${cleanRomTitle(romData.title)}*\n\n`;
+                infoText += `🌐 *Source:* ${romData.url}\n\n*Available Downloads:*\n`;
+                allDownloads.forEach((dl, i) => { infoText += `*${i + 1}.* ${dl.name || `File ${i + 1}`}\n`; });
+                infoText += `\n👉 *බාගත කිරීමට අදාළ අංකය Reply කරන්න.*`;
+
+                const infoMsg = await socket.sendMessage(sender, {
+                    image: { url: romData.image || chosenRom.image },
+                    caption: infoText
+                }, { quoted: replyMek });
+
+                const infoMsgID = infoMsg.key.id;
+
+                // ═══ STEP 4 : USER PICKS A LINK ════
+                const handleRomDownload = async ({ messages: dlMessages }) => {
+                    const dlMek = dlMessages?.[0];
+                    if (!dlMek?.message || dlMek.key.remoteJid !== sender) return;
+
+                    const dlChoiceText = (dlMek.message.conversation || dlMek.message.extendedTextMessage?.text || '').trim();
+                    const isDlReply = dlMek.message.extendedTextMessage?.contextInfo?.stanzaId === infoMsgID;
+                    if (!isDlReply) return;
+
+                    const dlIdx = parseInt(dlChoiceText) - 1;
+                    if (isNaN(dlIdx) || dlIdx < 0 || dlIdx >= allDownloads.length) {
+                        await socket.sendMessage(sender, { text: `❌ කරුණාකර 1 - ${allDownloads.length} අතර අංකයක් ලබාදෙන්න!` }, { quoted: dlMek });
+                        return;
+                    }
+
+                    clearAllRomListeners();
+                    const selectedDl = allDownloads[dlIdx];
+                    const dlUrl = selectedDl?.download_link || selectedDl?.link || selectedDl?.url;
+                    const fileName = selectedDl?.name || `ROM_${dlIdx + 1}`;
+                    const fileSize = selectedDl?.size || 'Unknown';
+
+                    if (!dlUrl) {
+                        await socket.sendMessage(sender, { text: `❌ Download link එක හමු නොවීය!` }, { quoted: dlMek });
+                        return;
+                    }
+
+                    await socket.sendMessage(sender, { react: { text: '📥', key: dlMek.key } });
+                    await socket.sendMessage(sender, {
+                        text: `⏳ *Downloading to server:* ${fileName}\n💾 *Size:* ${fileSize}\n\n_කරුණාකර රැඳී සිටින්න... (file ලොකු නම් විනාඩි කිහිපයක් ගත වේ)_`
+                    }, { quoted: dlMek });
+
+                    // Temp folder
+                    await fs.ensureDir(ROM_TEMP_DIR);
+                    const safeName = cleanRomTitle(romData.title).replace(/[^a-z0-9]/gi, '_');
+                    const localFile = path.join(ROM_TEMP_DIR, `${safeName}_${Date.now()}.zip`);
+                    let partsDir = null;
+
+                    try {
+                        // 1. Download
+                        await downloadFile(dlUrl, localFile);
+                        const stats = await fs.stat(localFile);
+                        const sizeMB = stats.size / (1024 * 1024);
+
+                        await socket.sendMessage(sender, {
+                            text: `✅ *Server එකට download වුනා!*\n📦 Size: ${sizeMB.toFixed(0)} MB\n\n_දැන් parts වලට කඩනවා..._`
+                        }, { quoted: dlMek });
+
+                        // 2. Split
+                        const partSizeBytes = ROM_PART_SIZE_MB * 1024 * 1024;
+                        const parts = await splitIntoParts(localFile, partSizeBytes);
+                        partsDir = localFile + '_parts';
+
+                        await socket.sendMessage(sender, {
+                            text: `✂️ *Parts ${parts.length} කට කැඩුවා*\n\n📌 හැම part එකක් අතරේ *3 විනාඩි* රැඳීමක්. Part ${parts.length}ක් = *${((parts.length - 1) * 3)} විනාඩි* ගතවේ.\n\n_යවමින් පවතී..._`
+                        }, { quoted: dlMek });
+
+                        // 3. Send parts with delay
+                        for (let i = 0; i < parts.length; i++) {
+                            const partNum = i + 1;
+
+                            try {
+                                await socket.sendMessage(sender, {
+                                    document: { url: parts[i] },
+                                    mimetype: 'application/octet-stream',
+                                    fileName: path.basename(parts[i]),
+                                    caption: `📦 *PART ${partNum}/${parts.length}*\n🎮 *${cleanRomTitle(romData.title)}*\n💾 500 MB / part\n\n_හැම part එකම download කරලා එකම folder එකේ තියන්න._\n\n> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                                }, { quoted: dlMek });
+
+                                await socket.sendMessage(sender, { react: { text: '✅', key: dlMek.key } });
+
+                            } catch (partErr) {
+                                await socket.sendMessage(sender, {
+                                    text: `⚠️ *Part ${partNum} යැවීමේ දෝෂය:* ${partErr.message}\n\n_ඊළඟ part එකට යනවා..._`
+                                }, { quoted: dlMek });
+                            }
+
+                            // අන්තිම part එකට පස්සේ delay නෑ
+                            if (partNum < parts.length) {
+                                await socket.sendMessage(sender, {
+                                    text: `⏸️ *Part ${partNum} යැව්වා.*\n\n⏳ ඊළඟ part එක එන්නේ *3 විනාඩියකින්*...\n_කරුණාකර ඉන්න._`
+                                }, { quoted: dlMek });
+
+                                await sleep(ROM_DELAY_MS);
+                            }
+                        }
+
+                        // 4. Final message
+                        await socket.sendMessage(sender, {
+                            text:
+`✅ *සියලුම PARTS යැව්වා!*
+
+📦 *Total Parts:* ${parts.length}
+🎮 *Game:* ${cleanRomTitle(romData.title)}
+
+━━━━━━━━━━━━━━━
+📌 *JOIN කරන්නේ කොහොමද?*
+━━━━━━━━━━━━━━━
+1️⃣ හැම part එකම download කරන්න
+2️⃣ එකම folder එකේ තියන්න
+3️⃣ *WinRAR* හෝ *7-Zip* එකෙන් open කරන්න
+4️⃣ First part එක (.part1) extract කරන්න
+5️⃣ ඉතුරු ටික auto join වේවි ✅
+
+💡 *Tip:* WinRAR mobile app එකෙන් join කරන්න පුළුවන්.
+
+> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
+                        }, { quoted: dlMek });
+
+                        // 5. Cleanup
+                        await fs.remove(localFile);
+                        if (partsDir) await fs.remove(partsDir);
+
+                    } catch (err) {
+                        await socket.sendMessage(sender, {
+                            text: `❌ *Error:* ${err.message}\n\n🔗 *Fallback Link:*\n${dlUrl}`
+                        }, { quoted: dlMek });
+
+                        try { await fs.remove(localFile); } catch {}
+                        if (partsDir) try { await fs.remove(partsDir); } catch {}
+                    }
+                };
+
+                romDownloadListener = handleRomDownload;
+                socket.ev.on('messages.upsert', handleRomDownload);
+
+            } catch (dlErr) {
+                clearAllRomListeners();
+                await socket.sendMessage(sender, { text: `❌ ROM Download Error: ${dlErr.message}` }, { quoted: replyMek });
+            }
+        };
+
+        romSelectionListener = handleRomSelection;
+        socket.ev.on('messages.upsert', romSelectionListener);
+
+    } catch (err) {
+        clearAllRomListeners();
+        await socket.sendMessage(sender, { text: `❌ Error: ${err.message}` }, { quoted: msg });
+    }
+    break;
+}
 case 'cartoon':
 case 'sinhalacartoon': {
     if (!args.length) {
