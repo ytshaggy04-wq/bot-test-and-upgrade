@@ -1521,13 +1521,18 @@ case 'pcgame': {
     const chatJid = msg.key.remoteJid;
     const DEFAULT_FOOTER = `\n\n> 🎮 𝗖𝗛𝗔𝗠𝗔 𝗖𝗜𝗡𝗘 𝗛𝗨𝗕 🎮\n> 🧬 ᴘᴏᴡᴇʀᴇᴅ ʙʏ 👑 𝗖𝗛𝗔𝗠𝗜𝗡𝗗𝗨 𝗢𝗙𝗖`;
 
-    // ⚙️ CONFIG — ඔයාට මෙතන වෙනස් කරන්න පුළුවන්
+    // ⚙️ CONFIG
     const FITGIRL_CONFIG = {
         PART_SIZE_MB: 500,
         SEND_DELAY_MS: 120000,
         TEMP_DIR: './tmp_fitgirl',
         MAX_PARTS: 25
     };
+
+    // 🔑 API CONFIG
+    const API_BASE = "https://api.chamindu.site";
+    const API_KEY = "chama_api_11230a80e5eed3c1b80bfcc5d1773ec9";
+    const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=500";
 
     function getCircledNumber(num) {
         const circledNumbers = [
@@ -1538,10 +1543,9 @@ case 'pcgame': {
         return circledNumbers[num - 1] || `[${num}]`;
     }
 
-    // ============ HELPER: Sanitize name ============
+    // ============ HELPERS ============
     const fgSanitize = (n) => (n || 'game').replace(/[^a-zA-Z0-9 _-]/g, '').trim().substring(0, 60);
     
-    // ============ HELPER: Format size ============
     const fgFmtSize = (bytes) => {
         if (!bytes || bytes === 0) return 'Unknown';
         const mb = bytes / 1024 / 1024;
@@ -1550,8 +1554,7 @@ case 'pcgame': {
         return `${(mb / 1024).toFixed(2)} GB`;
     };
 
-    // ============ HELPER: Resolve direct link ============
-    const fgResolveLink = async (rawLink, API_BASE, API_KEY) => {
+    const fgResolveLink = async (rawLink) => {
         if (!rawLink) return null;
         if (rawLink.startsWith('magnet:')) return rawLink;
 
@@ -1574,7 +1577,6 @@ case 'pcgame': {
         return rawLink;
     };
 
-    // ============ HELPER: Get size ============
     const fgGetSize = async (url) => {
         try {
             const r = await axios.head(url, {
@@ -1585,7 +1587,6 @@ case 'pcgame': {
         } catch (e) { return 0; }
     };
 
-    // ============ HELPER: Download file ============
     const fgDownload = async (url, dest) => {
         await fs.ensureDir(path.dirname(dest));
         const res = await axios.get(url, {
@@ -1597,7 +1598,6 @@ case 'pcgame': {
         return dest;
     };
 
-    // ============ HELPER: Split file into chunks ============
     const fgSplit = async (srcPath, chunkMB, outDir, baseName) => {
         const chunkSize = chunkMB * 1024 * 1024;
         const stat = await fs.stat(srcPath);
@@ -1651,8 +1651,7 @@ case 'pcgame': {
         return parts;
     };
 
-    // ============ MAIN: Auto download + split + send all ============
-    const fgAutoSendAll = async (parts, gameTitle, socket, chatJid, replyMek, API_BASE, API_KEY) => {
+    const fgAutoSendAll = async (parts, gameTitle, socket, chatJid, replyMek) => {
         const safeTitle = fgSanitize(gameTitle);
         const tmpRoot = path.join(FITGIRL_CONFIG.TEMP_DIR, `${Date.now()}_${safeTitle}`);
         const rawDir = path.join(tmpRoot, 'raw');
@@ -1678,7 +1677,7 @@ case 'pcgame': {
                         text: `⏳ *${label}* Resolving link...`
                     });
 
-                    const direct = await fgResolveLink(part.link, API_BASE, API_KEY);
+                    const direct = await fgResolveLink(part.link);
 
                     if (!direct || direct.startsWith('magnet:')) {
                         await socket.sendMessage(chatJid, {
@@ -1698,7 +1697,6 @@ case 'pcgame': {
                     await fgDownload(direct, rawFile);
                     const rawStat = await fs.stat(rawFile);
 
-                    // Split if needed
                     let chunks = [{ path: rawFile, size: rawStat.size, temp: false }];
 
                     if (rawStat.size > FITGIRL_CONFIG.PART_SIZE_MB * 1024 * 1024) {
@@ -1715,7 +1713,6 @@ case 'pcgame': {
                         await fs.remove(rawFile).catch(() => {});
                     }
 
-                    // Send chunks
                     for (let j = 0; j < chunks.length; j++) {
                         const chunk = chunks[j];
                         const isSub = chunks.length > 1;
@@ -1795,10 +1792,6 @@ case 'pcgame': {
         text: `*❪ SEARCHING ❫*\n\n🔍 *Searching Fitgirl Repacks...*\n⚡ _Please wait a moment._`
     });
 
-    const API_BASE = "https://api.chamindu.site";
-    const API_KEY = "chama_api_c82b12fffda71170b553f662d39426ec";
-    const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=500";
-
     // ============ SEARCH ============
     let searchResponse = null;
     let searchRetries = 3;
@@ -1808,7 +1801,7 @@ case 'pcgame': {
         } catch (searchErr) {
             searchRetries--;
             if (searchRetries === 0) throw searchErr;
-            console.log(`Fitgirl search failed, retrying... (${searchRetries} left)`);
+            console.log(`Fitgirl search retry... (${searchRetries} left)`);
             await new Promise(resolve => setTimeout(resolve, 2000));
         }
     }
@@ -1946,7 +1939,6 @@ case 'pcgame': {
                         caption: gameDetailsText
                     }, { quoted: replyMek });
 
-                    // Download options
                     let downloadOptionsText = `*❪ GAME DOWNLOADS ❫*\n\n`;
                     downloadOptionsText += `*99* ➜ 📦 *AUTO DOWNLOAD & SEND ALL* (${FITGIRL_CONFIG.PART_SIZE_MB}MB chunks)\n`;
                     downloadOptionsText += `*00* ➜ 📥 _Get ALL links at once_\n\n`;
@@ -1981,7 +1973,7 @@ case 'pcgame': {
                             // ===== 99: AUTO DOWNLOAD & SEND ALL =====
                             if (downloadChoice === '99') {
                                 await socket.sendMessage(chatJid, { react: { text: '📦', key: downloadMek.key } });
-                                await fgAutoSendAll(validDownloads, gameTitle, socket, chatJid, downloadMek, API_BASE, API_KEY);
+                                await fgAutoSendAll(validDownloads, gameTitle, socket, chatJid, downloadMek);
                                 return;
                             }
 
@@ -2022,7 +2014,7 @@ case 'pcgame': {
                                 return;
                             }
 
-                            const directLink = await fgResolveLink(selectedDownload.link, API_BASE, API_KEY);
+                            const directLink = await fgResolveLink(selectedDownload.link);
 
                             let fileName = `${gameTitle.replace(/[^a-zA-Z0-9 ]/g, '').trim()} - Part_${choiceNum + 1}.rar`;
                             try {
@@ -2080,100 +2072,6 @@ case 'pcgame': {
         }, { quoted: msg });
     }
     
-    break;
-}
-case 'downloadgame':
-case 'gamepart': {
-    const chatJid = msg.key.remoteJid;
-    const DEFAULT_FOOTER = `\n\n> 🎮 𝗖𝗛𝗔𝗠𝗔 𝗖𝗜𝗡𝗘 & 𝗚𝗔𝗠𝗘 HUB 🎮\n> 🧬 ᴘᴏᴡᴇʀᴇᴅ ʙʏ 👑 𝗖𝗛𝗔𝗠𝗜𝗡𝗗𝗨 𝗢𝗙𝗖`;
-
-    if (!args.length) {
-        await socket.sendMessage(chatJid, {
-            text: `*❪ ERROR ❫*\n\n⚠️ *Invalid Usage!*\n\n🔍 *Example:*\n• .gamepart Black Myth Wukong\n\n📝 _Please provide the game name!_${DEFAULT_FOOTER}`
-        }, { quoted: msg });
-        break;
-    }
-
-    const gameQuery = args.join(' ');
-    
-    await socket.sendMessage(chatJid, { 
-        text: `*┏━━━━━━━━━━━━━━━━━━━━┓*\n` +
-              `┃   🛡️ *SAFE DOWNLOAD QUEUE* 🛡️\n` +
-              `*┗━━━━━━━━━━━━━━━━━━━━┛*\n\n` +
-              `🎯 *Game:* _${gameQuery}_\n` +
-              `⏱️ *Mode:* _Anti-Ban Safe Delay (Active)_\n` +
-              `📦 *Status:* _Initializing parts queue..._\n` +
-              `${DEFAULT_FOOTER}`
-    }, { quoted: msg });
-
-    try {
-        // උදාහරණයක් ලෙස ඔබේ කොටස් ලැයිස්තුව (Parts 1 සිට 195 දක්වා)
-        const allParts = [
-            { partNo: 1, totalParts: 195, size: "500.0 MB", name: "Black_Myth_Wukong_Part_1.rar", link: "https://example.com/part1.rar" },
-            { partNo: 2, totalParts: 195, size: "500.0 MB", name: "Black_Myth_Wukong_Part_2.rar", link: "https://example.com/part2.rar" }
-            // මෙලෙස අනෙක් කොටස් ද එකතු කරගත හැක
-        ];
-
-        for (let i = 0; i < allParts.length; i++) {
-            const part = allParts[i];
-
-            const partCaption = `*┏━━━━━━━━━━━━━━━━━━━━┓*\n` +
-                                `┃   📦 *SECURE FILE TRANSFER* 📦\n` +
-                                `*┗━━━━━━━━━━━━━━━━━━━━┛*\n\n` +
-                                `🎮 *Game:* _${gameQuery}_\n` +
-                                `📦 *Part:* _${part.partNo} of ${part.totalParts}_\n` +
-                                `💾 *Size:* _${part.size}_\n` +
-                                `📊 *Progress:* _${Math.round((part.partNo / part.totalParts) * 100)}%_\n` +
-                                `🛡️ *Anti-Ban Delay:* _Active_\n` +
-                                `${DEFAULT_FOOTER}`;
-
-            try {
-                // Document එක ලෙස Part එක යැවීම
-                await socket.sendMessage(chatJid, {
-                    document: { url: part.link },
-                    mimetype: 'application/x-rar-compressed',
-                    fileName: part.name,
-                    caption: partCaption
-                });
-
-                console.log(`[SafeDL] Successfully sent Part ${part.partNo}/${part.totalParts}`);
-            } catch (sendErr) {
-                console.log(`[SafeDL] Error sending part ${part.partNo}, sending fallback link...`);
-                await socket.sendMessage(chatJid, {
-                    text: `*❪ LINK FALLBACK ❫*\n\n📦 *Part ${part.partNo} of ${part.totalParts}*\n🔗 *Direct Link:*\n${part.link}\n\n${DEFAULT_FOOTER}`
-                });
-            }
-
-            // වැදගත්ම කොටස: WhatsApp Ban වීම වැළැක්වීමට කොටස් අතර ප්‍රමාදය (Delay)
-            // මෙහි 180000 milliseconds යනු විනාඩි 3 කි. (කොටසකට විනාඩි 3ක් ගියහොත් කොටස් 195කට පැය 9කට ආසන්න කාලයක් යයි)
-            // ඔබට අවශ්‍ය පරිදි කාලය වෙනස් කරගත හැක (උදා: විනාඩි 2ක් සඳහා 120000 දමන්න)
-            const delayTimeMinutes = 3; 
-            const delayTimeMs = delayTimeMinutes * 60 * 1000;
-
-            if (i < allParts.length - 1) {
-                await socket.sendMessage(chatJid, {
-                    text: `⏳ *Waiting ${delayTimeMinutes} minutes before sending the next part to protect account from getting banned...*`
-                });
-                await new Promise(resolve => setTimeout(resolve, delayTimeMs));
-            }
-        }
-
-        await socket.sendMessage(chatJid, {
-            text: `*┏━━━━━━━━━━━━━━━━━━━━┓*\n` +
-                  `┃   🎉 *ALL PARTS SENT* 🎉\n` +
-                  `*┗━━━━━━━━━━━━━━━━━━━━┛*\n\n` +
-                  `🎮 *Game:* _${gameQuery}_\n` +
-                  `✅ _All parts have been delivered safely without triggering spam filters!_\n` +
-                  `${DEFAULT_FOOTER}`
-        });
-
-    } catch (error) {
-        console.error('Queue Error:', error);
-        await socket.sendMessage(chatJid, {
-            text: `*❪ ERROR ❫*\n\n❌ *Queue stopped due to an error!*\n🚫 _${error.message}_\n${DEFAULT_FOOTER}`
-        }, { quoted: msg });
-    }
-
     break;
 }
 case 'zoom':
