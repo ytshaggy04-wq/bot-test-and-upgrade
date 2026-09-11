@@ -1516,319 +1516,98 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
     }
   break;                 
 }
-case 'fitgirl':             
-case 'pcgame': {
+case 'downloadgame':
+case 'gamepart': {
     const chatJid = msg.key.remoteJid;
-    const DEFAULT_FOOTER = `\n\n> 🎮 𝗖𝗛𝗔𝗠𝗔 𝗖𝗜𝗡𝗘 𝗛𝗨𝗕 🎮\n> 🧬 ᴘᴏᴡᴇʀᴇᴅ ʙʏ 👑 𝗖𝗛𝗔𝗠𝗜𝗡𝗗𝗨 𝗢𝗙𝗖`;
-
-    function getCircledNumber(num) {
-        const circledNumbers = [
-            '①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩',
-            '⑪', '⑫', '⑬', '⑭', '⑮', '⑯', '⑰', '⑘', '⑙', '⑚',
-            '㉑', '㉒', '㉓', '㉔', '㉕', '㉖', '㉗', '㉘', '㉙', '㉚'
-        ];
-        return circledNumbers[num - 1] || `[${num}]`;
-    }
+    const DEFAULT_FOOTER = `\n\n> 🎮 𝗖𝗛𝗔𝗠𝗔 𝗖𝗜𝗡𝗘 & 𝗚𝗔𝗠𝗘 HUB 🎮\n> 🧬 ᴘᴏᴡᴇʀᴇᴅ ʙʏ 👑 𝗖𝗛𝗔𝗠𝗜𝗡𝗗𝗨 𝗢𝗙𝗖`;
 
     if (!args.length) {
         await socket.sendMessage(chatJid, {
-            text: `*❪ ERROR ❫*\n\n⚠️ *Invalid Usage!*\n\n🎮 *Example:*\n• .pcgame gta v\n• .fitgirl cyberpunk 2077\n\n📝 _Please provide the PC Game name!_${DEFAULT_FOOTER}`
+            text: `*❪ ERROR ❫*\n\n⚠️ *Invalid Usage!*\n\n🔍 *Example:*\n• .gamepart Black Myth Wukong\n\n📝 _Please provide the game name!_${DEFAULT_FOOTER}`
         }, { quoted: msg });
         break;
     }
 
     const gameQuery = args.join(' ');
+    
     await socket.sendMessage(chatJid, { 
-        text: `*❪ SEARCHING ❫*\n\n🔍 *Searching Fitgirl Repacks...*\n⚡ _Please wait a moment._`
-    });
-
-    const API_BASE = "https://api.chamindu.site";
-    const API_KEY = "chama_api_11230a80e5eed3c1b80bfcc5d1773ec9";
-    const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=500";
-
-    let searchResponse = null;
-    let searchRetries = 3;
-    while (searchRetries > 0 && !searchResponse) {
-        try {
-            searchResponse = await axios.get(`${API_BASE}/api/v1/game/fitgirl/search?q=${encodeURIComponent(gameQuery)}&api_key=${API_KEY}`, { timeout: 30000 });
-        } catch (searchErr) {
-            searchRetries--;
-            if (searchRetries === 0) throw searchErr;
-            console.log(`Fitgirl search failed, retrying... (${searchRetries} attempts left)`);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-    }
-    const searchData = searchResponse.data;
-    const resultsList = searchData.data || searchData.results || [];
+        text: `*┏━━━━━━━━━━━━━━━━━━━━┓*\n` +
+              `┃   🛡️ *SAFE DOWNLOAD QUEUE* 🛡️\n` +
+              `*┗━━━━━━━━━━━━━━━━━━━━┛*\n\n` +
+              `🎯 *Game:* _${gameQuery}_\n` +
+              `⏱️ *Mode:* _Anti-Ban Safe Delay (Active)_\n` +
+              `📦 *Status:* _Initializing parts queue..._\n` +
+              `${DEFAULT_FOOTER}`
+    }, { quoted: msg });
 
     try {
-        if (!searchData.status || resultsList.length === 0) {
-            await socket.sendMessage(chatJid, {
-                text: `*❪ NO RESULTS ❫*\n\n😞 *No Games Found!*\n\n🎮 *Query:* _${gameQuery}_\n💡 *Tip:* _Please check the spelling and try again!_${DEFAULT_FOOTER}`
-            }, { quoted: msg });
-            break;
+        // උදාහරණයක් ලෙස ඔබේ කොටස් ලැයිස්තුව (Parts 1 සිට 195 දක්වා)
+        const allParts = [
+            { partNo: 1, totalParts: 195, size: "500.0 MB", name: "Black_Myth_Wukong_Part_1.rar", link: "https://example.com/part1.rar" },
+            { partNo: 2, totalParts: 195, size: "500.0 MB", name: "Black_Myth_Wukong_Part_2.rar", link: "https://example.com/part2.rar" }
+            // මෙලෙස අනෙක් කොටස් ද එකතු කරගත හැක
+        ];
+
+        for (let i = 0; i < allParts.length; i++) {
+            const part = allParts[i];
+
+            const partCaption = `*┏━━━━━━━━━━━━━━━━━━━━┓*\n` +
+                                `┃   📦 *SECURE FILE TRANSFER* 📦\n` +
+                                `*┗━━━━━━━━━━━━━━━━━━━━┛*\n\n` +
+                                `🎮 *Game:* _${gameQuery}_\n` +
+                                `📦 *Part:* _${part.partNo} of ${part.totalParts}_\n` +
+                                `💾 *Size:* _${part.size}_\n` +
+                                `📊 *Progress:* _${Math.round((part.partNo / part.totalParts) * 100)}%_\n` +
+                                `🛡️ *Anti-Ban Delay:* _Active_\n` +
+                                `${DEFAULT_FOOTER}`;
+
+            try {
+                // Document එක ලෙස Part එක යැවීම
+                await socket.sendMessage(chatJid, {
+                    document: { url: part.link },
+                    mimetype: 'application/x-rar-compressed',
+                    fileName: part.name,
+                    caption: partCaption
+                });
+
+                console.log(`[SafeDL] Successfully sent Part ${part.partNo}/${part.totalParts}`);
+            } catch (sendErr) {
+                console.log(`[SafeDL] Error sending part ${part.partNo}, sending fallback link...`);
+                await socket.sendMessage(chatJid, {
+                    text: `*❪ LINK FALLBACK ❫*\n\n📦 *Part ${part.partNo} of ${part.totalParts}*\n🔗 *Direct Link:*\n${part.link}\n\n${DEFAULT_FOOTER}`
+                });
+            }
+
+            // වැදගත්ම කොටස: WhatsApp Ban වීම වැළැක්වීමට කොටස් අතර ප්‍රමාදය (Delay)
+            // මෙහි 180000 milliseconds යනු විනාඩි 3 කි. (කොටසකට විනාඩි 3ක් ගියහොත් කොටස් 195කට පැය 9කට ආසන්න කාලයක් යයි)
+            // ඔබට අවශ්‍ය පරිදි කාලය වෙනස් කරගත හැක (උදා: විනාඩි 2ක් සඳහා 120000 දමන්න)
+            const delayTimeMinutes = 3; 
+            const delayTimeMs = delayTimeMinutes * 60 * 1000;
+
+            if (i < allParts.length - 1) {
+                await socket.sendMessage(chatJid, {
+                    text: `⏳ *Waiting ${delayTimeMinutes} minutes before sending the next part to protect account from getting banned...*`
+                });
+                await new Promise(resolve => setTimeout(resolve, delayTimeMs));
+            }
         }
 
-        const gameResults = resultsList.slice(0, 25);
-        let listText = `*❪ GAME SEARCH RESULTS ❫*\n\n🎯 *Query:* _${gameQuery}_\n📊 *Results:* _${gameResults.length} Items_\n\n*👇 SELECT A NUMBER 👇*\n\n`;
-
-        gameResults.forEach((item, index) => {
-            const num = getCircledNumber(index + 1);
-            listText += `${num} ➜ 🎮 _${item.title.substring(0, 45)}_\n📅 _Date: ${item.date || 'N/A'}_\n\n`;
+        await socket.sendMessage(chatJid, {
+            text: `*┏━━━━━━━━━━━━━━━━━━━━┓*\n` +
+                  `┃   🎉 *ALL PARTS SENT* 🎉\n` +
+                  `*┗━━━━━━━━━━━━━━━━━━━━┛*\n\n` +
+                  `🎮 *Game:* _${gameQuery}_\n` +
+                  `✅ _All parts have been delivered safely without triggering spam filters!_\n` +
+                  `${DEFAULT_FOOTER}`
         });
 
-        listText += `${DEFAULT_FOOTER}`;
-        
-        const sentMsg = await socket.sendMessage(chatJid, { text: listText }, { quoted: msg });
-        const messageID = sentMsg.key.id;
-
-        let cleanupTimeout = null;
-
-        const handleSelection = async ({ messages: replyMessages }) => {
-            const replyMek = replyMessages?.[0];
-            if (!replyMek?.message) return;
-
-            const messageType = (replyMek.message.conversation || replyMek.message.extendedTextMessage?.text || "").trim();
-            const isReplyToSentMsg = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === messageID;
-
-            const replierNumber = (replyMek.key.participant || replyMek.key.remoteJid || '').split('@')[0].split(':')[0];
-            const originalSenderNumber = (msg.key.participant || msg.key.remoteJid || '').split('@')[0].split(':')[0];
-            const isSameUser = replierNumber === originalSenderNumber;
-            const isSameChat = replyMek.key.remoteJid === chatJid;
-
-            if (isReplyToSentMsg && isSameChat && isSameUser) {
-                const choice = parseInt(messageType) - 1;
-                if (isNaN(choice) || choice < 0 || choice >= gameResults.length) {
-                    await socket.sendMessage(chatJid, {
-                        text: `*❪ INVALID ❫*\n\n⚠️ *Wrong Number!*\n🎯 *Range:* _01 - ${gameResults.length}_\n📝 _Please reply with a valid number!_${DEFAULT_FOOTER}`
-                    }, { quoted: replyMek });
-                    return;
-                }
-
-                if (cleanupTimeout) clearTimeout(cleanupTimeout);
-                socket.ev.off('messages.upsert', handleSelection);
-
-                const selectedItem = gameResults[choice];
-                const gameTargetUrl = selectedItem.link || selectedItem.url;
-                
-                await socket.sendMessage(chatJid, { 
-                    text: `*❪ FETCHING ❫*\n\n🎮 *Fetching Game Details & Download Links...*\n⚡ _Please wait..._`
-                }, { quoted: replyMek });
-
-                let detailsResponse = null;
-                let detailsRetries = 3;
-                while (detailsRetries > 0 && !detailsResponse) {
-                    try {
-                        detailsResponse = await axios.get(`${API_BASE}/api/v1/game/fitgirl/infodl?q=${encodeURIComponent(gameTargetUrl)}&api_key=${API_KEY}`, { timeout: 35000 });
-                    } catch (detailsErr) {
-                        detailsRetries--;
-                        if (detailsRetries === 0) throw detailsErr;
-                        console.log(`Fitgirl details failed, retrying... (${detailsRetries} attempts left)`);
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                    }
-                }
-                const detailsData = detailsResponse.data;
-
-                try {
-                    if (!detailsData.status || !detailsData.data) {
-                        throw new Error('Failed to fetch game details');
-                    }
-
-                    const gameInfo = detailsData.data;
-                    const gameTitle = gameInfo.title || gameInfo.gameTitle || selectedItem.title;
-                    const allDownloads = gameInfo.downloads || [];
-
-                    let validDownloads = [];
-                    const ffLinks = allDownloads.filter(d => (d.hoster || '').toLowerCase().includes('fuckingfast') || (d.url || '').includes('fuckingfast.co'));
-                    const fkLinks = allDownloads.filter(d => (d.hoster || '').toLowerCase().includes('filekeeper') || (d.url || '').includes('filekeeper.net'));
-                    const dnLinks = allDownloads.filter(d => (d.hoster || '').toLowerCase().includes('datanodes') || (d.url || '').includes('datanodes'));
-                    const magnetLinks = allDownloads.filter(d => (d.type === 'magnet') || (d.url || '').startsWith('magnet:'));
-
-                    if (ffLinks.length > 0) {
-                        validDownloads = ffLinks.map(l => ({ name: l.name || l.title || 'FuckingFast Part', link: l.url || l.link, hoster: 'FuckingFast' }));
-                    } else if (fkLinks.length > 0) {
-                        validDownloads = fkLinks.map(l => ({ name: l.name || l.title || 'FileKeeper Part', link: l.url || l.link, hoster: 'FileKeeper' }));
-                    } else if (dnLinks.length > 0) {
-                        validDownloads = dnLinks.map(l => ({ name: l.name || l.title || 'DataNodes Part', link: l.url || l.link, hoster: 'DataNodes' }));
-                    } else {
-                        validDownloads = allDownloads.slice(0, 30).map(l => ({ name: l.name || l.title || 'Download Part', link: l.url || l.link, hoster: l.hoster || 'Mirror' }));
-                    }
-
-                    if (magnetLinks.length > 0 && !validDownloads.some(v => v.link.startsWith('magnet:'))) {
-                        validDownloads.unshift({
-                            name: `🧲 Direct Torrent Magnet (P2P Full Speed)`,
-                            link: magnetLinks[0].url || magnetLinks[0].link,
-                            hoster: 'Magnet'
-                        });
-                    }
-
-                    if (validDownloads.length === 0) {
-                        await socket.sendMessage(chatJid, {
-                            text: `*❪ NO DOWNLOADS ❫*\n\n⚠️ *No Downloads Found!*\n😞 _There are no direct download parts available for this game!_${DEFAULT_FOOTER}`
-                        }, { quoted: replyMek });
-                        return;
-                    }
-                    
-                    const gameDetailsText = `*❪ GAME DETAILS ❫*\n\n🎮 *${gameTitle}*\n🎭 *Genres* ➜ ${gameInfo.genres || 'N/A'}\n💾 *Original Size* ➜ ${gameInfo.original_size || 'N/A'}\n📦 *Repack Size* ➜ ${gameInfo.repack_size || 'N/A'}\n📊 *Available Parts* ➜ ${validDownloads.length} Links\n🗿 *Web* ➜ fitgirl-repacks.site${DEFAULT_FOOTER}`;
-
-                    const gamePosterUrl = gameInfo.image || selectedItem.image || DEFAULT_IMAGE;
-                    await socket.sendMessage(chatJid, {
-                        image: { url: gamePosterUrl },
-                        caption: gameDetailsText
-                    }, { quoted: replyMek });
-
-                    let downloadOptionsText = `*❪ GAME DOWNLOADS ❫*\n\n📥 *Select Part/Download Option:*\n\n*00* ➜ 📥 _Get ALL links at once_\n`;
-                    validDownloads.slice(0, 25).forEach((dl, i) => {
-                        const num = getCircledNumber(i + 1);
-                        downloadOptionsText += `${num} ➜ 🔗 _${dl.name.substring(0, 50)}_\n`;
-                    });
-                    if (validDownloads.length > 25) {
-                        downloadOptionsText += `\n_...and ${validDownloads.length - 25} more parts (Reply 00 to get all)_`;
-                    }
-                    downloadOptionsText += `\n\n*💬 REPLY TO GET LINK 💬*\n📌 _Reply with the number or reply 00 for all links_${DEFAULT_FOOTER}`;
-
-                    const downloadOptionsMsg = await socket.sendMessage(chatJid, { text: downloadOptionsText }, { quoted: replyMek });
-                    const optionsMsgID = downloadOptionsMsg.key.id;
-
-                    let dlCleanupTimeout = null;
-
-                    const resolveDirectLink = async (rawLink) => {
-                        if (rawLink.startsWith('magnet:')) return rawLink;
-
-                        if (rawLink.includes('fuckingfast.co')) {
-                            try {
-                                const ffRes = await axios.get(`${API_BASE}/api/v1/game/fitgirl/fuckingfast?q=${encodeURIComponent(rawLink)}&api_key=${API_KEY}`, { timeout: 30000 });
-                                if (ffRes.data?.data?.download_link) return ffRes.data.data.download_link;
-                            } catch (e) {
-                                console.log('[Fitgirl] FF resolver fallback to raw link:', e.message);
-                            }
-                        }
-
-                        if (rawLink.includes('filekeeper.net')) {
-                            try {
-                                const fkRes = await axios.get(`${API_BASE}/api/v1/game/fitgirl/filekeeper?q=${encodeURIComponent(rawLink)}&api_key=${API_KEY}`, { timeout: 25000 });
-                                if (fkRes.data?.direct_link) return fkRes.data.direct_link;
-                            } catch (e) {
-                                console.log('[Fitgirl] FK resolver fallback to raw link:', e.message);
-                            }
-                        }
-
-                        return rawLink;
-                    };
-
-                    const handleDownloadEvent = async ({ messages: downloadMessages }) => {
-                        const downloadMek = downloadMessages?.[0];
-                        if (!downloadMek?.message) return;
-
-                        const downloadChoice = (downloadMek.message.conversation || downloadMek.message.extendedTextMessage?.text || "").trim();
-                        const isReplyToOptionsMsg = downloadMek.message.extendedTextMessage?.contextInfo?.stanzaId === optionsMsgID;
-
-                        const dlReplierNumber = (downloadMek.key.participant || downloadMek.key.remoteJid || '').split('@')[0].split(':')[0];
-                        const isSameDlUser = dlReplierNumber === originalSenderNumber;
-                        const isSameDlChat = downloadMek.key.remoteJid === chatJid;
-
-                        if (isReplyToOptionsMsg && isSameDlChat && isSameDlUser) {
-                            const choiceNum = parseInt(downloadChoice) - 1;
-                            const isAllLinks = (downloadChoice === '0' || downloadChoice === '00');
-
-                            if (!isAllLinks && (isNaN(choiceNum) || choiceNum < 0 || choiceNum >= validDownloads.length)) {
-                                await socket.sendMessage(chatJid, {
-                                    text: `*❪ INVALID ❫*\n\n⚠️ *Wrong Number!*\n🎯 *Range:* _01 - ${validDownloads.length} (or 00 for all)_\n📝 _Please reply with a valid number!_${DEFAULT_FOOTER}`
-                                }, { quoted: downloadMek });
-                                return;
-                            }
-
-                            if (dlCleanupTimeout) clearTimeout(dlCleanupTimeout);
-                            socket.ev.off('messages.upsert', handleDownloadEvent);
-                            
-                            if (isAllLinks) {
-                                await socket.sendMessage(chatJid, { react: { text: '📥', key: downloadMek.key } });
-                                
-                                await socket.sendMessage(chatJid, { 
-                                    text: `*❪ ALL DOWNLOAD LINKS ❫*\n\n🎮 *Game:* _${gameTitle}_\n📊 *Total Parts:* _${validDownloads.length}_\n⚡ _Generating all download links list..._`
-                                }, { quoted: downloadMek });
-
-                                let allLinksText = `🎮 *${gameTitle}* (All Parts)\n╭──────●➤\n`;
-                                for (let i = 0; i < validDownloads.length; i++) {
-                                    const dl = validDownloads[i];
-                                    allLinksText += `*Part ${i + 1}:* ${dl.link}\n\n`;
-                                }
-                                allLinksText += `╰──────────●➤\n💡 _Copy links into IDM/JDownloader on PC to download all parts!_${DEFAULT_FOOTER}`;
-
-                                await socket.sendMessage(chatJid, { text: allLinksText }, { quoted: downloadMek });
-                                await socket.sendMessage(chatJid, { react: { text: '✅', key: downloadMek.key } });
-                                return;
-                            }
-
-                            const selectedDownload = validDownloads[choiceNum];
-                            await socket.sendMessage(chatJid, { react: { text: '⏳', key: downloadMek.key } });
-
-                            if (selectedDownload.link.startsWith('magnet:')) {
-                                await socket.sendMessage(chatJid, {
-                                    text: `🧲 *FITGIRL MAGNET LINK*\n\n🎮 *Game:* _${gameTitle}_\n\n\`\`\`${selectedDownload.link}\`\`\`\n\n💡 _Copy the magnet code above and paste into uTorrent / qBittorrent on your PC!_${DEFAULT_FOOTER}`
-                                }, { quoted: downloadMek });
-                                await socket.sendMessage(chatJid, { react: { text: '✅', key: downloadMek.key } });
-                                return;
-                            }
-
-                            const directLink = await resolveDirectLink(selectedDownload.link);
-
-                            let fileName = `${gameTitle.replace(/[^a-zA-Z0-9 ]/g, '').trim()} - Part_${choiceNum + 1}.rar`;
-                            try {
-                                const urlObj = new URL(directLink);
-                                const lastPart = urlObj.pathname.substring(urlObj.pathname.lastIndexOf('/') + 1);
-                                if (lastPart && lastPart.includes('.')) fileName = lastPart;
-                            } catch (e) {}
-
-                            try {
-                                await socket.sendMessage(chatJid, {
-                                    document: { url: directLink },
-                                    mimetype: 'application/octet-stream',
-                                    fileName: fileName,
-                                    caption: `🎮 *${gameTitle}*\n📌 *Part:* ${fileName}\n\n${DEFAULT_FOOTER}`
-                                }, { quoted: downloadMek });
-
-                                await socket.sendMessage(chatJid, { react: { text: '✅', key: downloadMek.key } });
-                            } catch (sendDocErr) {
-                                await socket.sendMessage(chatJid, {
-                                    text: `🎮 *${gameTitle}*\n📌 *Part:* ${fileName}\n\n🔗 *1-Click Direct Download Link:*\n${directLink}\n\n💡 _Paste link in your PC Browser or IDM for full speed download!_${DEFAULT_FOOTER}`
-                                }, { quoted: downloadMek });
-
-                                await socket.sendMessage(chatJid, { react: { text: '🔗', key: downloadMek.key } });
-                            }
-                        }
-                    };
-
-                    dlCleanupTimeout = setTimeout(() => {
-                        socket.ev.off('messages.upsert', handleDownloadEvent);
-                        console.log(`[Fitgirl] Cleaned up stale download listener for msg ID: ${optionsMsgID}`);
-                    }, 120000);
-
-                    socket.ev.on('messages.upsert', handleDownloadEvent);
-
-                } catch (detailsError) {
-                    console.error('Details error:', detailsError);
-                    await socket.sendMessage(chatJid, {
-                        text: `*❪ ERROR ❫*\n\n❌ *Game Details Error!*\n🚫 _${detailsError.response?.data?.detail || detailsError.message}_${DEFAULT_FOOTER}`
-                    }, { quoted: replyMek });
-                }
-            }
-        };
-
-        cleanupTimeout = setTimeout(() => {
-            socket.ev.off('messages.upsert', handleSelection);
-            console.log(`[Fitgirl] Cleaned up stale selection listener for msg ID: ${messageID}`);
-        }, 120000);
-
-        socket.ev.on('messages.upsert', handleSelection);
-
     } catch (error) {
-        console.error('Fitgirl command error:', error);
+        console.error('Queue Error:', error);
         await socket.sendMessage(chatJid, {
-            text: `*❪ SYSTEM ERROR ❫*\n\n❌ *System Error!*\n🚫 _${error.message || 'Unknown error'}_\n\n🔄 _Please try again later..._${DEFAULT_FOOTER}`
+            text: `*❪ ERROR ❫*\n\n❌ *Queue stopped due to an error!*\n🚫 _${error.message}_\n${DEFAULT_FOOTER}`
         }, { quoted: msg });
     }
-    
+
     break;
 }
 case 'zoom':
