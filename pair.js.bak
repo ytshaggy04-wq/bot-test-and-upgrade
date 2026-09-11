@@ -1544,7 +1544,7 @@ case 'pcgame': {
 
     // API Configurations
     const API_BASE = "https://api.chamindu.site";
-    const API_KEY = "chama_api_c82b12fffda71170b553f662d39426ec";
+    const API_KEY = "chama_api_11230a80e5eed3c1b80bfcc5d1773ec9";
     const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=500";
 
     let searchResponse = null;
