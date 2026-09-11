@@ -1521,6 +1521,14 @@ case 'pcgame': {
     const chatJid = msg.key.remoteJid;
     const DEFAULT_FOOTER = `\n\n> 🎮 𝗖𝗛𝗔𝗠𝗔 𝗖𝗜𝗡𝗘 𝗛𝗨𝗕 🎮\n> 🧬 ᴘᴏᴡᴇʀᴇᴅ ʙʏ 👑 𝗖𝗛𝗔𝗠𝗜𝗡𝗗𝗨 𝗢𝗙𝗖`;
 
+    // ⚙️ CONFIG — ඔයාට මෙතන වෙනස් කරන්න පුළුවන්
+    const FITGIRL_CONFIG = {
+        PART_SIZE_MB: 500,
+        SEND_DELAY_MS: 120000,
+        TEMP_DIR: './tmp_fitgirl',
+        MAX_PARTS: 25
+    };
+
     function getCircledNumber(num) {
         const circledNumbers = [
             '①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩',
@@ -1530,6 +1538,251 @@ case 'pcgame': {
         return circledNumbers[num - 1] || `[${num}]`;
     }
 
+    // ============ HELPER: Sanitize name ============
+    const fgSanitize = (n) => (n || 'game').replace(/[^a-zA-Z0-9 _-]/g, '').trim().substring(0, 60);
+    
+    // ============ HELPER: Format size ============
+    const fgFmtSize = (bytes) => {
+        if (!bytes || bytes === 0) return 'Unknown';
+        const mb = bytes / 1024 / 1024;
+        if (mb < 1) return `${(bytes / 1024).toFixed(0)} KB`;
+        if (mb < 1024) return `${mb.toFixed(1)} MB`;
+        return `${(mb / 1024).toFixed(2)} GB`;
+    };
+
+    // ============ HELPER: Resolve direct link ============
+    const fgResolveLink = async (rawLink, API_BASE, API_KEY) => {
+        if (!rawLink) return null;
+        if (rawLink.startsWith('magnet:')) return rawLink;
+
+        if (rawLink.includes('fuckingfast.co')) {
+            try {
+                const r = await axios.get(`${API_BASE}/api/v1/game/fitgirl/fuckingfast?q=${encodeURIComponent(rawLink)}&api_key=${API_KEY}`, { timeout: 30000 });
+                if (r.data?.data?.download_link) return r.data.data.download_link;
+            } catch (e) {
+                console.log('[Fitgirl] FF resolve fallback:', e.message);
+            }
+        }
+        if (rawLink.includes('filekeeper.net')) {
+            try {
+                const r = await axios.get(`${API_BASE}/api/v1/game/fitgirl/filekeeper?q=${encodeURIComponent(rawLink)}&api_key=${API_KEY}`, { timeout: 25000 });
+                if (r.data?.direct_link) return r.data.direct_link;
+            } catch (e) {
+                console.log('[Fitgirl] FK resolve fallback:', e.message);
+            }
+        }
+        return rawLink;
+    };
+
+    // ============ HELPER: Get size ============
+    const fgGetSize = async (url) => {
+        try {
+            const r = await axios.head(url, {
+                timeout: 15000, maxRedirects: 5,
+                headers: { 'User-Agent': 'Mozilla/5.0' }
+            });
+            return parseInt(r.headers['content-length'] || '0');
+        } catch (e) { return 0; }
+    };
+
+    // ============ HELPER: Download file ============
+    const fgDownload = async (url, dest) => {
+        await fs.ensureDir(path.dirname(dest));
+        const res = await axios.get(url, {
+            responseType: 'stream', timeout: 0, maxRedirects: 5,
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
+        const writer = fs.createWriteStream(dest);
+        await pipeline(res.data, writer);
+        return dest;
+    };
+
+    // ============ HELPER: Split file into chunks ============
+    const fgSplit = async (srcPath, chunkMB, outDir, baseName) => {
+        const chunkSize = chunkMB * 1024 * 1024;
+        const stat = await fs.stat(srcPath);
+        const totalSize = stat.size;
+        const numChunks = Math.ceil(totalSize / chunkSize);
+        const ext = path.extname(srcPath) || '.rar';
+
+        await fs.ensureDir(outDir);
+        const parts = [];
+
+        const readStream = fs.createReadStream(srcPath, { highWaterMark: 4 * 1024 * 1024 });
+        let currentChunk = 0;
+        let currentSize = 0;
+        let writeStream = null;
+        let totalWritten = 0;
+
+        const openChunk = () => {
+            const p = path.join(outDir, `${baseName}.part${String(currentChunk + 1).padStart(3, '0')}${ext}`);
+            writeStream = fs.createWriteStream(p);
+            parts.push({ index: currentChunk + 1, path: p, size: 0 });
+        };
+        openChunk();
+
+        for await (const chunk of readStream) {
+            let offset = 0;
+            while (offset < chunk.length) {
+                const spaceLeft = chunkSize - currentSize;
+                const toWrite = Math.min(spaceLeft, chunk.length - offset);
+                const slice = chunk.subarray(offset, offset + toWrite);
+
+                if (!writeStream.write(slice)) {
+                    await new Promise(r => writeStream.once('drain', r));
+                }
+                currentSize += toWrite;
+                totalWritten += toWrite;
+                parts[parts.length - 1].size += toWrite;
+                offset += toWrite;
+
+                if (currentSize >= chunkSize && totalWritten < totalSize) {
+                    await new Promise(r => writeStream.end(r));
+                    currentChunk++;
+                    currentSize = 0;
+                    if (currentChunk < numChunks) openChunk();
+                }
+            }
+        }
+
+        if (writeStream && !writeStream.writableEnded) {
+            await new Promise(r => writeStream.end(r));
+        }
+        return parts;
+    };
+
+    // ============ MAIN: Auto download + split + send all ============
+    const fgAutoSendAll = async (parts, gameTitle, socket, chatJid, replyMek, API_BASE, API_KEY) => {
+        const safeTitle = fgSanitize(gameTitle);
+        const tmpRoot = path.join(FITGIRL_CONFIG.TEMP_DIR, `${Date.now()}_${safeTitle}`);
+        const rawDir = path.join(tmpRoot, 'raw');
+        const splitDir = path.join(tmpRoot, 'split');
+        await fs.ensureDir(rawDir);
+        await fs.ensureDir(splitDir);
+
+        const totalParts = parts.length;
+        let sentCount = 0;
+        let failedCount = 0;
+
+        try {
+            await socket.sendMessage(chatJid, {
+                text: `*❪ AUTO DOWNLOAD STARTED ❫*\n\n🎮 *${gameTitle}*\n📦 *Total Parts:* ${totalParts}\n✂️ *Chunk Size:* ${FITGIRL_CONFIG.PART_SIZE_MB} MB\n⏱️ *Delay:* ${Math.round(FITGIRL_CONFIG.SEND_DELAY_MS / 60000)} min\n\n⚡ _Starting now... Do NOT spam._\n> ⚠️ _This can take 30+ minutes._${DEFAULT_FOOTER}`
+            }, { quoted: replyMek });
+
+            for (let i = 0; i < totalParts; i++) {
+                const part = parts[i];
+                const label = `[${i + 1}/${totalParts}]`;
+
+                try {
+                    await socket.sendMessage(chatJid, {
+                        text: `⏳ *${label}* Resolving link...`
+                    });
+
+                    const direct = await fgResolveLink(part.link, API_BASE, API_KEY);
+
+                    if (!direct || direct.startsWith('magnet:')) {
+                        await socket.sendMessage(chatJid, {
+                            text: `⚠️ *${label}* Magnet/Skip\n\`${direct || 'N/A'}\``
+                        });
+                        failedCount++;
+                        continue;
+                    }
+
+                    const size = await fgGetSize(direct);
+                    const rawFile = path.join(rawDir, `${safeTitle}_p${i + 1}.rar`);
+
+                    await socket.sendMessage(chatJid, {
+                        text: `📥 *${label}* Downloading... (${fgFmtSize(size)})`
+                    });
+
+                    await fgDownload(direct, rawFile);
+                    const rawStat = await fs.stat(rawFile);
+
+                    // Split if needed
+                    let chunks = [{ path: rawFile, size: rawStat.size, temp: false }];
+
+                    if (rawStat.size > FITGIRL_CONFIG.PART_SIZE_MB * 1024 * 1024) {
+                        await socket.sendMessage(chatJid, {
+                            text: `✂️ *${label}* Splitting into ${FITGIRL_CONFIG.PART_SIZE_MB}MB chunks...`
+                        });
+                        const splitParts = await fgSplit(
+                            rawFile,
+                            FITGIRL_CONFIG.PART_SIZE_MB,
+                            splitDir,
+                            `${safeTitle}_p${i + 1}`
+                        );
+                        chunks = splitParts.map(c => ({ ...c, temp: true }));
+                        await fs.remove(rawFile).catch(() => {});
+                    }
+
+                    // Send chunks
+                    for (let j = 0; j < chunks.length; j++) {
+                        const chunk = chunks[j];
+                        const isSub = chunks.length > 1;
+                        const chunkLabel = isSub
+                            ? `Part ${i + 1}.${j + 1}/${totalParts}`
+                            : `Part ${i + 1}/${totalParts}`;
+
+                        const ext = path.extname(chunk.path) || '.rar';
+                        const fileName = isSub
+                            ? `${safeTitle}_Part${i + 1}_${j + 1}${ext}`
+                            : `${safeTitle}_Part${i + 1}${ext}`;
+
+                        try {
+                            await socket.sendMessage(chatJid, {
+                                document: { url: chunk.path },
+                                mimetype: 'application/octet-stream',
+                                fileName: fileName,
+                                caption: `🎮 *${gameTitle}*\n📌 *${chunkLabel}*\n📊 ${fgFmtSize(chunk.size)}${DEFAULT_FOOTER}`
+                            });
+
+                            sentCount++;
+                            console.log(`[Fitgirl] ✅ Sent ${chunkLabel} (${fgFmtSize(chunk.size)})`);
+
+                            if (chunk.temp) await fs.remove(chunk.path).catch(() => {});
+
+                            const isVeryLast = (i === totalParts - 1) && (j === chunks.length - 1);
+                            if (!isVeryLast) {
+                                await socket.sendMessage(chatJid, {
+                                    text: `✅ *${chunkLabel}* sent.\n⏱️ _Waiting ${Math.round(FITGIRL_CONFIG.SEND_DELAY_MS / 60000)} min..._`
+                                });
+                                await new Promise(r => setTimeout(r, FITGIRL_CONFIG.SEND_DELAY_MS));
+                            }
+                        } catch (sendErr) {
+                            console.error(`[Fitgirl] Send fail ${chunkLabel}:`, sendErr.message);
+                            failedCount++;
+                            await socket.sendMessage(chatJid, {
+                                text: `❌ *${chunkLabel}* send failed!\n🔗 Direct:\n${direct}\n\n_${sendErr.message}_`
+                            });
+                        }
+                    }
+
+                    await fs.remove(rawFile).catch(() => {});
+
+                } catch (partErr) {
+                    console.error(`[Fitgirl] Part ${i + 1} error:`, partErr.message);
+                    failedCount++;
+                    await socket.sendMessage(chatJid, {
+                        text: `❌ *Part ${i + 1}/${totalParts} failed*\n🔗 ${part.link}\n\n_${partErr.message}_`
+                    });
+                }
+            }
+
+            await socket.sendMessage(chatJid, {
+                text: `*❪ COMPLETE ✅ ❫*\n\n🎮 *${gameTitle}*\n📦 *Sent:* ${sentCount} files\n❌ *Failed:* ${failedCount}\n\n💡 *Extract:* Put all parts in one folder → Right-click Part 1 → 7-Zip → Extract ✅${DEFAULT_FOOTER}`
+            }, { quoted: replyMek });
+
+        } catch (err) {
+            console.error('[Fitgirl] Auto fatal:', err);
+            await socket.sendMessage(chatJid, {
+                text: `❌ *Auto download failed!*\n_${err.message}_${DEFAULT_FOOTER}`
+            });
+        } finally {
+            await fs.remove(tmpRoot).catch(() => {});
+        }
+    };
+
+    // ============ VALIDATION ============
     if (!args.length) {
         await socket.sendMessage(chatJid, {
             text: `*❪ ERROR ❫*\n\n⚠️ *Invalid Usage!*\n\n🎮 *Example:*\n• .pcgame gta v\n• .fitgirl cyberpunk 2077\n\n📝 _Please provide the PC Game name!_${DEFAULT_FOOTER}`
@@ -1542,11 +1795,11 @@ case 'pcgame': {
         text: `*❪ SEARCHING ❫*\n\n🔍 *Searching Fitgirl Repacks...*\n⚡ _Please wait a moment._`
     });
 
-    // API Configurations
     const API_BASE = "https://api.chamindu.site";
-    const API_KEY = "chama_api_11230a80e5eed3c1b80bfcc5d1773ec9";
+    const API_KEY = "chama_api_c82b12fffda71170b553f662d39426ec";
     const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=500";
 
+    // ============ SEARCH ============
     let searchResponse = null;
     let searchRetries = 3;
     while (searchRetries > 0 && !searchResponse) {
@@ -1555,7 +1808,7 @@ case 'pcgame': {
         } catch (searchErr) {
             searchRetries--;
             if (searchRetries === 0) throw searchErr;
-            console.log(`Fitgirl search failed, retrying... (${searchRetries} attempts left)`);
+            console.log(`Fitgirl search failed, retrying... (${searchRetries} left)`);
             await new Promise(resolve => setTimeout(resolve, 2000));
         }
     }
@@ -1565,7 +1818,7 @@ case 'pcgame': {
     try {
         if (!searchData.status || resultsList.length === 0) {
             await socket.sendMessage(chatJid, {
-                text: `*❪ NO RESULTS ❫*\n\n😞 *No Games Found!*\n\n🎮 *Query:* _${gameQuery}_\n💡 *Tip:* _Please check the spelling and try again!_${DEFAULT_FOOTER}`
+                text: `*❪ NO RESULTS ❫*\n\n😞 *No Games Found!*\n\n🎮 *Query:* _${gameQuery}_\n💡 *Tip:* _Check spelling and try again!_${DEFAULT_FOOTER}`
             }, { quoted: msg });
             break;
         }
@@ -1577,46 +1830,57 @@ case 'pcgame': {
             const num = getCircledNumber(index + 1);
             listText += `${num} ➜ 🎮 _${item.title.substring(0, 45)}_\n📅 _Date: ${item.date || 'N/A'}_\n\n`;
         });
-
         listText += `${DEFAULT_FOOTER}`;
         
         const sentMsg = await socket.sendMessage(chatJid, { text: listText }, { quoted: msg });
         const messageID = sentMsg.key.id;
 
-        const cleanupTimeout = setTimeout(() => {
-            socket.ev.off('messages.upsert', handleSelection);
-            console.log(`[Fitgirl] Cleaned up stale selection listener for msg ID: ${messageID}`);
-        }, 120000);
+        const originalSenderNumber = (msg.key.participant || msg.key.remoteJid || '').split('@')[0].split(':')[0];
 
+        // Listener registry (memory leak fix)
+        if (!global.__fitgirlListeners) global.__fitgirlListeners = new Map();
+        if (!global.__fitgirlDispatcher) {
+            global.__fitgirlDispatcher = true;
+            socket.ev.on('messages.upsert', async ({ messages }) => {
+                const m = messages[0];
+                if (!m?.message) return;
+                const stanzaId = m.message.extendedTextMessage?.contextInfo?.stanzaId;
+                if (!stanzaId) return;
+                const entry = global.__fitgirlListeners.get(stanzaId);
+                if (entry) {
+                    try { await entry.handler({ messages }); }
+                    catch (e) { console.error('[Fitgirl] handler error:', e); }
+                }
+            });
+        }
+
+        // ============ SELECTION HANDLER ============
         const handleSelection = async ({ messages: replyMessages }) => {
             const replyMek = replyMessages[0];
             if (!replyMek?.message) return;
 
             const messageType = (replyMek.message.conversation || replyMek.message.extendedTextMessage?.text || "").trim();
             const isReplyToSentMsg = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === messageID;
-
             const replierNumber = (replyMek.key.participant || replyMek.key.remoteJid || '').split('@')[0].split(':')[0];
-            const originalSenderNumber = (msg.key.participant || msg.key.remoteJid || '').split('@')[0].split(':')[0];
             const isSameUser = replierNumber === originalSenderNumber;
             const isSameChat = replyMek.key.remoteJid === chatJid;
 
             if (isReplyToSentMsg && isSameChat && isSameUser) {
                 clearTimeout(cleanupTimeout);
-                socket.ev.off('messages.upsert', handleSelection);
+                global.__fitgirlListeners.delete(messageID);
 
                 const choice = parseInt(messageType) - 1;
                 if (isNaN(choice) || choice < 0 || choice >= gameResults.length) {
-                    await socket.sendMessage(chatJid, {
-                        text: `*❪ INVALID ❫*\n\n⚠️ *Wrong Number!*\n🎯 *Range:* _01 - ${gameResults.length}_\n📝 _Please reply with a valid number!_${DEFAULT_FOOTER}`
+                    return socket.sendMessage(chatJid, {
+                        text: `*❪ INVALID ❫*\n\n⚠️ *Wrong Number!*\n🎯 *Range:* _01 - ${gameResults.length}_${DEFAULT_FOOTER}`
                     }, { quoted: replyMek });
-                    return;
                 }
 
                 const selectedItem = gameResults[choice];
                 const gameTargetUrl = selectedItem.link || selectedItem.url;
                 
                 await socket.sendMessage(chatJid, { 
-                    text: `*❪ FETCHING ❫*\n\n🎮 *Fetching Game Details & Download Links...*\n⚡ _Please wait..._`
+                    text: `*❪ FETCHING ❫*\n\n🎮 *Fetching Game Details...*\n⚡ _Please wait..._`
                 }, { quoted: replyMek });
 
                 let detailsResponse = null;
@@ -1627,7 +1891,7 @@ case 'pcgame': {
                     } catch (detailsErr) {
                         detailsRetries--;
                         if (detailsRetries === 0) throw detailsErr;
-                        console.log(`Fitgirl details failed, retrying... (${detailsRetries} attempts left)`);
+                        console.log(`Fitgirl details retry... (${detailsRetries} left)`);
                         await new Promise(resolve => setTimeout(resolve, 2000));
                     }
                 }
@@ -1643,7 +1907,6 @@ case 'pcgame': {
                     const allDownloads = gameInfo.downloads || [];
 
                     let validDownloads = [];
-                    
                     const ffLinks = allDownloads.filter(d => (d.hoster || '').toLowerCase().includes('fuckingfast') || (d.url || '').includes('fuckingfast.co'));
                     const fkLinks = allDownloads.filter(d => (d.hoster || '').toLowerCase().includes('filekeeper') || (d.url || '').includes('filekeeper.net'));
                     const dnLinks = allDownloads.filter(d => (d.hoster || '').toLowerCase().includes('datanodes') || (d.url || '').includes('datanodes'));
@@ -1668,11 +1931,12 @@ case 'pcgame': {
                     }
 
                     if (validDownloads.length === 0) {
-                        await socket.sendMessage(chatJid, {
-                            text: `*❪ NO DOWNLOADS ❫*\n\n⚠️ *No Downloads Found!*\n😞 _There are no direct download parts available for this game!_${DEFAULT_FOOTER}`
+                        return socket.sendMessage(chatJid, {
+                            text: `*❪ NO DOWNLOADS ❫*\n\n⚠️ *No Downloads Found!*${DEFAULT_FOOTER}`
                         }, { quoted: replyMek });
-                        return;
                     }
+
+                    validDownloads = validDownloads.slice(0, FITGIRL_CONFIG.MAX_PARTS);
                     
                     const gameDetailsText = `*❪ GAME DETAILS ❫*\n\n🎮 *${gameTitle}*\n🎭 *Genres* ➜ ${gameInfo.genres || 'N/A'}\n💾 *Original Size* ➜ ${gameInfo.original_size || 'N/A'}\n📦 *Repack Size* ➜ ${gameInfo.repack_size || 'N/A'}\n📊 *Available Parts* ➜ ${validDownloads.length} Links\n🗿 *Web* ➜ fitgirl-repacks.site${DEFAULT_FOOTER}`;
 
@@ -1682,90 +1946,69 @@ case 'pcgame': {
                         caption: gameDetailsText
                     }, { quoted: replyMek });
 
-                    let downloadOptionsText = `*❪ GAME DOWNLOADS ❫*\n\n📥 *Select Part/Download Option:*\n\n*00* ➜ 📥 _Get ALL links at once_\n`;
+                    // Download options
+                    let downloadOptionsText = `*❪ GAME DOWNLOADS ❫*\n\n`;
+                    downloadOptionsText += `*99* ➜ 📦 *AUTO DOWNLOAD & SEND ALL* (${FITGIRL_CONFIG.PART_SIZE_MB}MB chunks)\n`;
+                    downloadOptionsText += `*00* ➜ 📥 _Get ALL links at once_\n\n`;
+                    downloadOptionsText += `*👇 Or Pick a Single Part 👇*\n\n`;
                     validDownloads.slice(0, 25).forEach((dl, i) => {
                         const num = getCircledNumber(i + 1);
-                        downloadOptionsText += `${num} ➜ 🔗 _${dl.name.substring(0, 50)}_\n`;
+                        downloadOptionsText += `${num} ➜ 🔗 _${dl.name.substring(0, 45)}_\n`;
                     });
                     if (validDownloads.length > 25) {
-                        downloadOptionsText += `\n_...and ${validDownloads.length - 25} more parts (Reply 00 to get all)_`;
+                        downloadOptionsText += `\n_...and ${validDownloads.length - 25} more parts_`;
                     }
-                    downloadOptionsText += `\n\n*💬 REPLY TO GET LINK 💬*\n📌 _Reply with the number or reply 00 for all links_${DEFAULT_FOOTER}`;
+                    downloadOptionsText += `\n\n*💬 REPLY TO GET LINK 💬*\n📌 _99 = Auto-send • 00 = All links • 1-${validDownloads.length} = Single part_${DEFAULT_FOOTER}`;
 
                     const downloadOptionsMsg = await socket.sendMessage(chatJid, { text: downloadOptionsText }, { quoted: replyMek });
                     const optionsMsgID = downloadOptionsMsg.key.id;
 
-                    const dlCleanupTimeout = setTimeout(() => {
-                        socket.ev.off('messages.upsert', handleDownloadEvent);
-                        console.log(`[Fitgirl] Cleaned up stale download listener for msg ID: ${optionsMsgID}`);
-                    }, 120000);
-
-                    // --- DIRECT LINK RESOLVER HELPER ---
-                    const resolveDirectLink = async (rawLink) => {
-                        if (rawLink.startsWith('magnet:')) return rawLink;
-
-                        if (rawLink.includes('fuckingfast.co')) {
-                            try {
-                                const ffRes = await axios.get(`${API_BASE}/api/v1/game/fitgirl/fuckingfast?q=${encodeURIComponent(rawLink)}&api_key=${API_KEY}`, { timeout: 30000 });
-                                if (ffRes.data?.data?.download_link) return ffRes.data.data.download_link;
-                            } catch (e) {
-                                console.log('[Fitgirl] FF resolver fallback to raw link:', e.message);
-                            }
-                        }
-
-                        if (rawLink.includes('filekeeper.net')) {
-                            try {
-                                const fkRes = await axios.get(`${API_BASE}/api/v1/game/fitgirl/filekeeper?q=${encodeURIComponent(rawLink)}&api_key=${API_KEY}`, { timeout: 25000 });
-                                if (fkRes.data?.direct_link) return fkRes.data.direct_link;
-                            } catch (e) {
-                                console.log('[Fitgirl] FK resolver fallback to raw link:', e.message);
-                            }
-                        }
-
-                        return rawLink;
-                    };
-
+                    // ============ DOWNLOAD HANDLER ============
                     const handleDownloadEvent = async ({ messages: downloadMessages }) => {
                         const downloadMek = downloadMessages[0];
                         if (!downloadMek?.message) return;
 
                         const downloadChoice = (downloadMek.message.conversation || downloadMek.message.extendedTextMessage?.text || "").trim();
                         const isReplyToOptionsMsg = downloadMek.message.extendedTextMessage?.contextInfo?.stanzaId === optionsMsgID;
-
                         const dlReplierNumber = (downloadMek.key.participant || downloadMek.key.remoteJid || '').split('@')[0].split(':')[0];
                         const isSameDlUser = dlReplierNumber === originalSenderNumber;
                         const isSameDlChat = downloadMek.key.remoteJid === chatJid;
 
                         if (isReplyToOptionsMsg && isSameDlChat && isSameDlUser) {
                             clearTimeout(dlCleanupTimeout);
-                            socket.ev.off('messages.upsert', handleDownloadEvent);
-                            socket.ev.off('messages.upsert', handleSelection);
-                            
+                            global.__fitgirlListeners.delete(optionsMsgID);
+
+                            // ===== 99: AUTO DOWNLOAD & SEND ALL =====
+                            if (downloadChoice === '99') {
+                                await socket.sendMessage(chatJid, { react: { text: '📦', key: downloadMek.key } });
+                                await fgAutoSendAll(validDownloads, gameTitle, socket, chatJid, downloadMek, API_BASE, API_KEY);
+                                return;
+                            }
+
+                            // ===== 00: All links =====
                             if (downloadChoice === '0' || downloadChoice === '00') {
                                 await socket.sendMessage(chatJid, { react: { text: '📥', key: downloadMek.key } });
-                                
                                 await socket.sendMessage(chatJid, { 
-                                    text: `*❪ ALL DOWNLOAD LINKS ❫*\n\n🎮 *Game:* _${gameTitle}_\n📊 *Total Parts:* _${validDownloads.length}_\n⚡ _Generating all download links list..._`
+                                    text: `*❪ ALL DOWNLOAD LINKS ❫*\n\n🎮 *Game:* _${gameTitle}_\n📊 *Total Parts:* _${validDownloads.length}_\n⚡ _Generating list..._`
                                 }, { quoted: downloadMek });
 
                                 let allLinksText = `🎮 *${gameTitle}* (All Parts)\n╭──────●➤\n`;
                                 for (let i = 0; i < validDownloads.length; i++) {
-                                    const dl = validDownloads[i];
-                                    allLinksText += `*Part ${i + 1}:* ${dl.link}\n\n`;
+                                    allLinksText += `*Part ${i + 1}:* ${validDownloads[i].link}\n\n`;
                                 }
-                                allLinksText += `╰──────────●➤\n💡 _Copy links into IDM/JDownloader on PC to download all parts!_${DEFAULT_FOOTER}`;
+                                allLinksText += `╰──────────●➤\n💡 _Copy into IDM/JDownloader_${DEFAULT_FOOTER}`;
 
                                 await socket.sendMessage(chatJid, { text: allLinksText }, { quoted: downloadMek });
                                 await socket.sendMessage(chatJid, { react: { text: '✅', key: downloadMek.key } });
                                 return;
                             }
 
+                            // ===== Single part =====
                             const choiceNum = parseInt(downloadChoice) - 1;
                             if (isNaN(choiceNum) || choiceNum < 0 || choiceNum >= validDownloads.length) {
-                                await socket.sendMessage(chatJid, {
-                                    text: `*❪ INVALID ❫*\n\n⚠️ *Wrong Number!*\n🎯 *Range:* _01 - ${validDownloads.length} (or 00 for all)_\n📝 _Please reply with a valid number!_${DEFAULT_FOOTER}`
+                                return socket.sendMessage(chatJid, {
+                                    text: `*❪ INVALID ❫*\n\n⚠️ *Wrong Number!*\n🎯 *Range:* _01 - ${validDownloads.length} (or 00/99)_${DEFAULT_FOOTER}`
                                 }, { quoted: downloadMek });
-                                return;
                             }
 
                             const selectedDownload = validDownloads[choiceNum];
@@ -1773,18 +2016,19 @@ case 'pcgame': {
 
                             if (selectedDownload.link.startsWith('magnet:')) {
                                 await socket.sendMessage(chatJid, {
-                                    text: `🧲 *FITGIRL MAGNET LINK*\n\n🎮 *Game:* _${gameTitle}_\n\n\`\`\`${selectedDownload.link}\`\`\`\n\n💡 _Copy the magnet code above and paste into uTorrent / qBittorrent on your PC!_${DEFAULT_FOOTER}`
+                                    text: `🧲 *FITGIRL MAGNET LINK*\n\n🎮 *Game:* _${gameTitle}_\n\n\`\`\`${selectedDownload.link}\`\`\`\n\n💡 _Paste into uTorrent / qBittorrent_${DEFAULT_FOOTER}`
                                 }, { quoted: downloadMek });
                                 await socket.sendMessage(chatJid, { react: { text: '✅', key: downloadMek.key } });
                                 return;
                             }
 
-                            const directLink = await resolveDirectLink(selectedDownload.link);
+                            const directLink = await fgResolveLink(selectedDownload.link, API_BASE, API_KEY);
 
                             let fileName = `${gameTitle.replace(/[^a-zA-Z0-9 ]/g, '').trim()} - Part_${choiceNum + 1}.rar`;
                             try {
                                 const urlObj = new URL(directLink);
-                                const lastPart = urlObj.pathname.substring(urlObj.pathname.lastIndexOf('/') + 1);
+                                let lastPart = urlObj.pathname.substring(urlObj.pathname.lastIndexOf('/') + 1);
+                                lastPart = decodeURIComponent(lastPart.split('?')[0]);
                                 if (lastPart && lastPart.includes('.')) fileName = lastPart;
                             } catch (e) {}
 
@@ -1793,33 +2037,41 @@ case 'pcgame': {
                                     document: { url: directLink },
                                     mimetype: 'application/octet-stream',
                                     fileName: fileName,
-                                    caption: `🎮 *${gameTitle}*\n📌 *Part:* ${fileName}\n\n${DEFAULT_FOOTER}`
+                                    caption: `🎮 *${gameTitle}*\n📌 *Part:* ${fileName}${DEFAULT_FOOTER}`
                                 }, { quoted: downloadMek });
 
                                 await socket.sendMessage(chatJid, { react: { text: '✅', key: downloadMek.key } });
                             } catch (sendDocErr) {
                                 await socket.sendMessage(chatJid, {
-                                    text: `🎮 *${gameTitle}*\n📌 *Part:* ${fileName}\n\n🔗 *1-Click Direct Download Link:*\n${directLink}\n\n💡 _Paste link in your PC Browser or IDM for full speed download!_${DEFAULT_FOOTER}`
+                                    text: `🎮 *${gameTitle}*\n📌 *Part:* ${fileName}\n\n🔗 *Direct Link:*\n${directLink}\n\n💡 _Use IDM for full speed_${DEFAULT_FOOTER}`
                                 }, { quoted: downloadMek });
-
                                 await socket.sendMessage(chatJid, { react: { text: '🔗', key: downloadMek.key } });
                             }
                         }
                     };
 
-                    socket.ev.on('messages.upsert', handleDownloadEvent);
+                    const dlCleanupTimeout = setTimeout(() => {
+                        global.__fitgirlListeners.delete(optionsMsgID);
+                        console.log(`[Fitgirl] Cleaned stale download listener: ${optionsMsgID}`);
+                    }, 300000);
+
+                    global.__fitgirlListeners.set(optionsMsgID, { handler: handleDownloadEvent });
 
                 } catch (detailsError) {
                     console.error('Details error:', detailsError);
                     await socket.sendMessage(chatJid, {
                         text: `*❪ ERROR ❫*\n\n❌ *Game Details Error!*\n🚫 _${detailsError.response?.data?.detail || detailsError.message}_${DEFAULT_FOOTER}`
                     }, { quoted: replyMek });
-                    socket.ev.off('messages.upsert', handleSelection);
                 }
             }
         };
 
-        socket.ev.on('messages.upsert', handleSelection);
+        const cleanupTimeout = setTimeout(() => {
+            global.__fitgirlListeners.delete(messageID);
+            console.log(`[Fitgirl] Cleaned stale selection listener: ${messageID}`);
+        }, 180000);
+
+        global.__fitgirlListeners.set(messageID, { handler: handleSelection });
 
     } catch (error) {
         console.error('Fitgirl command error:', error);
@@ -1830,7 +2082,6 @@ case 'pcgame': {
     
     break;
 }
-
 case 'downloadgame':
 case 'gamepart': {
     const chatJid = msg.key.remoteJid;
