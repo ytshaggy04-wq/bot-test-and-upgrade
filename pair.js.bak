@@ -1524,7 +1524,7 @@ case 'pcgame': {
     function getCircledNumber(num) {
         const circledNumbers = [
             '①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩',
-            '⑪', '⑫', '⑬', '⑭', '⑮', '⑯', '⑰', '⑱', '⑲', '⑳',
+            '⑪', '⑫', '⑬', '⑭', '⑮', '⑯', '⑰', '⑘', '⑙', '⑚',
             '㉑', '㉒', '㉓', '㉔', '㉕', '㉖', '㉗', '㉘', '㉙', '㉚'
         ];
         return circledNumbers[num - 1] || `[${num}]`;
@@ -1543,7 +1543,7 @@ case 'pcgame': {
     });
 
     const API_BASE = "https://api.chamindu.site";
-    const API_KEY = "chama_api_c82b12fffda71170b553f662d39426ec";
+    const API_KEY = "chama_api_11230a80e5eed3c1b80bfcc5d1773ec9";
     const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=500";
 
     let searchResponse = null;
@@ -1582,13 +1582,10 @@ case 'pcgame': {
         const sentMsg = await socket.sendMessage(chatJid, { text: listText }, { quoted: msg });
         const messageID = sentMsg.key.id;
 
-        const cleanupTimeout = setTimeout(() => {
-            socket.ev.off('messages.upsert', handleSelection);
-            console.log(`[Fitgirl] Cleaned up stale selection listener for msg ID: ${messageID}`);
-        }, 120000);
+        let cleanupTimeout = null;
 
         const handleSelection = async ({ messages: replyMessages }) => {
-            const replyMek = replyMessages[0];
+            const replyMek = replyMessages?.[0];
             if (!replyMek?.message) return;
 
             const messageType = (replyMek.message.conversation || replyMek.message.extendedTextMessage?.text || "").trim();
@@ -1600,9 +1597,6 @@ case 'pcgame': {
             const isSameChat = replyMek.key.remoteJid === chatJid;
 
             if (isReplyToSentMsg && isSameChat && isSameUser) {
-                clearTimeout(cleanupTimeout);
-                socket.ev.off('messages.upsert', handleSelection);
-
                 const choice = parseInt(messageType) - 1;
                 if (isNaN(choice) || choice < 0 || choice >= gameResults.length) {
                     await socket.sendMessage(chatJid, {
@@ -1610,6 +1604,9 @@ case 'pcgame': {
                     }, { quoted: replyMek });
                     return;
                 }
+
+                if (cleanupTimeout) clearTimeout(cleanupTimeout);
+                socket.ev.off('messages.upsert', handleSelection);
 
                 const selectedItem = gameResults[choice];
                 const gameTargetUrl = selectedItem.link || selectedItem.url;
@@ -1641,9 +1638,7 @@ case 'pcgame': {
                     const gameTitle = gameInfo.title || gameInfo.gameTitle || selectedItem.title;
                     const allDownloads = gameInfo.downloads || [];
 
-                    // Filter downloads: Priority to FuckingFast, DataNodes, FileKeeper & Magnets
                     let validDownloads = [];
-                    
                     const ffLinks = allDownloads.filter(d => (d.hoster || '').toLowerCase().includes('fuckingfast') || (d.url || '').includes('fuckingfast.co'));
                     const fkLinks = allDownloads.filter(d => (d.hoster || '').toLowerCase().includes('filekeeper') || (d.url || '').includes('filekeeper.net'));
                     const dnLinks = allDownloads.filter(d => (d.hoster || '').toLowerCase().includes('datanodes') || (d.url || '').includes('datanodes'));
@@ -1659,7 +1654,6 @@ case 'pcgame': {
                         validDownloads = allDownloads.slice(0, 30).map(l => ({ name: l.name || l.title || 'Download Part', link: l.url || l.link, hoster: l.hoster || 'Mirror' }));
                     }
 
-                    // Add Magnet link if present as first option
                     if (magnetLinks.length > 0 && !validDownloads.some(v => v.link.startsWith('magnet:'))) {
                         validDownloads.unshift({
                             name: `🧲 Direct Torrent Magnet (P2P Full Speed)`,
@@ -1696,16 +1690,11 @@ case 'pcgame': {
                     const downloadOptionsMsg = await socket.sendMessage(chatJid, { text: downloadOptionsText }, { quoted: replyMek });
                     const optionsMsgID = downloadOptionsMsg.key.id;
 
-                    const dlCleanupTimeout = setTimeout(() => {
-                        socket.ev.off('messages.upsert', handleDownloadEvent);
-                        console.log(`[Fitgirl] Cleaned up stale download listener for msg ID: ${optionsMsgID}`);
-                    }, 120000);
+                    let dlCleanupTimeout = null;
 
-                    // --- DIRECT LINK RESOLVER HELPER ---
                     const resolveDirectLink = async (rawLink) => {
                         if (rawLink.startsWith('magnet:')) return rawLink;
 
-                        // 1. FuckingFast Link -> Use fuckingfast resolver
                         if (rawLink.includes('fuckingfast.co')) {
                             try {
                                 const ffRes = await axios.get(`${API_BASE}/api/v1/game/fitgirl/fuckingfast?q=${encodeURIComponent(rawLink)}&api_key=${API_KEY}`, { timeout: 30000 });
@@ -1715,7 +1704,6 @@ case 'pcgame': {
                             }
                         }
 
-                        // 2. FileKeeper Link -> Use filekeeper resolver
                         if (rawLink.includes('filekeeper.net')) {
                             try {
                                 const fkRes = await axios.get(`${API_BASE}/api/v1/game/fitgirl/filekeeper?q=${encodeURIComponent(rawLink)}&api_key=${API_KEY}`, { timeout: 25000 });
@@ -1729,7 +1717,7 @@ case 'pcgame': {
                     };
 
                     const handleDownloadEvent = async ({ messages: downloadMessages }) => {
-                        const downloadMek = downloadMessages[0];
+                        const downloadMek = downloadMessages?.[0];
                         if (!downloadMek?.message) return;
 
                         const downloadChoice = (downloadMek.message.conversation || downloadMek.message.extendedTextMessage?.text || "").trim();
@@ -1740,12 +1728,20 @@ case 'pcgame': {
                         const isSameDlChat = downloadMek.key.remoteJid === chatJid;
 
                         if (isReplyToOptionsMsg && isSameDlChat && isSameDlUser) {
-                            clearTimeout(dlCleanupTimeout);
+                            const choiceNum = parseInt(downloadChoice) - 1;
+                            const isAllLinks = (downloadChoice === '0' || downloadChoice === '00');
+
+                            if (!isAllLinks && (isNaN(choiceNum) || choiceNum < 0 || choiceNum >= validDownloads.length)) {
+                                await socket.sendMessage(chatJid, {
+                                    text: `*❪ INVALID ❫*\n\n⚠️ *Wrong Number!*\n🎯 *Range:* _01 - ${validDownloads.length} (or 00 for all)_\n📝 _Please reply with a valid number!_${DEFAULT_FOOTER}`
+                                }, { quoted: downloadMek });
+                                return;
+                            }
+
+                            if (dlCleanupTimeout) clearTimeout(dlCleanupTimeout);
                             socket.ev.off('messages.upsert', handleDownloadEvent);
-                            socket.ev.off('messages.upsert', handleSelection);
                             
-                            // Send all parts list directly to current chat
-                            if (downloadChoice === '0' || downloadChoice === '00') {
+                            if (isAllLinks) {
                                 await socket.sendMessage(chatJid, { react: { text: '📥', key: downloadMek.key } });
                                 
                                 await socket.sendMessage(chatJid, { 
@@ -1764,19 +1760,9 @@ case 'pcgame': {
                                 return;
                             }
 
-                            // Send a single choice
-                            const choiceNum = parseInt(downloadChoice) - 1;
-                            if (isNaN(choiceNum) || choiceNum < 0 || choiceNum >= validDownloads.length) {
-                                await socket.sendMessage(chatJid, {
-                                    text: `*❪ INVALID ❫*\n\n⚠️ *Wrong Number!*\n🎯 *Range:* _01 - ${validDownloads.length} (or 00 for all)_\n📝 _Please reply with a valid number!_${DEFAULT_FOOTER}`
-                                }, { quoted: downloadMek });
-                                return;
-                            }
-
                             const selectedDownload = validDownloads[choiceNum];
                             await socket.sendMessage(chatJid, { react: { text: '⏳', key: downloadMek.key } });
 
-                            // Magnet link handling
                             if (selectedDownload.link.startsWith('magnet:')) {
                                 await socket.sendMessage(chatJid, {
                                     text: `🧲 *FITGIRL MAGNET LINK*\n\n🎮 *Game:* _${gameTitle}_\n\n\`\`\`${selectedDownload.link}\`\`\`\n\n💡 _Copy the magnet code above and paste into uTorrent / qBittorrent on your PC!_${DEFAULT_FOOTER}`
@@ -1785,7 +1771,6 @@ case 'pcgame': {
                                 return;
                             }
 
-                            // Resolve direct link
                             const directLink = await resolveDirectLink(selectedDownload.link);
 
                             let fileName = `${gameTitle.replace(/[^a-zA-Z0-9 ]/g, '').trim()} - Part_${choiceNum + 1}.rar`;
@@ -1795,7 +1780,6 @@ case 'pcgame': {
                                 if (lastPart && lastPart.includes('.')) fileName = lastPart;
                             } catch (e) {}
 
-                            // Attempt Document send (or provide direct 1-click link on large files)
                             try {
                                 await socket.sendMessage(chatJid, {
                                     document: { url: directLink },
@@ -1806,7 +1790,6 @@ case 'pcgame': {
 
                                 await socket.sendMessage(chatJid, { react: { text: '✅', key: downloadMek.key } });
                             } catch (sendDocErr) {
-                                // Large PC games (>100MB/2GB) fallback to 1-Click Direct Link
                                 await socket.sendMessage(chatJid, {
                                     text: `🎮 *${gameTitle}*\n📌 *Part:* ${fileName}\n\n🔗 *1-Click Direct Download Link:*\n${directLink}\n\n💡 _Paste link in your PC Browser or IDM for full speed download!_${DEFAULT_FOOTER}`
                                 }, { quoted: downloadMek });
@@ -1816,6 +1799,11 @@ case 'pcgame': {
                         }
                     };
 
+                    dlCleanupTimeout = setTimeout(() => {
+                        socket.ev.off('messages.upsert', handleDownloadEvent);
+                        console.log(`[Fitgirl] Cleaned up stale download listener for msg ID: ${optionsMsgID}`);
+                    }, 120000);
+
                     socket.ev.on('messages.upsert', handleDownloadEvent);
 
                 } catch (detailsError) {
@@ -1823,10 +1811,14 @@ case 'pcgame': {
                     await socket.sendMessage(chatJid, {
                         text: `*❪ ERROR ❫*\n\n❌ *Game Details Error!*\n🚫 _${detailsError.response?.data?.detail || detailsError.message}_${DEFAULT_FOOTER}`
                     }, { quoted: replyMek });
-                    socket.ev.off('messages.upsert', handleSelection);
                 }
             }
         };
+
+        cleanupTimeout = setTimeout(() => {
+            socket.ev.off('messages.upsert', handleSelection);
+            console.log(`[Fitgirl] Cleaned up stale selection listener for msg ID: ${messageID}`);
+        }, 120000);
 
         socket.ev.on('messages.upsert', handleSelection);
 
@@ -1836,6 +1828,218 @@ case 'pcgame': {
             text: `*❪ SYSTEM ERROR ❫*\n\n❌ *System Error!*\n🚫 _${error.message || 'Unknown error'}_\n\n🔄 _Please try again later..._${DEFAULT_FOOTER}`
         }, { quoted: msg });
     }
+    
+    break;
+}
+case 'zoom':
+case 'zoomsub': {
+    const chatJid = msg.key.remoteJid;
+    const DEFAULT_FOOTER = `\n\n> 🎬 𝗖𝗛𝗔𝗠𝗔 𝗖𝗜𝗡𝗘 𝗛𝗨𝗕 🎬\n> 🧬 ᴘᴏᴡᴇʀᴇᴅ ʙʏ 👑 𝗖𝗛𝗔𝗠𝗜𝗡𝗗𝗨 𝗢𝗙𝗖`;
+
+    function getCircledNumber(num) {
+        const circledNumbers = [
+            '①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩',
+            '⑪', '⑫', '⑬', '⑭', '⑮', '⑯', '⑰', '⑘', '⑙', '⑚',
+            '㉑', '㉒', '㉓', '㉔', '㉕', '㉖', '㉗', '㉘', '㉙', '㉚'
+        ];
+        return circledNumbers[num - 1] || `[${num}]`;
+    }
+
+    if (!args.length) {
+        await socket.sendMessage(chatJid, {
+            text: `*❪ ERROR ❫*\n\n⚠️ *Invalid Usage!*\n\n🔍 *Example:*\n• .zoom mobland\n• .zoomsub citadel\n\n📝 _Please provide the Movie or TV Show name!_${DEFAULT_FOOTER}`
+        }, { quoted: msg });
+        break;
+    }
+
+    const searchQuery = args.join(' ');
+    await socket.sendMessage(chatJid, { 
+        text: `*❪ SEARCHING ❫*\n\n🔍 *Searching Zoom.lk Subtitles...*\n⚡ _Please wait a moment._`
+    });
+
+    const API_BASE = "https://api.chamindu.site";
+    const API_KEY = "chama_api_11230a80e5eed3c1b80bfcc5d1773ec9";
+    const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500";
+
+    let searchResponse = null;
+    let searchRetries = 3;
+    while (searchRetries > 0 && !searchResponse) {
+        try {
+            searchResponse = await axios.get(`${API_BASE}/api/v1/movies/zoom/search?q=${encodeURIComponent(searchQuery)}&api_key=${API_KEY}`, { timeout: 30000 });
+        } catch (searchErr) {
+            searchRetries--;
+            if (searchRetries === 0) throw searchErr;
+            console.log(`Zoom search failed, retrying... (${searchRetries} attempts left)`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+    }
+    const searchData = searchResponse.data;
+    const resultsList = searchData.data || [];
+
+    try {
+        if (!searchData.status || resultsList.length === 0) {
+            await socket.sendMessage(chatJid, {
+                text: `*❪ NO RESULTS ❫*\n\n😞 *No Subtitles Found!*\n\n🔍 *Query:* _${searchQuery}_\n💡 *Tip:* _Please check the spelling and try again!_${DEFAULT_FOOTER}`
+            }, { quoted: msg });
+            break;
+        }
+
+        const subResults = resultsList.slice(0, 25);
+        let listText = `*❪ ZOOM.LK SUBTITLE RESULTS ❫*\n\n🎯 *Query:* _${searchQuery}_\n📊 *Results:* _${subResults.length} Items_\n\n*👇 SELECT A NUMBER 👇*\n\n`;
+
+        subResults.forEach((item, index) => {
+            const num = getCircledNumber(index + 1);
+            const itemType = item.type ? item.type.toUpperCase() : 'SUB';
+            listText += `${num} ➜ 🎬 _${item.title.substring(0, 45)}_\n📂 _Type: ${itemType}_\n\n`;
+        });
+
+        listText += `${DEFAULT_FOOTER}`;
+        
+        const sentMsg = await socket.sendMessage(chatJid, { text: listText }, { quoted: msg });
+        const messageID = sentMsg.key.id;
+
+        let cleanupTimeout = null;
+
+        const handleSelection = async ({ messages: replyMessages }) => {
+            const replyMek = replyMessages?.[0];
+            if (!replyMek?.message) return;
+
+            const messageType = (replyMek.message.conversation || replyMek.message.extendedTextMessage?.text || "").trim();
+            const isReplyToSentMsg = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === messageID;
+
+            const replierNumber = (replyMek.key.participant || replyMek.key.remoteJid || '').split('@')[0].split(':')[0];
+            const originalSenderNumber = (msg.key.participant || msg.key.remoteJid || '').split('@')[0].split(':')[0];
+            const isSameUser = replierNumber === originalSenderNumber;
+            const isSameChat = replyMek.key.remoteJid === chatJid;
+
+            if (isReplyToSentMsg && isSameChat && isSameUser) {
+                const choice = parseInt(messageType) - 1;
+                if (isNaN(choice) || choice < 0 || choice >= subResults.length) {
+                    await socket.sendMessage(chatJid, {
+                        text: `*❪ INVALID ❫*\n\n⚠️ *Wrong Number!*\n🎯 *Range:* _01 - ${subResults.length}_\n📝 _Please reply with a valid number!_${DEFAULT_FOOTER}`
+                    }, { quoted: replyMek });
+                    return;
+                }
+
+                if (cleanupTimeout) clearTimeout(cleanupTimeout);
+                socket.ev.off('messages.upsert', handleSelection);
+
+                const selectedItem = subResults[choice];
+                const targetUrl = selectedItem.link;
+                
+                await socket.sendMessage(chatJid, { 
+                    text: `*❪ FETCHING ❫*\n\n🎬 *Fetching Subtitle Download Link...*\n⚡ _Please wait..._`
+                }, { quoted: replyMek });
+
+                let detailsResponse = null;
+                let detailsRetries = 3;
+                while (detailsRetries > 0 && !detailsResponse) {
+                    try {
+                        detailsResponse = await axios.get(`${API_BASE}/api/v1/movies/zoom/infodl?q=${encodeURIComponent(targetUrl)}&api_key=${API_KEY}`, { timeout: 35000 });
+                    } catch (detailsErr) {
+                        detailsRetries--;
+                        if (detailsRetries === 0) throw detailsErr;
+                        console.log(`Zoom details failed, retrying... (${detailsRetries} attempts left)`);
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    }
+                }
+                const detailsData = detailsResponse.data;
+
+                try {
+                    if (!detailsData.status || !detailsData.data) {
+                        throw new Error('Failed to fetch subtitle details');
+                    }
+
+                    const subInfo = detailsData.data;
+                    const subTitle = subInfo.title || selectedItem.title;
+                    const downloads = subInfo.downloads || [];
+
+                    if (downloads.length === 0) {
+                        await socket.sendMessage(chatJid, {
+                            text: `*❪ NO DOWNLOADS ❫*\n\n⚠️ *No Subtitle Files Found!*\n😞 _There are no download links available for this post!_${DEFAULT_FOOTER}`
+                        }, { quoted: replyMek });
+                        return;
+                    }
+
+                    const subPosterUrl = subInfo.image && subInfo.image.startsWith('http') ? subInfo.image : (selectedItem.image && selectedItem.image.startsWith('http') ? selectedItem.image : DEFAULT_IMAGE);
+                    const cleanStory = subInfo.story ? subInfo.story.substring(0, 250) + '...' : 'No description available.';
+                    
+                    const detailsText = `*❪ SUBTITLE DETAILS ❫*\n\n🎬 *${subTitle}*\n⭐ *IMDb:* ${subInfo.imdb || 'N/A'}\n🗣️ *Language:* ${subInfo.language || 'Sinhala'}\n\n📝 *Story:* _${cleanStory}_\n\n${DEFAULT_FOOTER}`;
+
+                    await socket.sendMessage(chatJid, {
+                        image: { url: subPosterUrl },
+                        caption: detailsText
+                    }, { quoted: replyMek });
+
+                    // ගොනු ලින්ක් එක (ZIP) කෙලින්ම යැවීම
+                    const subDownloadLink = downloads[0].link;
+                    const fileName = `${subTitle.replace(/[^a-zA-Z0-9 ]/g, '').trim()}.zip`;
+
+                    await socket.sendMessage(chatJid, { react: { text: '⏳', key: replyMek.key } });
+
+                    try {
+                        // WhatsApp Document එකක් ලෙස සිංහල සබ්ටයිටල් ZIP එක එවීම
+                        await socket.sendMessage(chatJid, {
+                            document: { url: subDownloadLink },
+                            mimetype: 'application/zip',
+                            fileName: fileName,
+                            caption: `📥 *Sinhala Subtitle File*\n🎬 *${subTitle}*\n\n${DEFAULT_FOOTER}`
+                        }, { quoted: replyMek });
+
+                        await socket.sendMessage(chatJid, { react: { text: '✅', key: replyMek.key } });
+                    } catch (docErr) {
+                        // Document එක යැවීමට අපහසු වුවහොත් Direct Link එක යැවීම
+                        await socket.sendMessage(chatJid, {
+                            text: `*❪ SUBTITLE DOWNLOAD LINK ❫*\n\n🎬 *${subTitle}*\n\n🔗 *Direct Download:*\n${subDownloadLink}\n\n${DEFAULT_FOOTER}`
+                        }, { quoted: replyMek });
+
+                        await socket.sendMessage(chatJid, { react: { text: '🔗', key: replyMek.key } });
+                    }
+
+                } catch (detailsError) {
+                    console.error('Zoom Details error:', detailsError);
+                    await socket.sendMessage(chatJid, {
+                        text: `*❪ ERROR ❫*\n\n❌ *Details Error!*\n🚫 _${detailsError.response?.data?.detail || detailsError.message}_${DEFAULT_FOOTER}`
+                    }, { quoted: replyMek });
+                }
+            }
+        };
+
+        cleanupTimeout = setTimeout(() => {
+            socket.ev.off('messages.upsert', handleSelection);
+            console.log(`[Zoom] Cleaned up stale selection listener for msg ID: ${messageID}`);
+        }, 120000);
+
+        socket.ev.on('messages.upsert', handleSelection);
+
+    } catch (error) {
+        console.error('Zoom command error:', error);
+        await socket.sendMessage(chatJid, {
+            text: `*❪ SYSTEM ERROR ❫*\n\n❌ *System Error!*\n🚫 _${error.message || 'Unknown error'}_\n\n🔄 _Please try again later..._${DEFAULT_FOOTER}`
+        }, { quoted: msg });
+    }
+    
+    break;
+}
+case 'jid':
+case 'getjid': {
+    const chatJid = msg.key.remoteJid;
+    const senderJid = msg.key.participant || msg.key.remoteJid;
+    const isGroup = chatJid.endsWith('@g.us');
+
+    let jidText = `📌 *JID INFORMATION*\n\n`;
+    jidText += `📍 *Chat / Remote JID:* \n\`${chatJid}\`\n\n`;
+    
+    if (isGroup) {
+        jidText += `👤 *Sender JID:* \n\`${senderJid}\`\n\n`;
+        jidText += `🏠 *Type:* Group Chat\n`;
+    } else {
+        jidText += `🏠 *Type:* Private Chat (DM)\n`;
+    }
+
+    await socket.sendMessage(sender, {
+        text: jidText
+    }, { quoted: msg });
     
     break;
 }
