@@ -40,7 +40,7 @@ const config = {
     API_KEY:'lakiya_2f3b6c382d1236ad7a08d56331fb679935d51dfc846df2c254093fd1fff9494e',
     BOT_IMAGE:'https://files.catbox.moe/ef9tyw.png',
     BOT_FOOTER:"SHAGGY XMD 〽️ᴏᴠɪᴇ Bᴏᴛ ᴠ2",
-     MGROUP_LINK: 'https://chat.whatsapp.com/JpFSNrnqtnQIqdM0WlNds1',
+     MGROUP_LINK: 'https://chat.whatsapp.com/EeMhcQufXDFABM1MnR05Wh?s=cl&p=a&mlu=4&ilr=4',
     MOVIE_FOOTER:"⏤͟͟͞͞★❮ SHAGGY XMD 〽️OVIE ⏤͟͟͞͞★",
      MOVIE_CAPTION:"🇸‌ʜᴀɢɢY-xᴍᴅ ᴍᴏᴠɪᴇ 🔥🌈",
     PREFIX: '.',
@@ -1474,15 +1474,18 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
   • .sinhalasub  — Movie dl
   • .cinetv      — Tv searies 
   • .movie       — Movie dl
+  • .thinkiri    - Movie dl
+  • .dubzone     - (Fix soon)
   • .anime       — Anime dl
   • .pupilmovie  — Sinhala Movie dl
   • .dinka       — Sinhala dl
-  • .scartoon    — Cartoon dl
+  • .cartoon    — Cartoon dl
   • .rexporn     — Wal dl
   • .wrestling   — Wwe dl
   • .song        — Music dl
   • .tiktok      — Tiktok dl
-
+  • .sinhalatop  - Sub zip dl
+  
 ⚙️  𝗚𝗲𝗻𝗲𝗿𝗮𝗹
   • .alive       — status
   • .menu        — menu
