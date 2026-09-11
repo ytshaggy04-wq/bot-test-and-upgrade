@@ -40,8 +40,8 @@ const config = {
     API_KEY:'lakiya_2f3b6c382d1236ad7a08d56331fb679935d51dfc846df2c254093fd1fff9494e',
     BOT_IMAGE:'https://files.catbox.moe/ef9tyw.png',
     BOT_FOOTER:"SHAGGY XMD 〽️ᴏᴠɪᴇ Bᴏᴛ ᴠ2",
-     MGROUP_LINK: 'https://chat.whatsapp.com/JpFSNrnqtnQIqdM0WlNds1',
-    MOVIE_FOOTER:"​⏤͟͟͞͞★❮ SHAGGY XMD 〽️OVIE ⏤͟͟͞͞★",
+     MGROUP_LINK: 'https://chat.whatsapp.com/EeMhcQufXDFABM1MnR05Wh?s=cl&p=a&mlu=4&ilr=4',
+    MOVIE_FOOTER:"⏤͟͟͞͞★❮ SHAGGY XMD 〽️OVIE ⏤͟͟͞͞★",
      MOVIE_CAPTION:"🇸‌ʜᴀɢɢY-xᴍᴅ ᴍᴏᴠɪᴇ 🔥🌈",
     PREFIX: '.',
     OWNER_NUMBERS: ['94703830GGGG990'],
@@ -191,7 +191,7 @@ async function setupCommandHandlers(socket, number) {
             try {
                 await socket.readMessages([msg.key]);
             } catch (error) {
-               
+
             }
         }
 
@@ -393,7 +393,7 @@ Failed to fetch TikTok video! Please try again later.`
 
             if (isReplyToSentMsg && sender === replyMek.key.remoteJid) {
                 if (tiktokTimeout) clearTimeout(tiktokTimeout);
-                
+
                 await socket.sendMessage(sender, { react: { text: '⬇️', key: replyMek.key } });
 
                 const downloadLinks = tiktokData.downloads;
@@ -526,7 +526,7 @@ case 'cinesubz':
         });
 
         listText += `╰──────────●➤\n> ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`;
-        
+
         const sentMsg = await socket.sendMessage(sender, {
             image: { url: config.BOT_IMAGE},
             caption: listText
@@ -557,7 +557,7 @@ case 'cinesubz':
 
                 const selectedItem = cinezubResults[choice];
                 const isTvShow = selectedItem.link.includes('/tvshows/');
-                
+
                 if (isTvShow) {
                     await socket.sendMessage(sender, { 
                         text: '📺 𝙁𝙚𝙩𝙘𝙝𝙞𝙣𝙜 𝙏𝙑 𝙨𝙚𝙧𝙞𝙚𝙨 𝙙𝙚𝙩𝙖𝙞𝙡𝙨...' 
@@ -572,12 +572,12 @@ case 'cinesubz':
                         }
 
                         const tvInfo = tvShowData.data;
-                        
+
                         // 🟢 NEW STRUCTURE - Extract data correctly
                         const rating = tvInfo.rating?.score || 'N/A';
                         const totalEpisodes = tvInfo.episodes?.total || 'N/A';
                         const episodesList = tvInfo.episodes?.list || [];
-                        
+
                         // Group episodes by season (extract season from episode title or URL)
                         const seasonsMap = {};
                         episodesList.forEach(ep => {
@@ -592,7 +592,7 @@ case 'cinesubz':
                             }
                             seasonsMap[seasonNum].push(ep);
                         });
-                        
+
                         const seasonsArray = Object.keys(seasonsMap).map(season => ({
                             season: parseInt(season),
                             total_episodes: seasonsMap[season].length,
@@ -602,9 +602,9 @@ case 'cinesubz':
                                 url: ep.url || ''
                             }))
                         }));
-                        
+
                         const totalSeasons = seasonsArray.length;
-                        
+
                         let tvDetailsText = 
     `☘️ *𝗧ɪᴛʟᴇ ➟* _${tvInfo.title || 'N/A'}_
 ▫️🥇 *𝗜𝗺𝗱𝗯 𝗥ᴀᴛɪɴɢ ➟*  _${rating}_
@@ -648,7 +648,7 @@ case 'cinesubz':
 
                             if (isReplyToSeasonMsg && sender === seasonMek.key.remoteJid) {
                                 const seasonNum = parseInt(seasonChoice) - 1;
-                                
+
                                 if (isNaN(seasonNum) || seasonNum < 0 || seasonNum >= seasonsArray.length) {
                                     await socket.sendMessage(sender, {
                                         image:  { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
@@ -662,7 +662,7 @@ case 'cinesubz':
                                 }
 
                                 const selectedSeason = seasonsArray[seasonNum];
-                                
+
                                 let episodesText =
     `☘️ *𝗧𝗩-𝗦𝗘𝗥𝗜𝗘𝗦 : _𝗘𝗣𝗜𝗦𝗢𝗗𝗘 𝗦𝗘𝗟𝗘𝗖𝗧𝗜𝗢𝗡_* 📺
 ╭──────●➤
@@ -695,7 +695,7 @@ case 'cinesubz':
 
                                     if (isReplyToEpisodeMsg && sender === episodeMek.key.remoteJid) {
                                         const choiceNum = parseInt(episodeChoice);
-                                        
+
                                         if (isNaN(choiceNum) || choiceNum < 1 || choiceNum > selectedSeason.episodes.length) {
                                             await socket.sendMessage(sender, {
                                                 image:  { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
@@ -709,7 +709,7 @@ case 'cinesubz':
                                         }
 
                                         const selectedEpisode = selectedSeason.episodes[choiceNum - 1];
-                                        
+
                                         await socket.sendMessage(sender, { 
                                             text: `📥 𝙁𝙚𝙩𝙘𝙝𝙞𝙣𝙜 𝙙𝙤𝙬𝙣𝙡𝙤𝙖𝙙 𝙡𝙞𝙣𝙠𝙨 𝙛𝙤𝙧 S${selectedSeason.season}E${selectedEpisode.episode}...` 
                                         }, { quoted: episodeMek });
@@ -724,7 +724,7 @@ case 'cinesubz':
                                             }
 
                                             const episodeDownloadLinks = episodeData.data.download_links;
-                                            
+
                                             let qualityText = 
     `☘️ *𝗧𝗩-𝗦𝗘𝗥𝗜𝗘𝗦 : _𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗 𝗢𝗣𝗧𝗜𝗢𝗡𝗦_* 📺
 ╭──────●➤
@@ -758,7 +758,7 @@ case 'cinesubz':
 
                                                 if (isReplyToQualityMsg && sender === qualityMek.key.remoteJid) {
                                                     const qualityNum = parseInt(qualityChoice) - 1;
-                                                    
+
                                                     if (isNaN(qualityNum) || qualityNum < 0 || qualityNum >= episodeDownloadLinks.length) {
                                                         await socket.sendMessage(sender, {
                                                             image:  { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
@@ -772,7 +772,7 @@ case 'cinesubz':
                                                     }
 
                                                     const selectedQuality = episodeDownloadLinks[qualityNum];
-                                                    
+
                                                     await socket.sendMessage(sender, { 
                                                         text: `⏳ 𝙂𝙚𝙩𝙩𝙞𝙣𝙜 𝙙𝙤𝙬𝙣𝙡𝙤𝙖𝙙 𝙡𝙞𝙣𝙠...` 
                                                     }, { quoted: qualityMek });
@@ -788,17 +788,17 @@ case 'cinesubz':
                                                         }
 
                                                         const finalDownloadLinks = darkShanData.data.download;
-                                                        
+
                                                         const finalNonTelegramLinks = finalDownloadLinks.filter(link => 
                                                             link.name && link.name.toLowerCase() !== 'telegram'
                                                         );
-                                                        
+
                                                         if (finalNonTelegramLinks.length === 0) {
                                                             throw new Error('No non-Telegram download links available');
                                                         }
-                                                        
+
                                                         const finalLink = finalNonTelegramLinks.find(link => link.name === 'unknown') || finalNonTelegramLinks[0];
-                                                        
+
                                                         await socket.sendMessage(sender, { react: { text: '📥', key: qualityMek.key } });
 
                                                         await socket.sendMessage(sender, {
@@ -870,7 +870,7 @@ ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`
                         }, { quoted: replyMek });
                         socket.ev.off('messages.upsert', handleSelection);
                     }
-                    
+
                 } else {
                     await socket.sendMessage(sender, { 
                         text: '📽️ 𝙁𝙚𝙩𝙘𝙝𝙞𝙣𝙜 𝙙𝙚𝙩𝙖𝙞𝙡𝙨...' 
@@ -885,9 +885,9 @@ ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`
                         }
 
                         const movieInfo = detailsData.data;
-                        
+
                         const validDownloads = movieInfo.downloads?.filter(dl => dl && dl.quality && dl.url) || [];
-                        
+
                         if (validDownloads.length === 0) {
                             await socket.sendMessage(sender, {
                                 image:  { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
@@ -899,16 +899,16 @@ ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`
                             }, { quoted: replyMek });
                             return;
                         }
-                        
+
                         const description = movieInfo.description?.substring(0, 300) + (movieInfo.description?.length > 300 ? '...' : '') || 'No description available.';
-                        
+
                         const imdbRating = movieInfo.imdb_rating ? `${movieInfo.imdb_rating}/10` : 'N/A';
                         const year = movieInfo.year || 'N/A';
                         const runtime = movieInfo.runtime || 'N/A';
                         const director = movieInfo.director || 'N/A';
                         const country = movieInfo.country || 'N/A';
                         const cast = Array.isArray(movieInfo.cast) ? movieInfo.cast.join(', ') : movieInfo.cast || 'N/A';
-                        
+
                         const movieDetailsCaption = formatMessage(
                             `☘️ *𝗧ɪᴛʟᴇ ➟* _${movieInfo.title}_`,
                             `▫️🥇 *𝗜𝗺𝗱𝗯 𝗥ᴀᴛɪɴɢ ➟* _${imdbRating}_
@@ -952,7 +952,7 @@ ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`
 
                             if (isReplyToOptionsMsg && sender === downloadMek.key.remoteJid) {
                                 const choiceNum = parseInt(downloadChoice) - 1;
-                                
+
                                 if (isNaN(choiceNum) || choiceNum < 0 || choiceNum >= validDownloads.length) {
                                     await socket.sendMessage(sender, {
                                         image:  { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
@@ -966,7 +966,7 @@ ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`
                                 }
 
                                 const selectedDownload = validDownloads[choiceNum];
-                                
+
                                 await socket.sendMessage(sender, { 
                                     text: `⏳ 𝙂𝙚𝙩𝙩𝙞𝙣𝙜 𝙙𝙤𝙬𝙣𝙡𝙤𝙖𝙙 𝙡𝙞𝙣𝙠...` 
                                 }, { quoted: downloadMek });
@@ -980,17 +980,17 @@ ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`
                                     }
 
                                     const downloadLinks = downloadData.data.download;
-                                    
+
                                     const nonTelegramLinks = downloadLinks.filter(link => 
                                         link.name && link.name.toLowerCase() !== 'telegram'
                                     );
-                                    
+
                                     if (nonTelegramLinks.length === 0) {
                                         throw new Error('No non-Telegram download links available');
                                     }
-                                    
+
                                     const preferredLink = nonTelegramLinks.find(link => link.name === 'unknown') || nonTelegramLinks[0];
-                                    
+
                                     await socket.sendMessage(sender, { react: { text: '📥', key: downloadMek.key } });
 
                                     await socket.sendMessage(sender, {
@@ -1056,7 +1056,7 @@ ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`
             )
         }, { quoted: msg });
     }
-    
+
     break;
                 case 'sinhalasub':
     if (!args.length) {
@@ -1072,21 +1072,21 @@ ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`
     }
 
     const movieQuery55 = args.join(' ');
-   
+
     await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 2000) + 2000));
 
- 
+
     let sinhalasubSelectionListener = null;
     let sinhalasubDownloadListener = null;
     let sinhalasubSelectionTimeout = null;
     let sinhalasubDownloadTimeout = null;
-    
- 
+
+
     let sinhalasubMasterTimeout = null;
     const clearAllSinhalasubListeners = () => {
         console.log('🧹 Clearing all Sinhalasub listeners');
-        
-       
+
+
         if (sinhalasubSelectionListener) {
             socket.ev.off('messages.upsert', sinhalasubSelectionListener);
             sinhalasubSelectionListener = null;
@@ -1095,8 +1095,8 @@ ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`
             clearTimeout(sinhalasubSelectionTimeout);
             sinhalasubSelectionTimeout = null;
         }
-        
-     
+
+
         if (sinhalasubDownloadListener) {
             socket.ev.off('messages.upsert', sinhalasubDownloadListener);
             sinhalasubDownloadListener = null;
@@ -1105,8 +1105,8 @@ ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`
             clearTimeout(sinhalasubDownloadTimeout);
             sinhalasubDownloadTimeout = null;
         }
-        
-       
+
+
         if (sinhalasubMasterTimeout) {
             clearTimeout(sinhalasubMasterTimeout);
             sinhalasubMasterTimeout = null;
@@ -1149,13 +1149,13 @@ ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`
 
         const messageID = sentMsg.key.id;
 
-      
+
         sinhalasubMasterTimeout = setTimeout(() => {
             clearAllSinhalasubListeners();
             console.log('🧹 Sinhalasub master timeout - All listeners cleared after 3 minutes');
         }, 180000);
 
-       
+
         const handleSelection = async ({ messages: replyMessages }) => {
             const replyMek = replyMessages[0];
             if (!replyMek?.message) return;
@@ -1164,13 +1164,13 @@ ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`
             const isReplyToSentMsg = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === messageID;
 
             if (isReplyToSentMsg && sender === replyMek.key.remoteJid) {
-               
+
                 if (sinhalasubSelectionTimeout) {
                     clearTimeout(sinhalasubSelectionTimeout);
                     sinhalasubSelectionTimeout = null;
                 }
-                
-               
+
+
                 sinhalasubSelectionTimeout = setTimeout(() => {
                     if (sinhalasubSelectionListener) {
                         socket.ev.off('messages.upsert', sinhalasubSelectionListener);
@@ -1194,12 +1194,12 @@ ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`
                 }
 
                 const selectedMovie = movies[choice];
-                
+
                 await socket.sendMessage(sender, { 
                     text: '📽️ 𝙁𝙚𝙩𝙘𝙝𝙞𝙣𝙜 𝙙𝙚𝙩𝙖𝙞𝙡𝙨...' 
                 }, { quoted: replyMek });
 
-                
+
                 await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 2000) + 2000));
 
                 try {
@@ -1213,7 +1213,7 @@ ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`
                     const movieInfo = infoData.data.movie;
                     const downloads = infoData.data.downloads || [];
 
-                    
+
                     const videoDownloads = downloads.filter(d => d.server === 'pixeldrain');
 
                     if (videoDownloads.length === 0) {
@@ -1229,7 +1229,7 @@ ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`
                     }
 
                     const castPreview = movieInfo.cast?.slice(0, 5).join(', ') + (movieInfo.cast?.length > 5 ? '...' : '');
-                    
+
                     const detailsCaption = formatMessage(
                         `🍀 *𝗧ɪᴛʟᴇ : ${movieInfo.title}`,
                         `▫️📅 *𝗥ᴇʟᴇᴀꜱᴇ 𝗬ᴇᴀʀ ➟ ${movieInfo.year || 'N/A'}*
@@ -1251,7 +1251,7 @@ ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`
                         caption: detailsCaption
                     }, { quoted: replyMek });
 
-                    
+
                     await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 2000) + 2000));
 
                     const downloadOptionsText = `*⬇️🎀 𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗 𝗢𝗣𝗧𝗜𝗢𝗡𝗦*
@@ -1269,7 +1269,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 
                     const infoMsgID = downloadMsg.key.id;
 
-                   
+
                     const handleDownload = async ({ messages: downloadMessages }) => {
                         const downloadMek = downloadMessages[0];
                         if (!downloadMek?.message) return;
@@ -1278,13 +1278,13 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
                         const isReplyToInfoMsg = downloadMek.message.extendedTextMessage?.contextInfo?.stanzaId === infoMsgID;
 
                         if (isReplyToInfoMsg && sender === downloadMek.key.remoteJid) {
-                         
+
                             if (sinhalasubDownloadTimeout) {
                                 clearTimeout(sinhalasubDownloadTimeout);
                                 sinhalasubDownloadTimeout = null;
                             }
-                            
-                          
+
+
                             sinhalasubDownloadTimeout = setTimeout(() => {
                                 if (sinhalasubDownloadListener) {
                                     socket.ev.off('messages.upsert', sinhalasubDownloadListener);
@@ -1295,7 +1295,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
                             }, 120000);
 
                             const choiceNum = parseInt(downloadChoice) - 1;
-                            
+
                             if (isNaN(choiceNum) || choiceNum < 0 || choiceNum >= videoDownloads.length) {
                                 await socket.sendMessage(sender, {
                                      image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE},
@@ -1309,16 +1309,16 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
                             }
 
                             const selectedDownload = videoDownloads[choiceNum];
-                            
+
                             await socket.sendMessage(sender, { 
                                 text: `⏳ 𝙂𝙚𝙩𝙩𝙞𝙣𝙜 𝙙𝙤𝙬𝙣𝙡𝙤𝙖𝙙 𝙡𝙞𝙣𝙠...` 
                             }, { quoted: downloadMek });
 
-                          
+
                             await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 2000) + 2000));
 
                             try {
-                               
+
                                 const downloadResponse = await axios.get(`${config.API_MAIN_URL}/sinhalasub/download2?url=${encodeURIComponent(selectedDownload.link_page)}&api_key=${config.API_KEY}`);
                                 const downloadData = downloadResponse.data;
 
@@ -1328,20 +1328,20 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 
                                 const finalDownloadUrl = downloadData.data.download;
                                 const fileInfo = downloadData.data.file_info || {};
-                                
-                                
+
+
                                 let fileName = fileInfo.name || `${movieInfo.title} [${selectedDownload.quality || 'Unknown'}].mp4`;
                                 const mimeType = fileInfo.mimeType || 'video/mp4';
-                                
+
                                 console.log('Download URL:', finalDownloadUrl);
                                 console.log('File Name:', fileName);
                                 console.log('Mime Type:', mimeType);
-                                
+
                                 await socket.sendMessage(sender, { react: { text: '📥', key: downloadMek.key } });
 
-                             
 
-                               
+
+
                                 let sizeText = 'N/A';
                                 if (fileInfo.size) {
                                     const sizeInMB = fileInfo.size / 1024 / 1024;
@@ -1352,7 +1352,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
                                     }
                                 }
 
-                               
+
                                 await socket.sendMessage(sender, {
                                     document: { url: finalDownloadUrl },
                                     mimetype: mimeType,
@@ -1367,8 +1367,8 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
                                 }, { quoted: downloadMek });
 
                                 await socket.sendMessage(sender, { react: { text: '✅', key: downloadMek.key } });
-                                
-                               
+
+
                                 clearAllSinhalasubListeners();
 
                             } catch (downloadError) {
@@ -1385,11 +1385,11 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
                         }
                     };
 
-                   
+
                     sinhalasubDownloadListener = handleDownload;
                     socket.ev.on('messages.upsert', handleDownload);
 
-                   
+
                     sinhalasubDownloadTimeout = setTimeout(() => {
                         if (sinhalasubDownloadListener) {
                             socket.ev.off('messages.upsert', sinhalasubDownloadListener);
@@ -1413,11 +1413,11 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
             }
         };
 
-       
+
         sinhalasubSelectionListener = handleSelection;
         socket.ev.on('messages.upsert', handleSelection);
 
-       
+
         sinhalasubSelectionTimeout = setTimeout(() => {
             if (sinhalasubSelectionListener) {
                 socket.ev.off('messages.upsert', sinhalasubSelectionListener);
@@ -1429,7 +1429,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 
     } catch (error) {
         console.error('Movie command error:', error);
-       
+
         clearAllSinhalasubListeners();
         await socket.sendMessage(sender, {
              image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE},
@@ -1441,7 +1441,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
         }, { quoted: msg });
     }
     break;
-                 
+
     break;    case 'menu':
                case 'help':     {
     try {
@@ -1450,9 +1450,9 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
         const slstDate = new Date(date.toLocaleString("en-US", { timeZone: "Asia/Colombo" }));
         const formattedDate = `${slstDate.getFullYear()}/${slstDate.getMonth() + 1}/${slstDate.getDate()}`;
         const formattedTime = slstDate.toLocaleTimeString();
-        
+
         const hour = slstDate.getHours();
-      
+
         const greetings = hour < 12 ? `Good Morning✨` :
                           hour < 15 ? `Good Afternoon🚀` :
                           hour < 18 ? `Good Evening! 🌟` : `Good Night🌙`;
@@ -1474,15 +1474,18 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
   • .sinhalasub  — Movie dl
   • .cinetv      — Tv searies 
   • .movie       — Movie dl
+  • .thinkiri    - Movie dl
+  • .dubzone     - (Fix soon)
   • .anime       — Anime dl
   • .pupilmovie  — Sinhala Movie dl
   • .dinka       — Sinhala dl
-  • .scartoon    — Cartoon dl
+  • .cartoon    — Cartoon dl
   • .rexporn     — Wal dl
   • .wrestling   — Wwe dl
   • .song        — Music dl
   • .tiktok      — Tiktok dl
-
+  • .sinhalatop  - Sub zip dl
+  
 ⚙️  𝗚𝗲𝗻𝗲𝗿𝗮𝗹
   • .alive       — status
   • .menu        — menu
@@ -1506,14 +1509,14 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
             caption: mainMenuMsg
         }, { quoted: msg });
 
-       
+
 
     } catch (e) {
         console.error(e);
     }
   break;                 
 }
- 
+
 case 'dubzone':
 case 'dubzonesearch': {
     if (!args.length) {
@@ -1629,7 +1632,7 @@ case 'dubzonesearch': {
 
                     let infoText = `📥 *${dlData.title || chosenMovie.title}*\n\n`;
                     infoText += `*Available Qualities & Sizes:* \n`;
-                    
+
                     let flatLinks = [];
                     let count = 1;
 
@@ -1718,7 +1721,7 @@ case 'dubzonesearch': {
     }
     break;
 }   
-                
+
     case 'thinkiri':
 case 'thenkiri': {
     if (!args.length) {
@@ -1986,7 +1989,7 @@ case 'sinhalatopsearch': {
                     if (movieData.imdb) infoText += `⭐ *IMDb:* ${movieData.imdb}\n`;
                     if (movieData.language) infoText += `🗣️ *Language:* ${movieData.language}\n`;
                     if (movieData.genres) infoText += `🎭 *Genres:* ${movieData.genres.join(', ')}\n\n`;
-                    
+
                     if (movieData.story) {
                         infoText += `📖 *Story:* ${movieData.story.substring(0, 300)}...\n\n`;
                     }
@@ -2225,7 +2228,7 @@ case 'watchwrestling': {
                     if (showData.show_info?.Date) infoText += `📅 *Date:* ${showData.show_info.Date}\n`;
                     if (showData.show_info?.Location) infoText += `📍 *Location:* ${showData.show_info.Location}\n`;
                     if (showData.show_info?.Broadcast) infoText += `📺 *Network:* ${showData.show_info.Broadcast}\n\n`;
-                    
+
                     infoText += `*Available Download Sources / Qualities:*\n`;
                     allDownloads.forEach((dl, i) => {
                         infoText += `*${i + 1}.* [${dl.quality || 'HD'}] ${dl.label || dl.name}\n`;
@@ -2305,7 +2308,7 @@ case 'watchwrestling': {
     }
     break;
 }
-                    
+
                 case 'vv':
 case '❤️': {
     const quoted = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
@@ -2316,10 +2319,10 @@ case '❤️': {
 
     try {
         await socket.sendMessage(sender, { react: { text: '🔄', key: msg.key } });
-        
+
         // View Once හෝ සාමාන්‍ය මීඩියා ඩවුන්ලෝඩ් කර ගැනීම
         let mediaMessage = quoted.imageMessage || quoted.videoMessage || quoted.viewOnceMessageV2?.message?.imageMessage || quoted.viewOnceMessageV2?.message?.videoMessage;
-        
+
         if (mediaMessage) {
             const stream = await downloadContentFromMessage(mediaMessage, mediaMessage.mimetype.includes('image') ? 'image' : 'video');
             let buffer = Buffer.from([]);
@@ -2393,7 +2396,7 @@ case 'cinetv': {
         });
 
         listText += `${DEFAULT_FOOTER}`;
-        
+
         const sentMsg = await socket.sendMessage(sender, { text: listText }, { quoted: msg });
         const messageID = sentMsg.key.id;
 
@@ -2415,7 +2418,7 @@ case 'cinetv': {
 
                 const selectedItem = cinesubResults[choice];
                 const isTvShow = selectedItem.type === 'tvshows';
-                
+
                 if (isTvShow) {
                     await socket.sendMessage(sender, { 
                         text: `*❪ FETCHING ❫*\n\n📺 *Fetching TV Series...*\n⚡ _Please wait..._`
@@ -2430,7 +2433,7 @@ case 'cinetv': {
                         }
 
                         const tvInfo = tvShowData.data;
-                        
+
                         let tvDetailsText = `*❪ TV SERIES DETAILS ❫*\n\n📺 *${tvInfo.title}*\n⭐ 𝗜ᴍᴅʙ ➜ ★ ${tvInfo.rating || 'N/A'}\n📅 𝗬ᴇᴀʀ ➜ ${tvInfo.year || 'N/A'}\n⏳ 𝗥ᴜɴᴛɪᴍᴇ ➜ ${tvInfo.duration || 'N/A'}\n🌍 𝗖ᴏᴜɴ𝘁𝗿ʏ ➜ ${tvInfo.country || 'N/A'}\n🎭 𝗚𝗲𝗻 genres ➜ ${tvInfo.genres ? tvInfo.genres.join(', ') : 'N/A'}\n🎬 𝗗ɪʀᴇᴄᴛᴏʀ ➜ ${tvInfo.directors || 'N/A'}\n⭐ 𝗦ᴛᴀʀ𝘀: ${tvInfo.stars || 'N/A'}\n📝 𝗦𝘁𝗼𝗿𝘆 ➜ ${tvInfo.story ? (tvInfo.story.length > 250 ? tvInfo.story.substring(0, 250) + '...' : tvInfo.story) : 'N/A'}\n🗿 𝗪ᴇʙ ➜ cinesubz.com\n ${DEFAULT_FOOTER}`;
 
                         const posterUrl = tvInfo.image || selectedItem.image || DEFAULT_IMAGE;
@@ -2462,33 +2465,33 @@ case 'cinetv': {
                                         link.link && !link.link.includes('t.me') && !link.link.includes('telegram')
                                     );
                                     const finalLinkObj = nonTelegramLinks[0] || epDlData.data[0];
-                                    
+
                                     await socket.sendMessage(sender, {
                                         document: { url: finalLinkObj.link },
                                         mimetype: 'video/mp4',
                                         fileName: `${tvInfo.title} - ${episode.episode_name}.mp4`,
                                         caption: `*📺 𝗦𝗛𝗔𝗚𝗚𝗬 𝗫𝗠𝗗 𝗠𝗢𝗩𝗜𝗘 𝗕𝗢𝗧 📺*\n\n🎭 *Title:* ${tvInfo.title}\n📌 *Episode:* ${episode.episode_name}\n📊 *Quality:* Direct MP4\n\n${DEFAULT_FOOTER}`
                                     }, { quoted: replyMek });
-                                    
+
                                     successCount++;
                                 } else {
                                     failCount++;
                                 }
-                                
+
                                 await new Promise(resolve => setTimeout(resolve, 2500));
-                                
+
                             } catch (epError) {
                                 console.error(`Error downloading episode:`, epError);
                                 failCount++;
                             }
                         }
-                        
+
                         await socket.sendMessage(sender, { 
                             text: `*❪ SUMMARY ❫*\n\n🎉 *Download Complete!*\n\n🎬 *Series:* _${tvInfo.title}_\n✅ *Success:* _${successCount} Episodes_\n❌ *Failed:* _${failCount} Episodes_${DEFAULT_FOOTER}`
                         }, { quoted: replyMek });
 
                         socket.ev.off('messages.upsert', handleSelection);
-                        
+
                     } catch (tvShowError) {
                         console.error('TV Show error:', tvShowError);
                         await socket.sendMessage(sender, {
@@ -2496,7 +2499,7 @@ case 'cinetv': {
                         }, { quoted: replyMek });
                         socket.ev.off('messages.upsert', handleSelection);
                     }
-                    
+
                 } else {
                     // MOVIE FLOW
                     await socket.sendMessage(sender, { 
@@ -2513,14 +2516,14 @@ case 'cinetv': {
 
                         const movieInfo = detailsData.data;
                         const validDownloads = movieInfo.downloads || [];
-                        
+
                         if (validDownloads.length === 0) {
                             await socket.sendMessage(sender, {
                                 text: `*❪ NO DOWNLOADS ❫*\n\n⚠️ *No Downloads Found!*\n😞 _There are no downloads available for this movie!_${DEFAULT_FOOTER}`
                             }, { quoted: replyMek });
                             return;
                         }
-                        
+
                         const movieDetailsText = `*❪ MOVIE DETAILS ❫*\n\n🎬 *${movieInfo.title}*\n⭐ 𝗜𝗠𝗗𝗕 ➜ ★ ${movieInfo.imdb || movieInfo.rating || 'N/A'}\n📅 𝗬𝗲𝗮𝗿 ➜ ${movieInfo.year || 'N/A'}\n⏳ 𝗗𝘂𝗿𝗮𝘁𝗶𝗼𝗻 ➜ ${movieInfo.duration || 'N/A'}\n🌍 𝗖ᴏᴜɴ𝘁𝗿ʏ ➜ ${movieInfo.country || 'N/A'}\n🎭 𝗚𝗲𝗻 genres ➜ ${movieInfo.genres ? movieInfo.genres.join(', ') : 'N/A'}\n🏷️  ➜ ${movieInfo.language || movieInfo.tag || 'N/A'}\n🎬  ➜ ${movieInfo.directors || movieInfo.director || 'N/A'}\n⭐  ➜ ${movieInfo.stars || 'N/A'}\n📝  ➜ ${movieInfo.story ? (movieInfo.story.length > 250 ? movieInfo.story.substring(0, 250) + '...' : movieInfo.story) : 'N/A'}\n🗿 𝗪ᴇʙ ➜ cinesubz.com\n ${DEFAULT_FOOTER}`;
 
                         const moviePosterUrl = movieInfo.image || selectedItem.image || DEFAULT_IMAGE;
@@ -2547,7 +2550,7 @@ case 'cinetv': {
 
                             if (isReplyToOptionsMsg && sender === downloadMek.key.remoteJid) {
                                 const choiceNum = parseInt(downloadChoice) - 1;
-                                
+
                                 if (isNaN(choiceNum) || choiceNum < 0 || choiceNum >= validDownloads.length) {
                                     await socket.sendMessage(sender, {
                                         text: `*❪ INVALID ❫*\n\n⚠️ *Wrong Number!*\n🎯 *Range:* _01 - ${validDownloads.length}_\n📝 _Please reply with a valid number!_${DEFAULT_FOOTER}`
@@ -2603,7 +2606,7 @@ case 'cinetv': {
             text: `*❪ SYSTEM ERROR ❫*\n\n❌ *System Error!*\n🚫 _${error.message || 'Unknown error'}_\n\n🔄 _Please try again later..._${DEFAULT_FOOTER}`
         }, { quoted: msg });
     }
-    
+
     break;
 }
 
@@ -2623,20 +2626,20 @@ case 'cinetv': {
     const movieQueryF = args.join(' ');
     await socket.sendMessage(sender, { text: '🎬 𝙎𝙚𝙖𝙧𝙘𝙝𝙞𝙣𝙜 𝙋𝙪𝙥𝙞𝙡𝙫𝙞𝙙𝙚𝙤 - 𝙎𝙞𝙣𝙝𝙖𝙡𝙖 𝘿𝙪𝙗𝙗𝙚𝙙 𝙈𝙤𝙫𝙞𝙚𝙨...' });
 
-   
+
     let pupilSelectionListener = null;
     let pupilDownloadListener = null;
     let pupilSelectionTimeout = null;
     let pupilDownloadTimeout = null;
-    
-   
+
+
     let pupilMasterTimeout = null;
 
-    
+
     const clearAllPupilListeners = () => {
         console.log('🧹 Clearing all PupilMovie listeners');
-        
-      
+
+
         if (pupilSelectionListener) {
             socket.ev.off('messages.upsert', pupilSelectionListener);
             pupilSelectionListener = null;
@@ -2645,7 +2648,7 @@ case 'cinetv': {
             clearTimeout(pupilSelectionTimeout);
             pupilSelectionTimeout = null;
         }
-        
+
         if (pupilDownloadListener) {
             socket.ev.off('messages.upsert', pupilDownloadListener);
             pupilDownloadListener = null;
@@ -2654,7 +2657,7 @@ case 'cinetv': {
             clearTimeout(pupilDownloadTimeout);
             pupilDownloadTimeout = null;
         }
-        
+
         if (pupilMasterTimeout) {
             clearTimeout(pupilMasterTimeout);
             pupilMasterTimeout = null;
@@ -2662,7 +2665,7 @@ case 'cinetv': {
     };
 
     try {
-       
+
         const searchResponse = await axios.get(`${config.API_MAIN_URL}/pupilvideo/search?query=${encodeURIComponent(movieQueryF)}&api_key=${config.API_KEY}`);
         const searchData = searchResponse.data;
 
@@ -2697,13 +2700,13 @@ case 'cinetv': {
 
         const messageID = sentMsg.key.id;
 
-       
+
         pupilMasterTimeout = setTimeout(() => {
             clearAllPupilListeners();
             console.log('🧹 PupilMovie master timeout - All listeners cleared after 3 minutes');
         }, 180000);
 
-       
+
         const handleSelection = async ({ messages: replyMessages }) => {
             const replyMek = replyMessages[0];
             if (!replyMek?.message) return;
@@ -2712,13 +2715,13 @@ case 'cinetv': {
             const isReplyToSentMsg = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === messageID;
 
             if (isReplyToSentMsg && sender === replyMek.key.remoteJid) {
-                
+
                 if (pupilSelectionTimeout) {
                     clearTimeout(pupilSelectionTimeout);
                     pupilSelectionTimeout = null;
                 }
-                
-               
+
+
                 pupilSelectionTimeout = setTimeout(() => {
                     if (pupilSelectionListener) {
                         socket.ev.off('messages.upsert', pupilSelectionListener);
@@ -2742,13 +2745,13 @@ case 'cinetv': {
                 }
 
                 const selectedMovie = movies[choice];
-                
+
                 await socket.sendMessage(sender, { 
                     text: '📽️ 𝙁𝙚𝙩𝙘𝙝𝙞𝙣𝙜 𝙢𝙤𝙫𝙞𝙚 𝙙𝙚𝙩𝙖𝙞𝙡𝙨...' 
                 }, { quoted: replyMek });
 
                 try {
-                   
+
                     const infoResponse = await axios.get(`${config.API_MAIN_URL}/pupilvideo/movie?url=${encodeURIComponent(selectedMovie.url)}&api_key=${config.API_KEY}`);
                     const infoData = infoResponse.data;
 
@@ -2759,7 +2762,7 @@ case 'cinetv': {
                     const movieInfo = infoData.data;
                     const allDownloadLinks = movieInfo.download_links || [];
 
-                    
+
                     const filteredLinks = allDownloadLinks;
 
                     if (filteredLinks.length === 0) {
@@ -2774,7 +2777,7 @@ case 'cinetv': {
                         return;
                     }
 
-                   
+
                     const processedLinks = filteredLinks.map(link => {
                         const url = link.url || '';
                         if (url.includes('iws.sinhalachr.workers.dev') && !url.includes('download=true')) {
@@ -2787,7 +2790,7 @@ case 'cinetv': {
                         return link;
                     });
 
-                   
+
                     const detailsCaption = formatMessage(
                         `☘️ 𝗧ɪᴛʟᴇ : _${movieInfo.title}_`,
                         `▫️📝 *Tagline ➟* _${movieInfo.title}_
@@ -2805,7 +2808,7 @@ case 'cinetv': {
                         caption: detailsCaption
                     }, { quoted: replyMek });
 
-                    
+
                     const downloadOptionsText = `*⬇️🍀 𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗 𝗢𝗣𝗧𝗜𝗢𝗡𝗦*
 *Reply with number 👇*
 
@@ -2826,7 +2829,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 
                     const infoMsgID = downloadMsg.key.id;
 
-                    
+
                     const handleDownload = async ({ messages: downloadMessages }) => {
                         const downloadMek = downloadMessages[0];
                         if (!downloadMek?.message) return;
@@ -2835,13 +2838,13 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
                         const isReplyToInfoMsg = downloadMek.message.extendedTextMessage?.contextInfo?.stanzaId === infoMsgID;
 
                         if (isReplyToInfoMsg && sender === downloadMek.key.remoteJid) {
-                          
+
                             if (pupilDownloadTimeout) {
                                 clearTimeout(pupilDownloadTimeout);
                                 pupilDownloadTimeout = null;
                             }
-                            
-                           
+
+
                             pupilDownloadTimeout = setTimeout(() => {
                                 if (pupilDownloadListener) {
                                     socket.ev.off('messages.upsert', pupilDownloadListener);
@@ -2852,7 +2855,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
                             }, 120000);
 
                             const choiceNum = parseInt(downloadChoice) - 1;
-                            
+
                             if (isNaN(choiceNum) || choiceNum < 0 || choiceNum >= processedLinks.length) {
                                 await socket.sendMessage(sender, {
                                     image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE},
@@ -2867,7 +2870,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 
                             const selectedDownload = processedLinks[choiceNum];
                             const downloadUrl = selectedDownload.url;
-                            
+
                             await socket.sendMessage(sender, { 
                                 text: `⏳ Getting your download link...` 
                             }, { quoted: downloadMek });
@@ -2876,20 +2879,20 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
                                 await socket.sendMessage(sender, { react: { text: '📥', key: downloadMek.key } });
 
 
-                                
+
                                 if (downloadUrl.includes('t.me/')) {
-                                    
+
                                     await socket.sendMessage(sender, {
                                         text: `🔗 *Telegram Download Link*\n\n${downloadUrl}\n\n⚠️ Click the link above to download from Telegram.`
                                     }, { quoted: downloadMek });
                                 } 
                                 else if (downloadUrl.includes('sinhalachr.workers.dev')) {
-                                    
+
                                     await socket.sendMessage(sender, {
                                         document: { url: downloadUrl },
                                         mimetype: 'video/mp4',
                                         fileName: `${movieInfo.title} [${selectedDownload.quality || 'WEB-DL'}].mp4`,
-                                       
+
                                         caption: formatMessage(
                                             `🍀 ${movieInfo.title}`,
                                             `\`❚█ ${sessionConfig.MOVIE_CAPTION || config.MOVIE_CAPTION} █❚\`
@@ -2901,8 +2904,8 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
                                 }
 
                                 await socket.sendMessage(sender, { react: { text: '✅', key: downloadMek.key } });
-                                
-                               
+
+
                                 clearAllPupilListeners();
 
                             } catch (downloadError) {
@@ -2919,11 +2922,11 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
                         }
                     };
 
-                   
+
                     pupilDownloadListener = handleDownload;
                     socket.ev.on('messages.upsert', handleDownload);
 
-                    
+
                     pupilDownloadTimeout = setTimeout(() => {
                         if (pupilDownloadListener) {
                             socket.ev.off('messages.upsert', pupilDownloadListener);
@@ -2947,11 +2950,11 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
             }
         };
 
-       
+
         pupilSelectionListener = handleSelection;
         socket.ev.on('messages.upsert', handleSelection);
 
-       
+
         pupilSelectionTimeout = setTimeout(() => {
             if (pupilSelectionListener) {
                 socket.ev.off('messages.upsert', pupilSelectionListener);
@@ -2963,7 +2966,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 
     } catch (error) {
         console.error('Movie command error:', error);
-        
+
         clearAllPupilListeners();
         await socket.sendMessage(sender, {
             image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE},
@@ -3099,7 +3102,7 @@ case 'dinkamovieslk': {
                 const isTv = mediaData.type === 'tv_series' || downloads[0].episode !== undefined;
                 let infoText = `🎬 *${mediaData.title}*\n\n`;
                 if (mediaData.genres?.length) infoText += `🎭 *Genres:* ${mediaData.genres.join(', ')}\n`;
-                
+
                 if (isTv) {
                     infoText += `📺 *Type:* TV Series / Animation\n`;
                     infoText += `🔢 *Total Episodes:* ${downloads.length}\n\n`;
@@ -3492,7 +3495,7 @@ case 'm': {
             break;
         }
 
-        let listText = `*❪ MULTI-SOURCE SEARCH RESULTS ❫*\n\n🎯 *Query:* _${query}_\n📊 *Results:* _	ext ${results.length} Items_\n\n*👇 SELECT A NUMBER 👇*\n\n`;
+        let listText = `*❪ MULTI-SOURCE SEARCH RESULTS ❫*\n\n🎯 *Query:* _${query}_\n📊 *Results:* _        ext ${results.length} Items_\n\n*👇 SELECT A NUMBER 👇*\n\n`;
 
         results.forEach((item, index) => {
             const siteTag = item.site.toUpperCase();
@@ -3502,7 +3505,7 @@ case 'm': {
         });
 
         listText += `${DEFAULT_FOOTER}`;
-        
+
         const sentMsg = await socket.sendMessage(sender, { text: listText }, { quoted: msg });
         const messageID = sentMsg.key.id;
 
@@ -3517,7 +3520,7 @@ case 'm': {
                 const choice = parseInt(messageType) - 1;
                 if (isNaN(choice) || choice < 0 || choice >= results.length) {
                     await socket.sendMessage(sender, {
-                        text: `*❪ INVALID ❫*\n\n⚠️ *Wrong Number!*\n🎯 *Range:* _01 - 	ext ${results.length}_\n📝 _Please reply with a valid number!_${DEFAULT_FOOTER}`
+                        text: `*❪ INVALID ❫*\n\n⚠️ *Wrong Number!*\n🎯 *Range:* _01 -         ext ${results.length}_\n📝 _Please reply with a valid number!_${DEFAULT_FOOTER}`
                     }, { quoted: replyMek });
                     return;
                 }
@@ -3525,7 +3528,7 @@ case 'm': {
                 const selectedItem = results[choice];
                 const site = selectedItem.site;
                 const isTvShow = selectedItem.type === 'tvshows';
-                
+
                 if (isTvShow) {
                     await socket.sendMessage(sender, { 
                         text: `*❪ FETCHING ❫*\n\n📺 *Fetching TV Series details from ${site.toUpperCase()}...*\n⚡ _Please wait..._`
@@ -3540,7 +3543,7 @@ case 'm': {
                         }
 
                         const tvInfo = tvShowData.data;
-                        
+
                         let tvDetailsText = `*❪ TV SERIES DETAILS ❫*\n\n📺 *${tvInfo.title}*\n⭐ 𝗜ᴍᴅ𝗯 ➜ ★ ${tvInfo.rating || 'N/A'}\n📅 𝗬ᴇᴀʀ ➜ ${tvInfo.year || 'N/A'}\n⏳ 𝗥ᴜɴᴛɪᴍᴇ ➜ ${tvInfo.duration || 'N/A'}\n🌍 🇨🇴🇺🇳🇹🇷🇾 ➜ ${tvInfo.country || 'N/A'}\n🎭 𝗚𝗲𝗻𝗴𝗿𝗲𝘀 ➜ ${tvInfo.genres ? tvInfo.genres.join(', ') : 'N/A'}\n📝 𝗦𝘁𝗼𝗿𝘆 ➜ ${tvInfo.story ? (tvInfo.story.length > 250 ? tvInfo.story.substring(0, 250) + '...' : tvInfo.story) : 'N/A'}\n🗿 𝗦𝗼𝘂𝗿𝗰𝗲 ➜ ${site.toUpperCase()}\n ${DEFAULT_FOOTER}`;
 
                         const posterUrl = tvInfo.image || selectedItem.image || DEFAULT_IMAGE;
@@ -3576,7 +3579,7 @@ case 'm': {
                                         link.link && !link.link.includes('t.me') && !link.link.includes('telegram')
                                     );
                                     const finalLinkObj = nonTelegramLinks[0] || epDlData.data[0];
-                                    
+
                                     let jpegThumbnail = undefined;
                                     try {
                                         const thumbRes = await axios.get(posterUrl, { responseType: 'arraybuffer' });
@@ -3590,34 +3593,34 @@ case 'm': {
                                         caption: `*📺 𝗦𝗛𝗔𝗚𝗚𝗬 𝗠𝗢𝗩𝗜𝗘 𝗕𝗢𝗧 📺*\\n\\n🎭 *Title:* ${tvInfo.title}\\n📌 *Episode:* ${episode.episode_name || 'Episode ' + (i+1)}\\n📊 *Quality:* Direct MP4\\n\\n${DEFAULT_FOOTER}`,
                                         jpegThumbnail: jpegThumbnail
                                     }, { quoted: replyMek });
-                                    
+
                                     successCount++;
                                 } else {
                                     failCount++;
                                 }
-                                
+
                                 await new Promise(resolve => setTimeout(resolve, 2500));
-                                
+
                             } catch (epError) {
                                 console.error(`Error downloading episode:`, epError);
                                 failCount++;
                             }
                         }
-                        
+
                         await socket.sendMessage(sender, { 
                             text: `*❪ SUMMARY ❫*\n\n🎉 *Download Complete!*\n\n🎬 *Series:* _${tvInfo.title}_\n✅ *Success:* _${successCount} Episodes_\n❌ *Failed:* _${failCount} Episodes_${DEFAULT_FOOTER}`
                         }, { quoted: replyMek });
 
                         socket.ev.off('messages.upsert', handleSelection);
-                        
+
                     } catch (tvShowError) {
                         console.error('TV Show error:', tvShowError);
                         await socket.sendMessage(sender, {
-                            text: `*❪ ERROR ❫*\n\n❌ *TV Details Error!*\n🚫 _	ext ${tvShowError.message}_${DEFAULT_FOOTER}`
+                            text: `*❪ ERROR ❫*\n\n❌ *TV Details Error!*\n🚫 _        ext ${tvShowError.message}_${DEFAULT_FOOTER}`
                         }, { quoted: replyMek });
                         socket.ev.off('messages.upsert', handleSelection);
                     }
-                    
+
                 } else {
                     // MOVIE FLOW
                     await socket.sendMessage(sender, { 
@@ -3625,7 +3628,7 @@ case 'm': {
                     }, { quoted: replyMek });
 
                     try {
-                        const detailsResponse = await axios.get(`${API_BASE}/api/v1/movie/${site}/infodl?q=	ext ${encodeURIComponent(selectedItem.link)}&api_key=${API_KEY}`);
+                        const detailsResponse = await axios.get(`${API_BASE}/api/v1/movie/${site}/infodl?q=        ext ${encodeURIComponent(selectedItem.link)}&api_key=${API_KEY}`);
                         const detailsData = detailsResponse.data;
 
                         if (!detailsData.status || !detailsData.data) {
@@ -3634,15 +3637,15 @@ case 'm': {
 
                         const movieInfo = detailsData.data;
                         const validDownloads = movieInfo.downloads || [];
-                        
+
                         if (validDownloads.length === 0) {
                             await socket.sendMessage(sender, {
                                 text: `*❪ NO DOWNLOADS ❫*\n\n⚠️ *No Downloads Found!*\n😞 _There are no downloads available for this movie!_${DEFAULT_FOOTER}`
                             }, { quoted: replyMek });
                             return;
                         }
-                        
-                        const movieDetailsText = `*❪ MOVIE DETAILS ❫*\n\n🎬 *${movieInfo.title}*\n⭐ 𝗜𝗠𝗗𝗕 ➜ ★ ${movieInfo.imdb || movieInfo.rating || 'N/A'}\n📅 𝗬𝗲𝗮𝗿 ➜ 	ext ${movieInfo.year || 'N/A'}\n⏳ 𝗗𝘂𝗿𝗮𝘁𝗶𝗼𝗻 ➜ ${movieInfo.duration || 'N/A'}\n🌍 🇨🇴🇺🇳🇹🇷🇾 ➜ ${movieInfo.country || 'N/A'}\n🎭 🇬𝗲𝗻𝗿𝗲𝘀 ➜ ${movieInfo.genres ? movieInfo.genres.join(', ') : 'N/A'}\n🏷️ 𝗟𝗮𝗻𝗴 ➜ ${movieInfo.language || movieInfo.tag || 'N/A'}\n🎬 𝗗𝗶𝗿𝗲𝗰𝘁𝗼𝗿 ➜ ${movieInfo.directors || movieInfo.director || 'N/A'}\n⭐ 𝗖𝗮𝘀𝘁 ➜ ${movieInfo.stars || 'N/A'}\n📝 𝗦𝘁𝗼𝗿𝘆 ➜ ${movieInfo.story ? (movieInfo.story.length > 250 ? movieInfo.story.substring(0, 250) + '...' : movieInfo.story) : 'N/A'}\n🗿 𝗦𝗼𝘂𝗿𝗰𝗲 ➜ ${site.toUpperCase()}\n ${DEFAULT_FOOTER}`;
+
+                        const movieDetailsText = `*❪ MOVIE DETAILS ❫*\n\n🎬 *${movieInfo.title}*\n⭐ 𝗜𝗠𝗗𝗕 ➜ ★ ${movieInfo.imdb || movieInfo.rating || 'N/A'}\n📅 𝗬𝗲𝗮𝗿 ➜         ext ${movieInfo.year || 'N/A'}\n⏳ 𝗗𝘂𝗿𝗮𝘁𝗶𝗼𝗻 ➜ ${movieInfo.duration || 'N/A'}\n🌍 🇨🇴🇺🇳🇹🇷🇾 ➜ ${movieInfo.country || 'N/A'}\n🎭 🇬𝗲𝗻𝗿𝗲𝘀 ➜ ${movieInfo.genres ? movieInfo.genres.join(', ') : 'N/A'}\n🏷️ 𝗟𝗮𝗻𝗴 ➜ ${movieInfo.language || movieInfo.tag || 'N/A'}\n🎬 𝗗𝗶𝗿𝗲𝗰𝘁𝗼𝗿 ➜ ${movieInfo.directors || movieInfo.director || 'N/A'}\n⭐ 𝗖𝗮𝘀𝘁 ➜ ${movieInfo.stars || 'N/A'}\n📝 𝗦𝘁𝗼𝗿𝘆 ➜ ${movieInfo.story ? (movieInfo.story.length > 250 ? movieInfo.story.substring(0, 250) + '...' : movieInfo.story) : 'N/A'}\n🗿 𝗦𝗼𝘂𝗿𝗰𝗲 ➜ ${site.toUpperCase()}\n ${DEFAULT_FOOTER}`;
 
                         const moviePosterUrl = movieInfo.image || selectedItem.image || DEFAULT_IMAGE;
                         await socket.sendMessage(sender, {
@@ -3676,7 +3679,7 @@ case 'm': {
                                 }
 
                                 const selectedDownload = validDownloads[dlChoice];
-                                
+
                                 await socket.sendMessage(sender, { 
                                     text: `*❪ SENDING MOVIE ❫*\n\n📥 *Sending:* _${movieInfo.title}_
 📊 *Quality:* _${selectedDownload.quality}_
@@ -3730,7 +3733,7 @@ case 'm': {
             text: `*❪ SYSTEM ERROR ❫*\n\n❌ *System Error!*\n🚫 _${error.message || 'Unknown error'}_\n\n🔄 _Please try again later..._${DEFAULT_FOOTER}`
         }, { quoted: msg });
     }
-    
+
     break;
 }    
 case 'anime':
@@ -3749,19 +3752,19 @@ case 'anime':
     const animehave = args.join(' ');
     await socket.sendMessage(sender, { text: '🎬 𝙎𝙚𝙖𝙧𝙘𝙝𝙞𝙣𝙜 𝙖𝙣𝙞𝙢𝙚 𝙤𝙣 𝘼𝙣𝙞𝙢𝙚𝙃𝙚𝙖𝙫𝙚𝙣...' });
 
-   
+
     await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 2000) + 2000));
 
-    
+
     let animeSelectionListener = null;
     let animeEpisodeListener = null;
     let animeSelectionTimeout = null;
     let animeEpisodeTimeout = null;
     let animeMasterTimeout = null;
     const clearAllAnimeListeners = () => {
-       
-        
-        
+
+
+
         if (animeSelectionListener) {
             socket.ev.off('messages.upsert', animeSelectionListener);
             animeSelectionListener = null;
@@ -3770,8 +3773,8 @@ case 'anime':
             clearTimeout(animeSelectionTimeout);
             animeSelectionTimeout = null;
         }
-        
-       
+
+
         if (animeEpisodeListener) {
             socket.ev.off('messages.upsert', animeEpisodeListener);
             animeEpisodeListener = null;
@@ -3780,8 +3783,8 @@ case 'anime':
             clearTimeout(animeEpisodeTimeout);
             animeEpisodeTimeout = null;
         }
-        
-       
+
+
         if (animeMasterTimeout) {
             clearTimeout(animeMasterTimeout);
             animeMasterTimeout = null;
@@ -3789,7 +3792,7 @@ case 'anime':
     };
 
     try {
-        
+
         const searchResponse = await axios.get(`${config.API_MAIN_URL}/animeheaven/search?query=${encodeURIComponent(animehave)}&api_key=${config.API_KEY}`);
         const searchData = searchResponse.data;
 
@@ -3805,7 +3808,7 @@ case 'anime':
             break;
         }
 
-     
+
         const uniqueResults = [];
         const seenIds = new Set();
         for (const item of searchData.data.results) {
@@ -3814,10 +3817,10 @@ case 'anime':
                 uniqueResults.push(item);
             }
         }
-        
+
         const animeResults = uniqueResults.slice(0, 25);
-        
-       
+
+
         let listText = `☘️ *𝗔𝗡𝗜𝗠𝗘 𝗛𝗘𝗔𝗩𝗘𝗡 𝗦𝗘𝗔𝗥𝗖𝗛 : _${animehave}_*
 ╭──────●➤
 *🔢 ʀᴇᴘʟʏ ʙᴇʟᴏᴡ ɴᴜᴍʙᴇʀ*
@@ -3827,9 +3830,9 @@ case 'anime':
         });
 
         listText += `╰──────────●➤\n${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
-        
+
         const bannerUrl = config.ANIME_H;
-        
+
         const sentMsg = await socket.sendMessage(sender, {
             image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE},
             caption: listText
@@ -3837,13 +3840,13 @@ case 'anime':
 
         const messageID = sentMsg.key.id;
 
-       
+
         animeMasterTimeout = setTimeout(() => {
             clearAllAnimeListeners();
             console.log('🧹 Anime master timeout - All listeners cleared after 3 minutes');
         }, 180000);
 
-        
+
         const handleAnimeSelection = async ({ messages: replyMessages }) => {
             const replyMek = replyMessages[0];
             if (!replyMek?.message) return;
@@ -3852,13 +3855,13 @@ case 'anime':
             const isReplyToSentMsg = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === messageID;
 
             if (isReplyToSentMsg && sender === replyMek.key.remoteJid) {
-                
+
                 if (animeSelectionTimeout) {
                     clearTimeout(animeSelectionTimeout);
                     animeSelectionTimeout = null;
                 }
-                
-               
+
+
                 animeSelectionTimeout = setTimeout(() => {
                     if (animeSelectionListener) {
                         socket.ev.off('messages.upsert', animeSelectionListener);
@@ -3882,16 +3885,16 @@ case 'anime':
                 }
 
                 const selectedItem = animeResults[choice];
-                
+
                 await socket.sendMessage(sender, { 
                     text: '📽️ 𝙁𝙚𝙩𝙘𝙝𝙞𝙣𝙜 𝙖𝙣𝙞𝙢𝙚 𝙙𝙚𝙩𝙖𝙞𝙡𝙨...' 
                 }, { quoted: replyMek });
 
-               
+
                 await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 2000) + 2000));
 
                 try {
-                    
+
                     const detailsResponse = await axios.get(`${config.API_MAIN_URL}/animeheaven/info?url=${encodeURIComponent(selectedItem.url)}&api_key=${config.API_KEY}`);
                     const detailsData = detailsResponse.data;
 
@@ -3900,7 +3903,7 @@ case 'anime':
                     }
 
                     const animeInfo = detailsData.anime;
-                    
+
                     if (!animeInfo.episodeList || animeInfo.episodeList.length === 0) {
                         await socket.sendMessage(sender, {
                             image:  { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
@@ -3912,23 +3915,23 @@ case 'anime':
                         }, { quoted: replyMek });
                         return;
                     }
-                    
-                 
+
+
                     const animeTitle = animeInfo.title || selectedItem.title;
                     const japaneseTitle = animeInfo.japaneseTitle || '';
                     const description = animeInfo.description || 'No description available.';
                     const fullDescription = description.length > 400 ? description.substring(0, 400) + '...' : description;
-                    
-                    
+
+
                     const episodes = animeInfo.episodeList.sort((a, b) => a.episode - b.episode);
                     const totalEpisodes = animeInfo.episodes || episodes.length;
-                    
-                  
+
+
                     const tags = animeInfo.tags?.slice(0, 6).join(', ') || 'Anime';
                     const year = animeInfo.year || 'N/A';
                     const score = animeInfo.score || 'N/A';
-                    
-                   
+
+
                     const detailsCaption = `☘️ *${animeTitle}*
                     
 ▫️🇯🇵 *𝗧ɪᴛʟᴇ ➟ ${japaneseTitle}*
@@ -3941,19 +3944,19 @@ case 'anime':
 > ${sessionConfig.MOVIE_FOOTER || config.MOVIE_FOOTER}`;
 
                     const posterUrl = animeInfo.poster || selectedItem.thumbnail || sessionConfig.BOT_IMAGE || config.BOT_IMAGE;
-                    
-                   
+
+
                     const infoMsg = await socket.sendMessage(sender, {
                         image: { url: posterUrl },
                         caption: detailsCaption
                     }, { quoted: replyMek });
 
-                  
+
                     await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 2000) + 2000));
 
-                
+
                     const displayEpisodes = episodes.slice(0, 999);
-                    
+
                     let episodeText = `*⬇️🍀 𝗘𝗣𝗜𝗦𝗢𝗗𝗘 𝗟𝗜𝗦𝗧 𝗢𝗣𝗧𝗜𝗢𝗡𝗦*
                     
 _*Reply with NUMBER (1-${displayEpisodes.length}) to download single episode*_
@@ -3974,34 +3977,34 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 
                     const episodeMsgID = episodeMsg.key.id;
 
-                   
+
                     const downloadSingleAnimeEpisode = async (episodeData, episodeMek) => {
                         try {
                             const episodeNumToShow = episodeData.episode || (episodes.findIndex(ep => ep === episodeData) + 1);
-                            
+
                             await socket.sendMessage(sender, { 
                                 text: `⏳ 𝙂𝙚𝙩𝙩𝙞𝙣𝙜 𝙙𝙤𝙬𝙣𝙡𝙤𝙖𝙙 𝙡𝙞𝙣𝙠 𝙛𝙤𝙧 𝙀𝙥𝙞𝙨𝙤𝙙𝙚 ${episodeNumToShow}...` 
                             }, { quoted: episodeMek });
 
-                         
+
                             await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 2000) + 2000));
-                            
+
                             const downloadResponse = await axios.get(`${config.API_MAIN_URL}/animeheaven/get-link?gate_id=${episodeData.gateId}&api_key=${config.API_KEY}`);
-                            
+
                             let videoUrl = null;
-                            
+
                             if (downloadResponse.data && downloadResponse.data.status === true) {
                                 videoUrl = downloadResponse.data.downloadLink;
                             }
-                            
+
                             if (!videoUrl && downloadResponse.data && downloadResponse.data.url) {
                                 videoUrl = downloadResponse.data.url;
                             }
-                            
+
                             if (!videoUrl) {
                                 throw new Error('Failed to get download URL from API response');
                             }
-                            
+
                             const videoConfig = {
                                 url: videoUrl,
                                 headers: {
@@ -4010,7 +4013,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
                             };
 
                             const fileName = `${animeTitle} - Episode ${episodeNumToShow}.mp4`;
-                            
+
                             await socket.sendMessage(sender, {
                                 document: { url: videoUrl, ...videoConfig },
                                 mimetype: 'video/mp4',
@@ -4023,11 +4026,11 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
                             }, { quoted: episodeMek });
 
                             await socket.sendMessage(sender, { react: { text: '✅', key: episodeMek.key } });
-                            
-                           
+
+
                             clearAllAnimeListeners();
                             return true;
-                            
+
                         } catch (error) {
                             console.error(`Download error for episode ${episodeData.episode}:`, error);
                             const episodeNumToShow = episodeData.episode || (episodes.findIndex(ep => ep === episodeData) + 1);
@@ -4043,7 +4046,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
                         }
                     };
 
-                  
+
                     const handleAnimeEpisode = async ({ messages: episodeMessages }) => {
                         const episodeMek = episodeMessages[0];
                         if (!episodeMek?.message) return;
@@ -4052,13 +4055,13 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
                         const isReplyToEpisodeMsg = episodeMek.message.extendedTextMessage?.contextInfo?.stanzaId === episodeMsgID;
 
                         if (isReplyToEpisodeMsg && sender === episodeMek.key.remoteJid) {
-                           
+
                             if (animeEpisodeTimeout) {
                                 clearTimeout(animeEpisodeTimeout);
                                 animeEpisodeTimeout = null;
                             }
-                            
-                            
+
+
                             animeEpisodeTimeout = setTimeout(() => {
                                 if (animeEpisodeListener) {
                                     socket.ev.off('messages.upsert', animeEpisodeListener);
@@ -4068,9 +4071,9 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
                                 animeEpisodeTimeout = null;
                             }, 120000);
 
-                            
+
                             const selectedIndex = parseInt(userInput) - 1;
-                            
+
                             if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= episodes.length) {
                                 await socket.sendMessage(sender, {
                                     image:  { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
@@ -4082,9 +4085,9 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
                                 }, { quoted: episodeMek });
                                 return;
                             }
-                            
+
                             const episodeData = episodes[selectedIndex];
-                            
+
                             if (!episodeData) {
                                 await socket.sendMessage(sender, {
                                     image:  { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
@@ -4103,7 +4106,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
                         }
                     };
 
-                 
+
                     animeEpisodeListener = handleAnimeEpisode;
                     socket.ev.on('messages.upsert', handleAnimeEpisode);
 
@@ -4111,7 +4114,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
                         if (animeEpisodeListener) {
                             socket.ev.off('messages.upsert', animeEpisodeListener);
                             animeEpisodeListener = null;
-                           
+
                         }
                         animeEpisodeTimeout = null;
                     }, 120000);
@@ -4130,7 +4133,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
             }
         };
 
-       
+
         animeSelectionListener = handleAnimeSelection;
         socket.ev.on('messages.upsert', handleAnimeSelection);
 
@@ -4145,7 +4148,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 
     } catch (error) {
         console.error('Anime command error:', error);
-       
+
         clearAllAnimeListeners();
         await socket.sendMessage(sender, {
             image:  { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
@@ -4157,7 +4160,7 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
         }, { quoted: msg });
     }
     break;
-                                        
+
      // ==========================================
 
 case 'schedule':
@@ -4264,7 +4267,7 @@ case 'codex': {
                 {},
                 { logger: console }
             );
-            
+
             const mimeType = isDirectImage ? msg.message.imageMessage.mimetype : quotedMessage.imageMessage.mimetype;
             imageUrl = `data:${mimeType};base64,${stream.toString('base64')}`;
         }
@@ -4656,7 +4659,7 @@ case 'news':
                     txt += "*" + (index + 1) + ".* " + game.title + "\n🔗 " + game.link + "\n\n";
                 });
                 txt += "*සම්පූර්ණ විස්තර බැලීමට .fginfo [game name] භාවිතා කරන්න.*";
-                
+
                 await sock.sendMessage(from, { text: txt }, { quoted: mek });
             }
         } catch (e) {
@@ -4851,7 +4854,7 @@ async function setupMessageHandlers(socket) {
             try {
                 await socket.sendPresenceUpdate('composing', msg.key.remoteJid);
             } catch (error) {
-                
+
             }
         }
 
@@ -4859,7 +4862,7 @@ async function setupMessageHandlers(socket) {
             try {
                 await socket.sendPresenceUpdate('recording', msg.key.remoteJid);
             } catch (error) {
-               
+
             }
         }
 
@@ -4877,7 +4880,7 @@ async function setupMessageHandlers(socket) {
                 try {
                     await socket.sendMessage(msg.key.remoteJid, { react: { text: randomReaction, key: msg.key } });
                 } catch (error) {
-                    
+
                 }
             }
         }
@@ -4886,7 +4889,7 @@ async function setupMessageHandlers(socket) {
     socket.ev.on('messages.upsert', messageHandler);
     return () => {
         socket.ev.off('messages.upsert', messageHandler);
-       
+
     };
 }
 
@@ -4910,7 +4913,7 @@ async function saveSession(number, creds) {
             fs.writeFileSync(NUMBER_LIST_PATH, JSON.stringify(numbers, null, 2));
         }
     } catch (error) {
-      
+
     }
 }
 
@@ -4945,7 +4948,7 @@ async function deleteSession(number) {
             fs.writeFileSync(NUMBER_LIST_PATH, JSON.stringify(numbers, null, 2));
         }
     } catch (error) {
-        
+
     }
 }
 
