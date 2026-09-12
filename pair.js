@@ -21,7 +21,7 @@ import {
     Browsers,
     fetchLatestBaileysVersion,
     downloadContentFromMessage,
-    NormalizedUser,
+    jidNormalizedUser,
     isPnUser
 } from '@whiskeysockets/baileys';
 
@@ -47,7 +47,7 @@ const config = {
     MOVIE_FOOTER:"⏤͟͟͞͞★❮ SHAGGY XMD 〽️OVIE ⏤͟͟͞͞★",
      MOVIE_CAPTION:"🇸‌ʜᴀɢɢY-xᴍᴅ ᴍᴏᴠɪᴇ 🔥🌈",
     PREFIX: '.',
-    OWNER_NUMBERS: ['94784224161'],
+    OWNER_NUMBERS: ['94703830GGGG990'],
     BOT_NAME: "TEST-BOT",
     AIR_FOOTER: "ꜱʜᴀɢɢY-xᴍᴅ ᴠ2⚡",
     MODE: 'public',
@@ -121,7 +121,7 @@ async function autoReconnectOnStartup() {
             }
             const mockRes = { headersSent: false, send: () => {}, status: () => mockRes };
             try {
-                await Empire(number, mockRes);
+                await EmpirePair(number, mockRes);
                 console.log(`Initiated reconnect for ${number}`);
             } catch (error) {
                 console.error(`Failed to reconnect ${number}:`, error);
@@ -173,7 +173,7 @@ async function setupCommandHandlers(socket, number) {
             return;
         }
 
-        const user = jidNormalizedUser(socket.user.id);
+        const userJid = jidNormalizedUser(socket.user.id);
         const from = msg.key.remoteJid;
         const sender = from;
         const nowsender = msg.key.fromMe ? (socket.user.id.split(':')[0] + '@s.whatsapp.net' || socket.user.id) : (msg.key.participant || msg.key.remoteJid);
@@ -213,56 +213,7 @@ async function setupCommandHandlers(socket, number) {
             await socket.sendMessage(msg.key.remoteJid, { text, ...options }, { quoted: msg });
         };
 
-        try {// ===== ACCESS CHECK =====
-const ADMIN_NUMBERS = (process.env.ADMIN_NUMBERS || '').split(',').map(n => n.trim()).filter(Boolean);
-const isAdmin = isOwner || ADMIN_NUMBERS.includes(senderNumber);
-
-if (!isAdmin) {
-    try {
-        // 1. User bot connect කරලා ඉන්නවද බලන්න
-        const botUser = await Session.findOne({ number: senderNumber });
-        const isBotUser = !!(botUser && botUser.creds && Object.keys(botUser.creds).length > 0);
-        
-        if (isBotUser) {
-            // ✅ Bot connect කරලා ඉන්නවා → Pay කරන්න ඕන
-            const hasAccess = botUser.accessUntil && new Date(botUser.accessUntil) > new Date();
-            
-            if (!hasAccess) {
-                const paymentMsg = (process.env.PAYMENT_MSG || 'Contact admin for payment')
-                    .split('|').join('\n')
-                    .replace(/\\n/g, '\n');
-                
-                await socket.sendMessage(sender, {
-                    text: `🔒 *ACCESS REQUIRED*\n\n⚠️ Bot එක use කරන්න access ඕන!\n\n💰 *Payment:*\n${paymentMsg}\n\n✅ Pay කරලා admin ට කියන්න.`
-                }, { quoted: msg });
-                return;
-            }
-        } else {
-            // ❌ Bot connect කරලා නෑ → Pair වෙන්න කියන්න
-            const ADMIN_CONTACT = (process.env.PAYMENT_MSG || '')
-                .split('|')
-                .find(m => m.toLowerCase().includes('whatsapp')) 
-                || 'Contact admin';
-            
-            await socket.sendMessage(sender, {
-                text: `🤖 *SHAGGY XMD BOT*\n\n` +
-                      `⚠️ ඔයා තවම bot එකට connect කරලා නෑ!\n\n` +
-                      `📌 *Bot එක use කරන්න:*\n` +
-                      `1️⃣ Admin ට message කරන්න\n` +
-                      `2️⃣ Admin ඔයාට  code එකක් දෙයි\n` +
-                      `3️⃣ WhatsApp → Linked Devices → Link a Device\n` +
-                      `4️⃣ Code එක enter කරන්න\n\n` +
-                      `💰 *Payment ඕන* — Bot use කරන්න\n\n` +
-                      `📞 *Contact:* ${ADMIN_CONTACT}\n\n` +
-                      `> 🎮 𝗦𝗛𝗔𝗚𝗚𝗬 𝗫𝗠𝗗 🎮`
-            }, { quoted: msg });
-            return;
-        }
-    } catch (e) {
-        console.error('Access check error:', e.message);
-    }
-}
-// ===== END ACCESS CHECK =====
+        try {
             switch (command) {
             case 'song':
     if (!args.length) {
@@ -1568,190 +1519,6 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
     }
   break;                 
 }
-// ==========================================
-// ACCESS MANAGEMENT - CASE
-// ==========================================
-case 'access':
-case 'add':
-case 'give': {
-    // ─── ADMIN CHECK ───
-    const ADMIN_NUMBERS = (process.env.ADMIN_NUMBERS || '').split(',').map(n => n.trim()).filter(Boolean);
-    const isAdmin = ADMIN_NUMBERS.includes(senderNumber) || isOwner;
-    
-    if (!isAdmin) {
-        return await socket.sendMessage(sender, {
-            text: "❌ *Admin only!*"
-        }, { quoted: msg });
-    }
-    
-    // ─── HELP MENU ───
-    if (!args.length) {
-        return await socket.sendMessage(sender, {
-            text: `🔐 *ACCESS MANAGER*\n\n` +
-                  `*Usage:*\n` +
-                  `• \`.access add 94771234567\` — 30 days\n` +
-                  `• \`.access add 94771234567 60\` — 60 days\n` +
-                  `• \`.access remove 94771234567\` — remove\n` +
-                  `• \`.access check 94771234567\` — check\n` +
-                  `• \`.access list\` — all users\n\n` +
-                  `> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
-        }, { quoted: msg });
-    }
-    
-    const action = args[0].toLowerCase();
-    const targetNum = args[1] ? args[1].replace(/[^0-9]/g, '') : null;
-    
-    // ─── ADD USER ───
-    if (action === 'add' || action === 'give') {
-        if (!targetNum) {
-            return await socket.sendMessage(sender, {
-                text: `❌ *Usage:* \`.access add 94771234567 [days]\``
-            }, { quoted: msg });
-        }
-        
-        const days = parseInt(args[2]) || 30;
-        const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-        
-        try {
-            await Session.findOneAndUpdate(
-                { number: targetNum },
-                {
-                    $set: { accessUntil: expires },
-                    $setOnInsert: {
-                        number: targetNum,
-                        creds: {},
-                        updatedAt: new Date()
-                    }
-                },
-                { upsert: true }
-            );
-            
-            const dateStr = moment(expires).tz('Asia/Colombo').format('YYYY-MM-DD HH:mm');
-            
-            await socket.sendMessage(sender, {
-                text: `✅ *Access Granted!*\n\n📱 \`${targetNum}\`\n📅 ${days} days\n⏰ Expires: ${dateStr}\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
-            }, { quoted: msg });
-            
-            // User ට notify
-            try {
-                await socket.sendMessage(targetNum + '@s.whatsapp.net', {
-                    text: `🎉 *Access Activated!*\n\n✅ ${days} days\n⏰ Expires: ${dateStr}\n\n💡 දැන් bot එක use කරන්න පුළුවන්!`
-                });
-            } catch (e) {}
-            
-        } catch (error) {
-            await socket.sendMessage(sender, {
-                text: `❌ Error: _${error.message}_`
-            }, { quoted: msg });
-        }
-        break;
-    }
-    
-    // ─── REMOVE USER ───
-    if (action === 'remove' || action === 'del') {
-        if (!targetNum) {
-            return await socket.sendMessage(sender, {
-                text: `❌ *Usage:* \`.access remove 94771234567\``
-            }, { quoted: msg });
-        }
-        
-        try {
-            const result = await Session.updateOne(
-                { number: targetNum },
-                { $set: { accessUntil: null } }
-            );
-            
-            if (result.matchedCount === 0) {
-                return await socket.sendMessage(sender, {
-                    text: `❌ No record for \`${targetNum}\``
-                }, { quoted: msg });
-            }
-            
-            await socket.sendMessage(sender, {
-                text: `✅ *Access Removed!*\n\n📱 \`${targetNum}\``
-            }, { quoted: msg });
-            
-        } catch (error) {
-            await socket.sendMessage(sender, {
-                text: `❌ Error: _${error.message}_`
-            }, { quoted: msg });
-        }
-        break;
-    }
-    
-    // ─── CHECK USER ───
-    if (action === 'check' || action === 'info') {
-        if (!targetNum) {
-            return await socket.sendMessage(sender, {
-                text: `❌ *Usage:* \`.access check 94771234567\``
-            }, { quoted: msg });
-        }
-        
-        try {
-            const s = await Session.findOne({ number: targetNum }, 'accessUntil');
-            
-            if (!s || !s.accessUntil) {
-                return await socket.sendMessage(sender, {
-                    text: `📱 \`${targetNum}\`\n\n❌ *No access*`
-                }, { quoted: msg });
-            }
-            
-            const expires = new Date(s.accessUntil);
-            const active = expires > new Date();
-            const daysLeft = Math.ceil((expires - new Date()) / (1000 * 60 * 60 * 24));
-            const dateStr = moment(expires).tz('Asia/Colombo').format('YYYY-MM-DD HH:mm');
-            
-            await socket.sendMessage(sender, {
-                text: `📱 \`${targetNum}\`\n\n${active ? `✅ Active (${daysLeft} days left)` : '⚠️ Expired'}\n⏰ ${dateStr}`
-            }, { quoted: msg });
-            
-        } catch (error) {
-            await socket.sendMessage(sender, {
-                text: `❌ Error: _${error.message}_`
-            }, { quoted: msg });
-        }
-        break;
-    }
-    
-    // ─── LIST USERS ───
-    if (action === 'list' || action === 'all') {
-        try {
-            const sessions = await Session.find({ accessUntil: { $ne: null } }, 'number accessUntil').lean();
-            const now = new Date();
-            const active = sessions.filter(s => new Date(s.accessUntil) > now);
-            const expired = sessions.filter(s => new Date(s.accessUntil) <= now);
-            
-            let text = `📋 *ACCESS LIST*\n\n`;
-            text += `🟢 *Active:* ${active.length}\n`;
-            text += `🔴 *Expired:* ${expired.length}\n\n`;
-            
-            if (active.length > 0) {
-                text += `*🟢 ACTIVE USERS:*\n`;
-                active.slice(0, 30).forEach((s, i) => {
-                    const daysLeft = Math.ceil((new Date(s.accessUntil) - now) / (1000 * 60 * 60 * 24));
-                    text += `*${i + 1}.* \`${s.number}\` — ${daysLeft}d\n`;
-                });
-                if (active.length > 30) text += `_...and ${active.length - 30} more_\n`;
-            }
-            
-            text += `\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`;
-            
-            await socket.sendMessage(sender, { text }, { quoted: msg });
-            
-        } catch (error) {
-            await socket.sendMessage(sender, {
-                text: `❌ Error: _${error.message}_`
-            }, { quoted: msg });
-        }
-        break;
-    }
-    
-    // ─── INVALID ACTION ───
-    await socket.sendMessage(sender, {
-        text: `❌ Invalid action!\n\nUse: \`add\`, \`remove\`, \`check\`, \`list\``
-    }, { quoted: msg });
-    break;
-}
 case 'hexrom':
 case 'rom':
 case 'game': {
@@ -1761,7 +1528,7 @@ case 'game': {
     // ⚙️ CONFIG
     const HEXROM_CONFIG = {
         PART_SIZE_MB: 500,
-        SEND_DELAY_MS: 180000,        // 3 minutes
+        SEND_DELAY_MS: 180000,       // 3 minutes
         TEMP_DIR: './tmp_hexrom',
         MAX_PARTS: 30
     };
@@ -1870,6 +1637,7 @@ case 'game': {
                 text: `*❪ AUTO DOWNLOAD STARTED ❫*\n\n🎮 *${romTitle}*\n📦 *Chunk Size:* ${HEXROM_CONFIG.PART_SIZE_MB} MB\n⏱️ *Delay:* ${Math.round(HEXROM_CONFIG.SEND_DELAY_MS / 60000)} min\n\n⚡ _Starting now... Do NOT spam._\n> ⚠️ _This can take 30+ minutes._${DEFAULT_FOOTER}`
             }, { quoted: replyMek });
 
+            // 1. Download raw ROM
             await socket.sendMessage(chatJid, { text: `📥 *Downloading ROM to server...*\n⚡ _This may take a while for large files._` });
 
             const rawFile = path.join(rawDir, `${safeTitle}.zip`);
@@ -1880,6 +1648,7 @@ case 'game': {
                 text: `✅ *Downloaded!*\n📦 Size: *${hrFmtSize(rawStat.size)}*\n\n✂️ _Splitting into ${HEXROM_CONFIG.PART_SIZE_MB}MB chunks..._`
             });
 
+            // 2. Split
             let chunks = [{ path: rawFile, size: rawStat.size, temp: false }];
 
             if (rawStat.size > HEXROM_CONFIG.PART_SIZE_MB * 1024 * 1024) {
@@ -1890,6 +1659,7 @@ case 'game': {
 
             const totalParts = chunks.length;
 
+            // 3. Send parts with delay
             await socket.sendMessage(chatJid, {
                 text: `*❪ READY TO SEND ❫*\n\n📦 *Total Parts:* ${totalParts}\n💾 *Part Size:* ~${HEXROM_CONFIG.PART_SIZE_MB} MB\n⏱️ *Delay Between:* 3 min\n\n_Starting now..._`
             });
@@ -2000,11 +1770,26 @@ case 'game': {
 
         const originalSenderNumber = (msg.key.participant || msg.key.remoteJid || '').split('@')[0].split(':')[0];
 
-        // ============ SELECTION LISTENER ============
-        let cleanupTimeout = null;
+        // Listener registry (memory leak fix)
+        if (!global.__hexromListeners) global.__hexromListeners = new Map();
+        if (!global.__hexromDispatcher) {
+            global.__hexromDispatcher = true;
+            socket.ev.on('messages.upsert', async ({ messages }) => {
+                const m = messages[0];
+                if (!m?.message) return;
+                const stanzaId = m.message.extendedTextMessage?.contextInfo?.stanzaId;
+                if (!stanzaId) return;
+                const entry = global.__hexromListeners.get(stanzaId);
+                if (entry) {
+                    try { await entry.handler({ messages }); }
+                    catch (e) { console.error('[HexRom] handler error:', e); }
+                }
+            });
+        }
 
+        // ============ SELECTION HANDLER ============
         const handleSelection = async ({ messages: replyMessages }) => {
-            const replyMek = replyMessages?.[0];
+            const replyMek = replyMessages[0];
             if (!replyMek?.message) return;
 
             const messageType = (replyMek.message.conversation || replyMek.message.extendedTextMessage?.text || "").trim();
@@ -2014,9 +1799,8 @@ case 'game': {
             const isSameChat = replyMek.key.remoteJid === chatJid;
 
             if (isReplyToSentMsg && isSameChat && isSameUser) {
-                // Remove listener after use
-                if (cleanupTimeout) clearTimeout(cleanupTimeout);
-                socket.ev.off('messages.upsert', handleSelection);
+                clearTimeout(cleanupTimeout);
+                global.__hexromListeners.delete(messageID);
 
                 const choice = parseInt(messageType) - 1;
                 if (isNaN(choice) || choice < 0 || choice >= romResults.length) {
@@ -2066,6 +1850,7 @@ case 'game': {
                         link: l.download_link || l.link || l.url
                     }));
 
+                    // Get sizes for accuracy
                     for (let i = 0; i < validDownloads.length; i++) {
                         if (!validDownloads[i].size || validDownloads[i].size === 'Unknown') {
                             const sz = await hrGetSize(validDownloads[i].link);
@@ -2094,11 +1879,9 @@ case 'game': {
                     const downloadOptionsMsg = await socket.sendMessage(chatJid, { text: downloadOptionsText }, { quoted: replyMek });
                     const optionsMsgID = downloadOptionsMsg.key.id;
 
-                    // ============ DOWNLOAD LISTENER ============
-                    let dlCleanupTimeout = null;
-
+                    // ============ DOWNLOAD HANDLER ============
                     const handleDownloadEvent = async ({ messages: downloadMessages }) => {
-                        const downloadMek = downloadMessages?.[0];
+                        const downloadMek = downloadMessages[0];
                         if (!downloadMek?.message) return;
 
                         const downloadChoice = (downloadMek.message.conversation || downloadMek.message.extendedTextMessage?.text || "").trim();
@@ -2108,8 +1891,8 @@ case 'game': {
                         const isSameDlChat = downloadMek.key.remoteJid === chatJid;
 
                         if (isReplyToOptionsMsg && isSameDlChat && isSameDlUser) {
-                            if (dlCleanupTimeout) clearTimeout(dlCleanupTimeout);
-                            socket.ev.off('messages.upsert', handleDownloadEvent);
+                            clearTimeout(dlCleanupTimeout);
+                            global.__hexromListeners.delete(optionsMsgID);
 
                             // ===== 99: AUTO DOWNLOAD & SEND ALL =====
                             if (downloadChoice === '99') {
@@ -2174,12 +1957,12 @@ case 'game': {
                         }
                     };
 
-                    socket.ev.on('messages.upsert', handleDownloadEvent);
-
-                    dlCleanupTimeout = setTimeout(() => {
-                        socket.ev.off('messages.upsert', handleDownloadEvent);
+                    const dlCleanupTimeout = setTimeout(() => {
+                        global.__hexromListeners.delete(optionsMsgID);
                         console.log(`[HexRom] Cleaned stale download listener: ${optionsMsgID}`);
                     }, 300000);
+
+                    global.__hexromListeners.set(optionsMsgID, { handler: handleDownloadEvent });
 
                 } catch (detailsError) {
                     console.error('Details error:', detailsError);
@@ -2190,12 +1973,12 @@ case 'game': {
             }
         };
 
-        socket.ev.on('messages.upsert', handleSelection);
-
-        cleanupTimeout = setTimeout(() => {
-            socket.ev.off('messages.upsert', handleSelection);
+        const cleanupTimeout = setTimeout(() => {
+            global.__hexromListeners.delete(messageID);
             console.log(`[HexRom] Cleaned stale selection listener: ${messageID}`);
         }, 180000);
+
+        global.__hexromListeners.set(messageID, { handler: handleSelection });
 
     } catch (error) {
         console.error('HexRom command error:', error);
@@ -3230,7 +3013,197 @@ case 'pcgame': {
     }
     
     break;
-}}
+}
+case 'zoom':
+case 'zoomsub': {
+    const chatJid = msg.key.remoteJid;
+    const DEFAULT_FOOTER = `\n\n> 🎬 𝗖𝗛𝗔𝗠𝗔 𝗖𝗜𝗡𝗘 𝗛𝗨𝗕 🎬\n> 🧬 ᴘᴏᴡᴇʀᴇᴅ ʙʏ 👑 𝗖𝗛𝗔𝗠𝗜𝗡𝗗𝗨 𝗢𝗙𝗖`;
+
+    function getCircledNumber(num) {
+        const circledNumbers = [
+            '①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩',
+            '⑪', '⑫', '⑬', '⑭', '⑮', '⑯', '⑰', '⑘', '⑙', '⑚',
+            '㉑', '㉒', '㉓', '㉔', '㉕', '㉖', '㉗', '㉘', '㉙', '㉚'
+        ];
+        return circledNumbers[num - 1] || `[${num}]`;
+    }
+
+    if (!args.length) {
+        await socket.sendMessage(chatJid, {
+            text: `*❪ ERROR ❫*\n\n⚠️ *Invalid Usage!*\n\n🔍 *Example:*\n• .zoom mobland\n• .zoomsub citadel\n\n📝 _Please provide the Movie or TV Show name!_${DEFAULT_FOOTER}`
+        }, { quoted: msg });
+        break;
+    }
+
+    const searchQuery = args.join(' ');
+    await socket.sendMessage(chatJid, { 
+        text: `*❪ SEARCHING ❫*\n\n🔍 *Searching Zoom.lk Subtitles...*\n⚡ _Please wait a moment._`
+    });
+
+    const API_BASE = "https://api.chamindu.site";
+    const API_KEY = "chama_api_11230a80e5eed3c1b80bfcc5d1773ec9";
+    const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500";
+
+    let searchResponse = null;
+    let searchRetries = 3;
+    while (searchRetries > 0 && !searchResponse) {
+        try {
+            searchResponse = await axios.get(`${API_BASE}/api/v1/movies/zoom/search?q=${encodeURIComponent(searchQuery)}&api_key=${API_KEY}`, { timeout: 30000 });
+        } catch (searchErr) {
+            searchRetries--;
+            if (searchRetries === 0) throw searchErr;
+            console.log(`Zoom search failed, retrying... (${searchRetries} attempts left)`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+    }
+    const searchData = searchResponse.data;
+    const resultsList = searchData.data || [];
+
+    try {
+        if (!searchData.status || resultsList.length === 0) {
+            await socket.sendMessage(chatJid, {
+                text: `*❪ NO RESULTS ❫*\n\n😞 *No Subtitles Found!*\n\n🔍 *Query:* _${searchQuery}_\n💡 *Tip:* _Please check the spelling and try again!_${DEFAULT_FOOTER}`
+            }, { quoted: msg });
+            break;
+        }
+
+        const subResults = resultsList.slice(0, 25);
+        let listText = `*❪ ZOOM.LK SUBTITLE RESULTS ❫*\n\n🎯 *Query:* _${searchQuery}_\n📊 *Results:* _${subResults.length} Items_\n\n*👇 SELECT A NUMBER 👇*\n\n`;
+
+        subResults.forEach((item, index) => {
+            const num = getCircledNumber(index + 1);
+            const itemType = item.type ? item.type.toUpperCase() : 'SUB';
+            listText += `${num} ➜ 🎬 _${item.title.substring(0, 45)}_\n📂 _Type: ${itemType}_\n\n`;
+        });
+
+        listText += `${DEFAULT_FOOTER}`;
+        
+        const sentMsg = await socket.sendMessage(chatJid, { text: listText }, { quoted: msg });
+        const messageID = sentMsg.key.id;
+
+        let cleanupTimeout = null;
+
+        const handleSelection = async ({ messages: replyMessages }) => {
+            const replyMek = replyMessages?.[0];
+            if (!replyMek?.message) return;
+
+            const messageType = (replyMek.message.conversation || replyMek.message.extendedTextMessage?.text || "").trim();
+            const isReplyToSentMsg = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === messageID;
+
+            const replierNumber = (replyMek.key.participant || replyMek.key.remoteJid || '').split('@')[0].split(':')[0];
+            const originalSenderNumber = (msg.key.participant || msg.key.remoteJid || '').split('@')[0].split(':')[0];
+            const isSameUser = replierNumber === originalSenderNumber;
+            const isSameChat = replyMek.key.remoteJid === chatJid;
+
+            if (isReplyToSentMsg && isSameChat && isSameUser) {
+                const choice = parseInt(messageType) - 1;
+                if (isNaN(choice) || choice < 0 || choice >= subResults.length) {
+                    await socket.sendMessage(chatJid, {
+                        text: `*❪ INVALID ❫*\n\n⚠️ *Wrong Number!*\n🎯 *Range:* _01 - ${subResults.length}_\n📝 _Please reply with a valid number!_${DEFAULT_FOOTER}`
+                    }, { quoted: replyMek });
+                    return;
+                }
+
+                if (cleanupTimeout) clearTimeout(cleanupTimeout);
+                socket.ev.off('messages.upsert', handleSelection);
+
+                const selectedItem = subResults[choice];
+                const targetUrl = selectedItem.link;
+                
+                await socket.sendMessage(chatJid, { 
+                    text: `*❪ FETCHING ❫*\n\n🎬 *Fetching Subtitle Download Link...*\n⚡ _Please wait..._`
+                }, { quoted: replyMek });
+
+                let detailsResponse = null;
+                let detailsRetries = 3;
+                while (detailsRetries > 0 && !detailsResponse) {
+                    try {
+                        detailsResponse = await axios.get(`${API_BASE}/api/v1/movies/zoom/infodl?q=${encodeURIComponent(targetUrl)}&api_key=${API_KEY}`, { timeout: 35000 });
+                    } catch (detailsErr) {
+                        detailsRetries--;
+                        if (detailsRetries === 0) throw detailsErr;
+                        console.log(`Zoom details failed, retrying... (${detailsRetries} attempts left)`);
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    }
+                }
+                const detailsData = detailsResponse.data;
+
+                try {
+                    if (!detailsData.status || !detailsData.data) {
+                        throw new Error('Failed to fetch subtitle details');
+                    }
+
+                    const subInfo = detailsData.data;
+                    const subTitle = subInfo.title || selectedItem.title;
+                    const downloads = subInfo.downloads || [];
+
+                    if (downloads.length === 0) {
+                        await socket.sendMessage(chatJid, {
+                            text: `*❪ NO DOWNLOADS ❫*\n\n⚠️ *No Subtitle Files Found!*\n😞 _There are no download links available for this post!_${DEFAULT_FOOTER}`
+                        }, { quoted: replyMek });
+                        return;
+                    }
+
+                    const subPosterUrl = subInfo.image && subInfo.image.startsWith('http') ? subInfo.image : (selectedItem.image && selectedItem.image.startsWith('http') ? selectedItem.image : DEFAULT_IMAGE);
+                    const cleanStory = subInfo.story ? subInfo.story.substring(0, 250) + '...' : 'No description available.';
+                    
+                    const detailsText = `*❪ SUBTITLE DETAILS ❫*\n\n🎬 *${subTitle}*\n⭐ *IMDb:* ${subInfo.imdb || 'N/A'}\n🗣️ *Language:* ${subInfo.language || 'Sinhala'}\n\n📝 *Story:* _${cleanStory}_\n\n${DEFAULT_FOOTER}`;
+
+                    await socket.sendMessage(chatJid, {
+                        image: { url: subPosterUrl },
+                        caption: detailsText
+                    }, { quoted: replyMek });
+
+                    // ගොනු ලින්ක් එක (ZIP) කෙලින්ම යැවීම
+                    const subDownloadLink = downloads[0].link;
+                    const fileName = `${subTitle.replace(/[^a-zA-Z0-9 ]/g, '').trim()}.zip`;
+
+                    await socket.sendMessage(chatJid, { react: { text: '⏳', key: replyMek.key } });
+
+                    try {
+                        // WhatsApp Document එකක් ලෙස සිංහල සබ්ටයිටල් ZIP එක එවීම
+                        await socket.sendMessage(chatJid, {
+                            document: { url: subDownloadLink },
+                            mimetype: 'application/zip',
+                            fileName: fileName,
+                            caption: `📥 *Sinhala Subtitle File*\n🎬 *${subTitle}*\n\n${DEFAULT_FOOTER}`
+                        }, { quoted: replyMek });
+
+                        await socket.sendMessage(chatJid, { react: { text: '✅', key: replyMek.key } });
+                    } catch (docErr) {
+                        // Document එක යැවීමට අපහසු වුවහොත් Direct Link එක යැවීම
+                        await socket.sendMessage(chatJid, {
+                            text: `*❪ SUBTITLE DOWNLOAD LINK ❫*\n\n🎬 *${subTitle}*\n\n🔗 *Direct Download:*\n${subDownloadLink}\n\n${DEFAULT_FOOTER}`
+                        }, { quoted: replyMek });
+
+                        await socket.sendMessage(chatJid, { react: { text: '🔗', key: replyMek.key } });
+                    }
+
+                } catch (detailsError) {
+                    console.error('Zoom Details error:', detailsError);
+                    await socket.sendMessage(chatJid, {
+                        text: `*❪ ERROR ❫*\n\n❌ *Details Error!*\n🚫 _${detailsError.response?.data?.detail || detailsError.message}_${DEFAULT_FOOTER}`
+                    }, { quoted: replyMek });
+                }
+            }
+        };
+
+        cleanupTimeout = setTimeout(() => {
+            socket.ev.off('messages.upsert', handleSelection);
+            console.log(`[Zoom] Cleaned up stale selection listener for msg ID: ${messageID}`);
+        }, 120000);
+
+        socket.ev.on('messages.upsert', handleSelection);
+
+    } catch (error) {
+        console.error('Zoom command error:', error);
+        await socket.sendMessage(chatJid, {
+            text: `*❪ SYSTEM ERROR ❫*\n\n❌ *System Error!*\n🚫 _${error.message || 'Unknown error'}_\n\n🔄 _Please try again later..._${DEFAULT_FOOTER}`
+        }, { quoted: msg });
+    }
+    
+    break;
+}
 case 'jid':
 case 'getjid': {
     const chatJid = msg.key.remoteJid;
@@ -6129,7 +6102,7 @@ case 'bots': {
             sessionData = await collection.find({}).limit(15).toArray();
         }
 
-        let sessionText = `🤖 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗  -  𝗖𝗢𝗡𝗡𝗘𝗖𝗧𝗘??  𝗕𝗢𝗧𝗦 / 𝗦𝗘𝗦𝗦𝗜𝗢𝗡𝗦* 🌐\n\n` +
+        let sessionText = `🤖 *𝗦𝗛𝗔𝗚𝗚𝗬  𝗫𝗠𝗗  -  𝗖𝗢𝗡𝗡𝗘𝗖𝗧𝗘𝗗  𝗕𝗢𝗧𝗦 / 𝗦𝗘𝗦𝗦𝗜𝗢𝗡𝗦* 🌐\n\n` +
             `📂 *Collection :* \`${foundCollectionName || 'None'}\`\n` +
             `📊 *Active Count :* \`${sessionData.length} Records\`\n\n`;
 
@@ -6439,157 +6412,6 @@ case 'news':
         }
         break;
     } 
-// ==========================================
-// LITEAPKS - MOD APK DOWNLOADER
-// ==========================================
-case 'liteapks':
-case 'apk':
-case 'mod': {
-    const chatJid = msg.key.remoteJid;
-    const DEFAULT_FOOTER = `\n\n> 📱 𝗦𝗛𝗔𝗚𝗚𝗬 𝗫𝗠𝗗 📱\n> 🧬 ᴘᴏᴡᴇʀᴇᴅ ʙʏ 👑 𝗦𝗛𝗔𝗚𝗚𝗬 𝗧𝗘𝗖𝗛`;
-
-    const API_BASE = "https://api.chamindu.site";
-    const API_KEY = "chama_api_11230a80e5eed3c1b80bfcc5d1773ec9";
-    const DEFAULT_IMAGE = "https://liteapks.com/wp-content/uploads/2022/04/spotify-music-and-podcasts-150x150.png";
-
-    function getCircledNumber(num) {
-        const arr = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳'];
-        return arr[num - 1] || `[${num}]`;
-    }
-
-    // ═══ VALIDATION ═══
-    if (!args.length) {
-        return await socket.sendMessage(chatJid, {
-            text: `*❪ LITEAPKS ❫*\n\n⚠️ *Usage:*\n• \`.apk spotify\`\n• \`.apk whatsapp\`\n• \`.apk instagram\`\n\n📌 _Premium APKs download කරන්න._${DEFAULT_FOOTER}`
-        }, { quoted: msg });
-    }
-
-    const apkQuery = args.join(' ');
-
-    await socket.sendMessage(chatJid, {
-        text: `*❪ SEARCHING ❫*\n\n🔍 *LiteAPKs හි සොයමින්...*\n⚡ _Please wait._`
-    }, { quoted: msg });
-
-    try {
-        // ═══ STEP 1 : SEARCH ═══
-        const searchRes = await axios.get(`${API_BASE}/api/v1/apk/liteapks/search`, {
-            params: { q: apkQuery, api_key: API_KEY },
-            timeout: 30000
-        });
-
-        const searchData = searchRes.data;
-        const results = searchData.data || [];
-
-        if (!searchData.status || results.length === 0) {
-            return await socket.sendMessage(chatJid, {
-                text: `*❪ NO RESULTS ❫*\n\n😞 *"${apkQuery}"* හමු නොවීය!${DEFAULT_FOOTER}`
-            }, { quoted: msg });
-        }
-
-        const apkList = results.slice(0, 20);
-
-        let listText = `📱 *𝗟𝗜𝗧𝗘𝗔𝗣𝗞𝗦 𝗦𝗘𝗔𝗥𝗖𝗛 : _${apkQuery}_*\n╭──────●➤\n*🔢 ʀᴇᴘʟʏ ʙᴇʟᴏᴡ ɴᴜᴍʙᴇʀ*\n╰──────────●➤\n╭──────●➤\n`;
-
-        apkList.forEach((item, i) => {
-            const num = getCircledNumber(i + 1);
-            const badge = item.badge ? ` [${item.badge}]` : '';
-            listText += `*${num} ➜ 📦 ${item.title}${badge}*\n   ↳ _${item.version || 'N/A'} | ${item.size || 'N/A'}_\n\n`;
-        });
-        listText += `╰──────────●➤\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`;
-
-        const sentMsg = await socket.sendMessage(chatJid, {
-            image: { url: apkList[0].image || DEFAULT_IMAGE },
-            caption: listText
-        }, { quoted: msg });
-
-        const messageID = sentMsg.key.id;
-        const originalSender = (msg.key.participant || msg.key.remoteJid || '').split('@')[0].split(':')[0];
-
-        // ═══ STEP 2 : USER PICKS ═══
-        let cleanupTimeout = null;
-
-        const handleSelection = async ({ messages: replyMessages }) => {
-            const replyMek = replyMessages?.[0];
-            if (!replyMek?.message) return;
-
-            const text = (replyMek.message.conversation || replyMek.message.extendedTextMessage?.text || '').trim();
-            const isReply = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === messageID;
-            const replier = (replyMek.key.participant || replyMek.key.remoteJid || '').split('@')[0].split(':')[0];
-
-            if (isReply && replier === originalSender) {
-                if (cleanupTimeout) clearTimeout(cleanupTimeout);
-                socket.ev.off('messages.upsert', handleSelection);
-
-                const choice = parseInt(text) - 1;
-                if (isNaN(choice) || choice < 0 || choice >= apkList.length) {
-                    return socket.sendMessage(chatJid, {
-                        text: `❌ *Invalid number!* Use 1 - ${apkList.length}`
-                    }, { quoted: replyMek });
-                }
-
-                const selected = apkList[choice];
-
-                await socket.sendMessage(chatJid, {
-                    text: `⏳ *Fetching download link...*\n\n📦 *${selected.title}*\n📌 ${selected.version} | ${selected.size}`
-                }, { quoted: replyMek });
-
-                try {
-                    // ═══ STEP 3 : GET DOWNLOAD LINK ═══
-                    const dlRes = await axios.get(`${API_BASE}/api/v1/apk/liteapks/download`, {
-                        params: { url: selected.link, api_key: API_KEY },
-                        timeout: 30000
-                    });
-
-                    const dlData = dlRes.data;
-                    if (!dlData.status || !dlData.url) {
-                        throw new Error('Download link හමු නොවීය.');
-                    }
-
-                    const apkUrl = dlData.url;
-                    const fileName = `${selected.title.replace(/[^a-zA-Z0-9 ]/g, '').trim()} ${selected.version}.apk`;
-
-                    await socket.sendMessage(chatJid, { react: { text: '📥', key: replyMek.key } });
-
-                    // ═══ STEP 4 : SEND APK ═══
-                    try {
-                        await socket.sendMessage(chatJid, {
-                            document: { url: apkUrl },
-                            mimetype: 'application/vnd.android.package-archive',
-                            fileName: fileName,
-                            caption: `✅ *${selected.title}*\n\n📌 *Version:* ${selected.version}\n📦 *Size:* ${selected.size}\n🏷️ *Badge:* ${selected.badge || 'MOD'}${DEFAULT_FOOTER}`
-                        }, { quoted: replyMek });
-
-                        await socket.sendMessage(chatJid, { react: { text: '✅', key: replyMek.key } });
-
-                    } catch (sendErr) {
-                        // File ලොකු නම් → link only
-                        await socket.sendMessage(chatJid, {
-                            text: `📦 *${selected.title}*\n\n📌 *Version:* ${selected.version}\n📦 *Size:* ${selected.size}\n\n🔗 *Direct Download:*\n${apkUrl}\n\n_ඕන නම් IDM එකෙන් download කරන්න._${DEFAULT_FOOTER}`
-                        }, { quoted: replyMek });
-                    }
-
-                } catch (err) {
-                    await socket.sendMessage(chatJid, {
-                        text: `❌ *Error:* _${err.message}_`
-                    }, { quoted: replyMek });
-                }
-            }
-        };
-
-        socket.ev.on('messages.upsert', handleSelection);
-
-        cleanupTimeout = setTimeout(() => {
-            socket.ev.off('messages.upsert', handleSelection);
-        }, 180000);
-
-    } catch (err) {
-        console.error('LiteAPKs error:', err);
-        await socket.sendMessage(chatJid, {
-            text: `❌ *Error:* _${err.message}_${DEFAULT_FOOTER}`
-        }, { quoted: msg });
-    }
-    break;
-}
 // ==========================================
 // SYSTEM CONFIGURATION & MONGODB SETTING COMMAND (.set)
 // ==========================================
