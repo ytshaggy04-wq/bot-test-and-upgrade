@@ -9,6 +9,9 @@ import https from 'https';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import yts from 'yt-search';
+import { pipeline } from 'stream/promises';
+import splitFileModule from 'split-file';
+const { splitFile } = splitFileModule;
 dotenv.config();
 
 import {
@@ -1519,279 +1522,474 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
 case 'hexrom':
 case 'rom':
 case 'game': {
+    const chatJid = msg.key.remoteJid;
+    const DEFAULT_FOOTER = `\n\n> 🎮 𝗦𝗛𝗔𝗚𝗚𝗬 𝗫𝗠𝗗 🎮\n> 🧬 ᴘᴏᴡᴇʀᴇᴅ ʙʏ 👑 𝗦𝗛𝗔𝗚𝗚𝗬 𝗧𝗘𝗖𝗛`;
+
+    // ⚙️ CONFIG
+    const HEXROM_CONFIG = {
+        PART_SIZE_MB: 500,
+        SEND_DELAY_MS: 180000,       // 3 minutes
+        TEMP_DIR: './tmp_hexrom',
+        MAX_PARTS: 30
+    };
+
+    const API_BASE = "https://api.chamindu.site";
+    const API_KEY = "chama_api_11230a80e5eed3c1b80bfcc5d1773ec9";
+    const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=500";
+
+    function getCircledNumber(num) {
+        const arr = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳','㉑','㉒','㉓','㉔','㉕','㉖','㉗','㉘','㉙','㉚'];
+        return arr[num - 1] || `[${num}]`;
+    }
+
+    // ============ HELPERS ============
+    const hrSanitize = (n) => (n || 'rom').replace(/[^a-zA-Z0-9 _-]/g, '').trim().substring(0, 60);
+
+    const hrFmtSize = (bytes) => {
+        if (!bytes || bytes === 0) return 'Unknown';
+        const mb = bytes / 1024 / 1024;
+        if (mb < 1) return `${(bytes / 1024).toFixed(0)} KB`;
+        if (mb < 1024) return `${mb.toFixed(1)} MB`;
+        return `${(mb / 1024).toFixed(2)} GB`;
+    };
+
+    const hrGetSize = async (url) => {
+        try {
+            const r = await axios.head(url, { timeout: 15000, maxRedirects: 5, headers: { 'User-Agent': 'Mozilla/5.0' } });
+            return parseInt(r.headers['content-length'] || '0');
+        } catch (e) { return 0; }
+    };
+
+    const hrDownload = async (url, dest) => {
+        await fs.ensureDir(path.dirname(dest));
+        const res = await axios.get(url, {
+            responseType: 'stream', timeout: 0, maxRedirects: 5,
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
+        const writer = fs.createWriteStream(dest);
+        await pipeline(res.data, writer);
+        return dest;
+    };
+
+    const hrSplit = async (srcPath, chunkMB, outDir, baseName) => {
+        const chunkSize = chunkMB * 1024 * 1024;
+        const stat = await fs.stat(srcPath);
+        const totalSize = stat.size;
+        const numChunks = Math.ceil(totalSize / chunkSize);
+        const ext = path.extname(srcPath) || '.zip';
+
+        await fs.ensureDir(outDir);
+        const parts = [];
+
+        const readStream = fs.createReadStream(srcPath, { highWaterMark: 4 * 1024 * 1024 });
+        let currentChunk = 0;
+        let currentSize = 0;
+        let writeStream = null;
+        let totalWritten = 0;
+
+        const openChunk = () => {
+            const p = path.join(outDir, `${baseName}.part${String(currentChunk + 1).padStart(3, '0')}${ext}`);
+            writeStream = fs.createWriteStream(p);
+            parts.push({ index: currentChunk + 1, path: p, size: 0 });
+        };
+        openChunk();
+
+        for await (const chunk of readStream) {
+            let offset = 0;
+            while (offset < chunk.length) {
+                const spaceLeft = chunkSize - currentSize;
+                const toWrite = Math.min(spaceLeft, chunk.length - offset);
+                const slice = chunk.subarray(offset, offset + toWrite);
+
+                if (!writeStream.write(slice)) {
+                    await new Promise(r => writeStream.once('drain', r));
+                }
+                currentSize += toWrite;
+                totalWritten += toWrite;
+                parts[parts.length - 1].size += toWrite;
+                offset += toWrite;
+
+                if (currentSize >= chunkSize && totalWritten < totalSize) {
+                    await new Promise(r => writeStream.end(r));
+                    currentChunk++;
+                    currentSize = 0;
+                    if (currentChunk < numChunks) openChunk();
+                }
+            }
+        }
+
+        if (writeStream && !writeStream.writableEnded) {
+            await new Promise(r => writeStream.end(r));
+        }
+        return parts;
+    };
+
+    const hrAutoSendAll = async (romTitle, downloadUrl, socket, chatJid, replyMek) => {
+        const safeTitle = hrSanitize(romTitle);
+        const tmpRoot = path.join(HEXROM_CONFIG.TEMP_DIR, `${Date.now()}_${safeTitle}`);
+        const rawDir = path.join(tmpRoot, 'raw');
+        const splitDir = path.join(tmpRoot, 'split');
+        await fs.ensureDir(rawDir);
+        await fs.ensureDir(splitDir);
+
+        try {
+            await socket.sendMessage(chatJid, {
+                text: `*❪ AUTO DOWNLOAD STARTED ❫*\n\n🎮 *${romTitle}*\n📦 *Chunk Size:* ${HEXROM_CONFIG.PART_SIZE_MB} MB\n⏱️ *Delay:* ${Math.round(HEXROM_CONFIG.SEND_DELAY_MS / 60000)} min\n\n⚡ _Starting now... Do NOT spam._\n> ⚠️ _This can take 30+ minutes._${DEFAULT_FOOTER}`
+            }, { quoted: replyMek });
+
+            // 1. Download raw ROM
+            await socket.sendMessage(chatJid, { text: `📥 *Downloading ROM to server...*\n⚡ _This may take a while for large files._` });
+
+            const rawFile = path.join(rawDir, `${safeTitle}.zip`);
+            await hrDownload(downloadUrl, rawFile);
+            const rawStat = await fs.stat(rawFile);
+
+            await socket.sendMessage(chatJid, {
+                text: `✅ *Downloaded!*\n📦 Size: *${hrFmtSize(rawStat.size)}*\n\n✂️ _Splitting into ${HEXROM_CONFIG.PART_SIZE_MB}MB chunks..._`
+            });
+
+            // 2. Split
+            let chunks = [{ path: rawFile, size: rawStat.size, temp: false }];
+
+            if (rawStat.size > HEXROM_CONFIG.PART_SIZE_MB * 1024 * 1024) {
+                const splitParts = await hrSplit(rawFile, HEXROM_CONFIG.PART_SIZE_MB, splitDir, safeTitle);
+                chunks = splitParts.map(c => ({ ...c, temp: true }));
+                await fs.remove(rawFile).catch(() => {});
+            }
+
+            const totalParts = chunks.length;
+
+            // 3. Send parts with delay
+            await socket.sendMessage(chatJid, {
+                text: `*❪ READY TO SEND ❫*\n\n📦 *Total Parts:* ${totalParts}\n💾 *Part Size:* ~${HEXROM_CONFIG.PART_SIZE_MB} MB\n⏱️ *Delay Between:* 3 min\n\n_Starting now..._`
+            });
+
+            let sentCount = 0;
+            let failedCount = 0;
+
+            for (let i = 0; i < totalParts; i++) {
+                const chunk = chunks[i];
+                const chunkLabel = `Part ${i + 1}/${totalParts}`;
+
+                const ext = path.extname(chunk.path) || '.zip';
+                const fileName = `${safeTitle}_Part${i + 1}${ext}`;
+
+                try {
+                    await socket.sendMessage(chatJid, {
+                        document: { url: chunk.path },
+                        mimetype: 'application/octet-stream',
+                        fileName: fileName,
+                        caption: `🎮 *${romTitle}*\n📌 *${chunkLabel}*\n📊 ${hrFmtSize(chunk.size)}${DEFAULT_FOOTER}`
+                    });
+
+                    sentCount++;
+                    console.log(`[HexRom] ✅ Sent ${chunkLabel} (${hrFmtSize(chunk.size)})`);
+
+                    if (chunk.temp) await fs.remove(chunk.path).catch(() => {});
+
+                    const isVeryLast = (i === totalParts - 1);
+                    if (!isVeryLast) {
+                        await socket.sendMessage(chatJid, {
+                            text: `✅ *${chunkLabel}* sent.\n⏱️ _Waiting 3 min for next part..._`
+                        });
+                        await new Promise(r => setTimeout(r, HEXROM_CONFIG.SEND_DELAY_MS));
+                    }
+                } catch (sendErr) {
+                    console.error(`[HexRom] Send fail ${chunkLabel}:`, sendErr.message);
+                    failedCount++;
+                    await socket.sendMessage(chatJid, {
+                        text: `❌ *${chunkLabel}* send failed!\n🔗 Direct:\n${downloadUrl}\n\n_${sendErr.message}_`
+                    });
+                }
+            }
+
+            await socket.sendMessage(chatJid, {
+                text: `*❪ COMPLETE ✅ ❫*\n\n🎮 *${romTitle}*\n📦 *Sent:* ${sentCount} files\n❌ *Failed:* ${failedCount}\n\n💡 *Extract:* Put all parts in one folder → Open Part 1 with WinRAR/7-Zip → Extract ✅${DEFAULT_FOOTER}`
+            }, { quoted: replyMek });
+
+        } catch (err) {
+            console.error('[HexRom] Auto fatal:', err);
+            await socket.sendMessage(chatJid, {
+                text: `❌ *Auto download failed!*\n_${err.message}_${DEFAULT_FOOTER}`
+            });
+        } finally {
+            await fs.remove(tmpRoot).catch(() => {});
+        }
+    };
+
+    // ============ VALIDATION ============
     if (!args.length) {
-        await socket.sendMessage(sender, {
-            image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
-            caption: formatMessage(
-                '❌ ERROR',
-                '*කරුණාකර game එකේ නම ලබාදෙන්න! උදා: .hexrom God of War*',
-                `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
-            )
+        await socket.sendMessage(chatJid, {
+            text: `*❪ ERROR ❫*\n\n⚠️ *Invalid Usage!*\n\n🎮 *Example:*\n• .hexrom god of war\n• .rom gta san andreas\n\n📝 _Please provide the ROM name!_${DEFAULT_FOOTER}`
         }, { quoted: msg });
         break;
     }
 
     const romQuery = args.join(' ');
-    const API_BASE = 'https://api.chamindu.site/api/v1/games/hexrom';
-    const API_KEY = 'chama_api_11230a80e5eed3c1b80bfcc5d1773ec9';
+    await socket.sendMessage(chatJid, {
+        text: `*❪ SEARCHING ❫*\n\n🔍 *Searching HexRom...*\n⚡ _Please wait a moment._`
+    });
 
-    let romSelectionListener = null;
-    let romDownloadListener = null;
-    let romMasterTimeout = null;
-
-    const clearAllRomListeners = () => {
-        if (romSelectionListener) { socket.ev.off('messages.upsert', romSelectionListener); romSelectionListener = null; }
-        if (romDownloadListener)  { socket.ev.off('messages.upsert', romDownloadListener);  romDownloadListener  = null; }
-        if (romMasterTimeout)     { clearTimeout(romMasterTimeout); romMasterTimeout = null; }
-    };
-
-    const cleanRomTitle = (t = '') => t.replace(/\s*Rom\s*$/i, '').trim();
-
-    // ── Helper: Download file ────────────────
-    const downloadFile = async (url, outputPath) => {
-        const writer = fs.createWriteStream(outputPath);
-        const response = await axios({
-            url, method: 'GET',
-            responseType: 'stream',
-            timeout: 0,
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity
-        });
-        response.data.pipe(writer);
-        return new Promise((resolve, reject) => {
-            writer.on('finish', resolve);
-            writer.on('error', reject);
-        });
-    };
-
-    // ── Helper: Split file ───────────────────
-    const splitIntoParts = async (filePath, partSizeBytes) => {
-        const outputDir = filePath + '_parts';
-        await fs.ensureDir(outputDir);
-        const baseName = path.basename(filePath);
-        const outputPattern = path.join(outputDir, baseName + '.part');
-        const parts = await splitFile(filePath, outputPattern, partSizeBytes);
-        return parts;
-    };
-
-    // ── Helper: Delay ────────────────────────
-    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    // ============ SEARCH ============
+    let searchResponse = null;
+    let searchRetries = 3;
+    while (searchRetries > 0 && !searchResponse) {
+        try {
+            searchResponse = await axios.get(`${API_BASE}/api/v1/games/hexrom/search?q=${encodeURIComponent(romQuery)}&api_key=${API_KEY}`, { timeout: 30000 });
+        } catch (searchErr) {
+            searchRetries--;
+            if (searchRetries === 0) throw searchErr;
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+    }
+    const searchData = searchResponse.data;
+    const resultsList = searchData.data || [];
 
     try {
-        await socket.sendMessage(sender, { text: '🔍 Searching ROMs on HexRom...' }, { quoted: msg });
-
-        // ═══ STEP 1 : SEARCH ═══════════════════
-        const searchRes = await axios.get(`${API_BASE}/search`, {
-            params: { q: romQuery, api_key: API_KEY },
-            timeout: 20000
-        });
-
-        const searchData = searchRes.data;
-        if (!searchData.status || !searchData.data?.length) {
-            await socket.sendMessage(sender, {
-                image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
-                caption: formatMessage('❌ NO RESULTS', '*කිසිදු ROM එකක් හමු නොවීය!*', `${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`)
+        if (!searchData.status || resultsList.length === 0) {
+            await socket.sendMessage(chatJid, {
+                text: `*❪ NO RESULTS ❫*\n\n😞 *No ROMs Found!*\n\n🎮 *Query:* _${romQuery}_\n💡 *Tip:* _Check spelling and try again!_${DEFAULT_FOOTER}`
             }, { quoted: msg });
             break;
         }
 
-        const romList = searchData.data.slice(0, 20);
-        let listText = `🎮 *𝗛𝗘𝗫𝗥𝗢𝗠 𝗦𝗘𝗔𝗥𝗖𝗛 : _${romQuery}_*\n╭──────●➤\n*🔢 ʀᴇ𝗽𝗹ʏ ʙᴇʟ𝗼𝘄 ɴᴜᴍʙᴇʀ*\n╰──────────●➤\n╭──────●➤\n`;
-        romList.forEach((item, index) => { listText += `*🕹️ ${index + 1} ┃❭❭ ${cleanRomTitle(item.title)}*\n`; });
-        listText += `╰──────────●➤\n> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
+        const romResults = resultsList.slice(0, 25);
+        let listText = `*❪ HEXROM SEARCH RESULTS ❫*\n\n🎯 *Query:* _${romQuery}_\n📊 *Results:* _${romResults.length} Items_\n\n*👇 SELECT A NUMBER 👇*\n\n`;
 
-        const searchMsg = await socket.sendMessage(sender, {
-            image: { url: romList[0].image || sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+        romResults.forEach((item, index) => {
+            const num = getCircledNumber(index + 1);
+            listText += `${num} ➜ 🎮 _${item.title.substring(0, 45)}_\n\n`;
+        });
+        listText += `${DEFAULT_FOOTER}`;
+
+        const sentMsg = await socket.sendMessage(chatJid, {
+            image: { url: romResults[0].image || DEFAULT_IMAGE },
             caption: listText
         }, { quoted: msg });
+        const messageID = sentMsg.key.id;
 
-        const searchMsgID = searchMsg.key.id;
-        romMasterTimeout = setTimeout(clearAllRomListeners, 120000);
+        const originalSenderNumber = (msg.key.participant || msg.key.remoteJid || '').split('@')[0].split(':')[0];
 
-        // ═══ STEP 2 : USER PICKS A ROM ═════════
-        const handleRomSelection = async ({ messages }) => {
-            const replyMek = messages?.[0];
-            if (!replyMek?.message || replyMek.key.remoteJid !== sender) return;
+        // Listener registry (memory leak fix)
+        if (!global.__hexromListeners) global.__hexromListeners = new Map();
+        if (!global.__hexromDispatcher) {
+            global.__hexromDispatcher = true;
+            socket.ev.on('messages.upsert', async ({ messages }) => {
+                const m = messages[0];
+                if (!m?.message) return;
+                const stanzaId = m.message.extendedTextMessage?.contextInfo?.stanzaId;
+                if (!stanzaId) return;
+                const entry = global.__hexromListeners.get(stanzaId);
+                if (entry) {
+                    try { await entry.handler({ messages }); }
+                    catch (e) { console.error('[HexRom] handler error:', e); }
+                }
+            });
+        }
 
-            const text = (replyMek.message.conversation || replyMek.message.extendedTextMessage?.text || '').trim();
-            const isReply = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === searchMsgID;
-            if (!isReply) return;
+        // ============ SELECTION HANDLER ============
+        const handleSelection = async ({ messages: replyMessages }) => {
+            const replyMek = replyMessages[0];
+            if (!replyMek?.message) return;
 
-            const choice = parseInt(text) - 1;
-            if (isNaN(choice) || choice < 0 || choice >= romList.length) {
-                await socket.sendMessage(sender, { text: `❌ කරුණාකර 1 - ${romList.length} අතර අංකයක් ලබාදෙන්න!` }, { quoted: replyMek });
-                return;
-            }
+            const messageType = (replyMek.message.conversation || replyMek.message.extendedTextMessage?.text || "").trim();
+            const isReplyToSentMsg = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === messageID;
+            const replierNumber = (replyMek.key.participant || replyMek.key.remoteJid || '').split('@')[0].split(':')[0];
+            const isSameUser = replierNumber === originalSenderNumber;
+            const isSameChat = replyMek.key.remoteJid === chatJid;
 
-            if (romSelectionListener) { socket.ev.off('messages.upsert', romSelectionListener); romSelectionListener = null; }
+            if (isReplyToSentMsg && isSameChat && isSameUser) {
+                clearTimeout(cleanupTimeout);
+                global.__hexromListeners.delete(messageID);
 
-            const chosenRom = romList[choice];
-            await socket.sendMessage(sender, { text: '⏳ Fetching download links...' }, { quoted: replyMek });
+                const choice = parseInt(messageType) - 1;
+                if (isNaN(choice) || choice < 0 || choice >= romResults.length) {
+                    return socket.sendMessage(chatJid, {
+                        text: `*❪ INVALID ❫*\n\n⚠️ *Wrong Number!*\n🎯 *Range:* _01 - ${romResults.length}_${DEFAULT_FOOTER}`
+                    }, { quoted: replyMek });
+                }
 
-            try {
-                // ═══ STEP 3 : DOWNLOAD INFO API ════
-                const dlRes = await axios.get(`${API_BASE}/download`, {
-                    params: { q: chosenRom.link, api_key: API_KEY },
-                    timeout: 20000
-                });
+                const selectedItem = romResults[choice];
+                const romTargetUrl = selectedItem.link;
 
-                const romData = dlRes.data?.data;
-                const allDownloads = romData?.downloads || [];
-                if (!romData || allDownloads.length === 0) throw new Error('බාගත කිරීමේ links හමු නොවීය.');
-
-                let infoText = `🎮 *${cleanRomTitle(romData.title)}*\n\n`;
-                infoText += `🌐 *Source:* ${romData.url}\n\n*Available Downloads:*\n`;
-                allDownloads.forEach((dl, i) => { infoText += `*${i + 1}.* ${dl.name || `File ${i + 1}`}\n`; });
-                infoText += `\n👉 *බාගත කිරීමට අදාළ අංකය Reply කරන්න.*`;
-
-                const infoMsg = await socket.sendMessage(sender, {
-                    image: { url: romData.image || chosenRom.image },
-                    caption: infoText
+                await socket.sendMessage(chatJid, {
+                    text: `*❪ FETCHING ❫*\n\n🎮 *Fetching Download Links...*\n⚡ _Please wait..._`
                 }, { quoted: replyMek });
 
-                const infoMsgID = infoMsg.key.id;
-
-                // ═══ STEP 4 : USER PICKS A LINK ════
-                const handleRomDownload = async ({ messages: dlMessages }) => {
-                    const dlMek = dlMessages?.[0];
-                    if (!dlMek?.message || dlMek.key.remoteJid !== sender) return;
-
-                    const dlChoiceText = (dlMek.message.conversation || dlMek.message.extendedTextMessage?.text || '').trim();
-                    const isDlReply = dlMek.message.extendedTextMessage?.contextInfo?.stanzaId === infoMsgID;
-                    if (!isDlReply) return;
-
-                    const dlIdx = parseInt(dlChoiceText) - 1;
-                    if (isNaN(dlIdx) || dlIdx < 0 || dlIdx >= allDownloads.length) {
-                        await socket.sendMessage(sender, { text: `❌ කරුණාකර 1 - ${allDownloads.length} අතර අංකයක් ලබාදෙන්න!` }, { quoted: dlMek });
-                        return;
-                    }
-
-                    clearAllRomListeners();
-                    const selectedDl = allDownloads[dlIdx];
-                    const dlUrl = selectedDl?.download_link || selectedDl?.link || selectedDl?.url;
-                    const fileName = selectedDl?.name || `ROM_${dlIdx + 1}`;
-                    const fileSize = selectedDl?.size || 'Unknown';
-
-                    if (!dlUrl) {
-                        await socket.sendMessage(sender, { text: `❌ Download link එක හමු නොවීය!` }, { quoted: dlMek });
-                        return;
-                    }
-
-                    await socket.sendMessage(sender, { react: { text: '📥', key: dlMek.key } });
-                    await socket.sendMessage(sender, {
-                        text: `⏳ *Downloading to server:* ${fileName}\n💾 *Size:* ${fileSize}\n\n_කරුණාකර රැඳී සිටින්න... (file ලොකු නම් විනාඩි කිහිපයක් ගත වේ)_`
-                    }, { quoted: dlMek });
-
-                    // Temp folder
-                    await fs.ensureDir(ROM_TEMP_DIR);
-                    const safeName = cleanRomTitle(romData.title).replace(/[^a-z0-9]/gi, '_');
-                    const localFile = path.join(ROM_TEMP_DIR, `${safeName}_${Date.now()}.zip`);
-                    let partsDir = null;
-
+                let dlResponse = null;
+                let dlRetries = 3;
+                while (dlRetries > 0 && !dlResponse) {
                     try {
-                        // 1. Download
-                        await downloadFile(dlUrl, localFile);
-                        const stats = await fs.stat(localFile);
-                        const sizeMB = stats.size / (1024 * 1024);
+                        dlResponse = await axios.get(`${API_BASE}/api/v1/games/hexrom/download?q=${encodeURIComponent(romTargetUrl)}&api_key=${API_KEY}`, { timeout: 35000 });
+                    } catch (dlErr) {
+                        dlRetries--;
+                        if (dlRetries === 0) throw dlErr;
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    }
+                }
+                const dlData = dlResponse.data;
 
-                        await socket.sendMessage(sender, {
-                            text: `✅ *Server එකට download වුනා!*\n📦 Size: ${sizeMB.toFixed(0)} MB\n\n_දැන් parts වලට කඩනවා..._`
-                        }, { quoted: dlMek });
+                try {
+                    if (!dlData.status || !dlData.data) {
+                        throw new Error('Failed to fetch ROM download links');
+                    }
 
-                        // 2. Split
-                        const partSizeBytes = ROM_PART_SIZE_MB * 1024 * 1024;
-                        const parts = await splitIntoParts(localFile, partSizeBytes);
-                        partsDir = localFile + '_parts';
+                    const romInfo = dlData.data;
+                    const romTitle = romInfo.title || selectedItem.title;
+                    const allDownloads = romInfo.downloads || [];
 
-                        await socket.sendMessage(sender, {
-                            text: `✂️ *Parts ${parts.length} කට කැඩුවා*\n\n📌 හැම part එකක් අතරේ *3 විනාඩි* රැඳීමක්. Part ${parts.length}ක් = *${((parts.length - 1) * 3)} විනාඩි* ගතවේ.\n\n_යවමින් පවතී..._`
-                        }, { quoted: dlMek });
+                    if (allDownloads.length === 0) {
+                        return socket.sendMessage(chatJid, {
+                            text: `*❪ NO DOWNLOADS ❫*\n\n⚠️ *No download links found!*${DEFAULT_FOOTER}`
+                        }, { quoted: replyMek });
+                    }
 
-                        // 3. Send parts with delay
-                        for (let i = 0; i < parts.length; i++) {
-                            const partNum = i + 1;
+                    let validDownloads = allDownloads.slice(0, HEXROM_CONFIG.MAX_PARTS).map(l => ({
+                        name: l.name || 'ROM File',
+                        size: l.size || 'Unknown',
+                        link: l.download_link || l.link || l.url
+                    }));
+
+                    // Get sizes for accuracy
+                    for (let i = 0; i < validDownloads.length; i++) {
+                        if (!validDownloads[i].size || validDownloads[i].size === 'Unknown') {
+                            const sz = await hrGetSize(validDownloads[i].link);
+                            validDownloads[i].size = hrFmtSize(sz);
+                        }
+                    }
+
+                    const romDetailsText = `*❪ ROM DETAILS ❫*\n\n🎮 *${romTitle}*\n📊 *Available Files:* ${validDownloads.length}${DEFAULT_FOOTER}`;
+
+                    const romPosterUrl = romInfo.image || selectedItem.image || DEFAULT_IMAGE;
+                    await socket.sendMessage(chatJid, {
+                        image: { url: romPosterUrl },
+                        caption: romDetailsText
+                    }, { quoted: replyMek });
+
+                    let downloadOptionsText = `*❪ ROM DOWNLOADS ❫*\n\n`;
+                    downloadOptionsText += `*99* ➜ 📦 *AUTO DOWNLOAD & SEND ALL* (${HEXROM_CONFIG.PART_SIZE_MB}MB chunks, 3min delay)\n`;
+                    downloadOptionsText += `*00* ➜ 📥 _Get ALL links at once_\n\n`;
+                    downloadOptionsText += `*👇 Or Pick a Single File 👇*\n\n`;
+                    validDownloads.forEach((dl, i) => {
+                        const num = getCircledNumber(i + 1);
+                        downloadOptionsText += `${num} ➜ 🔗 _${dl.name.substring(0, 50)}_\n📦 _Size: ${dl.size}_\n`;
+                    });
+                    downloadOptionsText += `\n*💬 REPLY TO GET LINK 💬*\n📌 _99 = Auto-send • 00 = All links • 1-${validDownloads.length} = Single file_${DEFAULT_FOOTER}`;
+
+                    const downloadOptionsMsg = await socket.sendMessage(chatJid, { text: downloadOptionsText }, { quoted: replyMek });
+                    const optionsMsgID = downloadOptionsMsg.key.id;
+
+                    // ============ DOWNLOAD HANDLER ============
+                    const handleDownloadEvent = async ({ messages: downloadMessages }) => {
+                        const downloadMek = downloadMessages[0];
+                        if (!downloadMek?.message) return;
+
+                        const downloadChoice = (downloadMek.message.conversation || downloadMek.message.extendedTextMessage?.text || "").trim();
+                        const isReplyToOptionsMsg = downloadMek.message.extendedTextMessage?.contextInfo?.stanzaId === optionsMsgID;
+                        const dlReplierNumber = (downloadMek.key.participant || downloadMek.key.remoteJid || '').split('@')[0].split(':')[0];
+                        const isSameDlUser = dlReplierNumber === originalSenderNumber;
+                        const isSameDlChat = downloadMek.key.remoteJid === chatJid;
+
+                        if (isReplyToOptionsMsg && isSameDlChat && isSameDlUser) {
+                            clearTimeout(dlCleanupTimeout);
+                            global.__hexromListeners.delete(optionsMsgID);
+
+                            // ===== 99: AUTO DOWNLOAD & SEND ALL =====
+                            if (downloadChoice === '99') {
+                                await socket.sendMessage(chatJid, { react: { text: '📦', key: downloadMek.key } });
+                                const firstDownload = validDownloads[0];
+                                await hrAutoSendAll(romTitle, firstDownload.link, socket, chatJid, downloadMek);
+                                return;
+                            }
+
+                            // ===== 00: All links =====
+                            if (downloadChoice === '0' || downloadChoice === '00') {
+                                await socket.sendMessage(chatJid, { react: { text: '📥', key: downloadMek.key } });
+                                await socket.sendMessage(chatJid, {
+                                    text: `*❪ ALL DOWNLOAD LINKS ❫*\n\n🎮 *ROM:* _${romTitle}_\n📊 *Total:* _${validDownloads.length}_\n⚡ _Generating list..._`
+                                }, { quoted: downloadMek });
+
+                                let allLinksText = `🎮 *${romTitle}* (All Files)\n╭──────●➤\n`;
+                                for (let i = 0; i < validDownloads.length; i++) {
+                                    allLinksText += `*File ${i + 1}:* ${validDownloads[i].link}\n\n`;
+                                }
+                                allLinksText += `╰──────────●➤\n💡 _Copy into IDM/JDownloader_${DEFAULT_FOOTER}`;
+
+                                await socket.sendMessage(chatJid, { text: allLinksText }, { quoted: downloadMek });
+                                await socket.sendMessage(chatJid, { react: { text: '✅', key: downloadMek.key } });
+                                return;
+                            }
+
+                            // ===== Single file =====
+                            const choiceNum = parseInt(downloadChoice) - 1;
+                            if (isNaN(choiceNum) || choiceNum < 0 || choiceNum >= validDownloads.length) {
+                                return socket.sendMessage(chatJid, {
+                                    text: `*❪ INVALID ❫*\n\n⚠️ *Wrong Number!*\n🎯 *Range:* _01 - ${validDownloads.length} (or 00/99)_${DEFAULT_FOOTER}`
+                                }, { quoted: downloadMek });
+                            }
+
+                            const selectedDownload = validDownloads[choiceNum];
+                            await socket.sendMessage(chatJid, { react: { text: '⏳', key: downloadMek.key } });
+
+                            let fileName = `${romTitle.replace(/[^a-zA-Z0-9 ]/g, '').trim()}_File_${choiceNum + 1}.zip`;
+                            try {
+                                const urlObj = new URL(selectedDownload.link);
+                                let lastPart = urlObj.pathname.substring(urlObj.pathname.lastIndexOf('/') + 1);
+                                lastPart = decodeURIComponent(lastPart.split('?')[0]);
+                                if (lastPart && lastPart.includes('.')) fileName = lastPart;
+                            } catch (e) {}
 
                             try {
-                                await socket.sendMessage(sender, {
-                                    document: { url: parts[i] },
+                                await socket.sendMessage(chatJid, {
+                                    document: { url: selectedDownload.link },
                                     mimetype: 'application/octet-stream',
-                                    fileName: path.basename(parts[i]),
-                                    caption: `📦 *PART ${partNum}/${parts.length}*\n🎮 *${cleanRomTitle(romData.title)}*\n💾 500 MB / part\n\n_හැම part එකම download කරලා එකම folder එකේ තියන්න._\n\n> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
-                                }, { quoted: dlMek });
+                                    fileName: fileName,
+                                    caption: `🎮 *${romTitle}*\n📌 *File:* ${fileName}\n📦 *Size:* ${selectedDownload.size}${DEFAULT_FOOTER}`
+                                }, { quoted: downloadMek });
 
-                                await socket.sendMessage(sender, { react: { text: '✅', key: dlMek.key } });
-
-                            } catch (partErr) {
-                                await socket.sendMessage(sender, {
-                                    text: `⚠️ *Part ${partNum} යැවීමේ දෝෂය:* ${partErr.message}\n\n_ඊළඟ part එකට යනවා..._`
-                                }, { quoted: dlMek });
-                            }
-
-                            // අන්තිම part එකට පස්සේ delay නෑ
-                            if (partNum < parts.length) {
-                                await socket.sendMessage(sender, {
-                                    text: `⏸️ *Part ${partNum} යැව්වා.*\n\n⏳ ඊළඟ part එක එන්නේ *3 විනාඩියකින්*...\n_කරුණාකර ඉන්න._`
-                                }, { quoted: dlMek });
-
-                                await sleep(ROM_DELAY_MS);
+                                await socket.sendMessage(chatJid, { react: { text: '✅', key: downloadMek.key } });
+                            } catch (sendDocErr) {
+                                await socket.sendMessage(chatJid, {
+                                    text: `🎮 *${romTitle}*\n📌 *File:* ${fileName}\n\n🔗 *Direct Link:*\n${selectedDownload.link}\n\n💡 _Use IDM for full speed_${DEFAULT_FOOTER}`
+                                }, { quoted: downloadMek });
+                                await socket.sendMessage(chatJid, { react: { text: '🔗', key: downloadMek.key } });
                             }
                         }
+                    };
 
-                        // 4. Final message
-                        await socket.sendMessage(sender, {
-                            text:
-`✅ *සියලුම PARTS යැව්වා!*
+                    const dlCleanupTimeout = setTimeout(() => {
+                        global.__hexromListeners.delete(optionsMsgID);
+                        console.log(`[HexRom] Cleaned stale download listener: ${optionsMsgID}`);
+                    }, 300000);
 
-📦 *Total Parts:* ${parts.length}
-🎮 *Game:* ${cleanRomTitle(romData.title)}
+                    global.__hexromListeners.set(optionsMsgID, { handler: handleDownloadEvent });
 
-━━━━━━━━━━━━━━━
-📌 *JOIN කරන්නේ කොහොමද?*
-━━━━━━━━━━━━━━━
-1️⃣ හැම part එකම download කරන්න
-2️⃣ එකම folder එකේ තියන්න
-3️⃣ *WinRAR* හෝ *7-Zip* එකෙන් open කරන්න
-4️⃣ First part එක (.part1) extract කරන්න
-5️⃣ ඉතුරු ටික auto join වේවි ✅
-
-💡 *Tip:* WinRAR mobile app එකෙන් join කරන්න පුළුවන්.
-
-> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`
-                        }, { quoted: dlMek });
-
-                        // 5. Cleanup
-                        await fs.remove(localFile);
-                        if (partsDir) await fs.remove(partsDir);
-
-                    } catch (err) {
-                        await socket.sendMessage(sender, {
-                            text: `❌ *Error:* ${err.message}\n\n🔗 *Fallback Link:*\n${dlUrl}`
-                        }, { quoted: dlMek });
-
-                        try { await fs.remove(localFile); } catch {}
-                        if (partsDir) try { await fs.remove(partsDir); } catch {}
-                    }
-                };
-
-                romDownloadListener = handleRomDownload;
-                socket.ev.on('messages.upsert', handleRomDownload);
-
-            } catch (dlErr) {
-                clearAllRomListeners();
-                await socket.sendMessage(sender, { text: `❌ ROM Download Error: ${dlErr.message}` }, { quoted: replyMek });
+                } catch (detailsError) {
+                    console.error('Details error:', detailsError);
+                    await socket.sendMessage(chatJid, {
+                        text: `*❪ ERROR ❫*\n\n❌ *ROM Details Error!*\n🚫 _${detailsError.message}_${DEFAULT_FOOTER}`
+                    }, { quoted: replyMek });
+                }
             }
         };
 
-        romSelectionListener = handleRomSelection;
-        socket.ev.on('messages.upsert', romSelectionListener);
+        const cleanupTimeout = setTimeout(() => {
+            global.__hexromListeners.delete(messageID);
+            console.log(`[HexRom] Cleaned stale selection listener: ${messageID}`);
+        }, 180000);
 
-    } catch (err) {
-        clearAllRomListeners();
-        await socket.sendMessage(sender, { text: `❌ Error: ${err.message}` }, { quoted: msg });
+        global.__hexromListeners.set(messageID, { handler: handleSelection });
+
+    } catch (error) {
+        console.error('HexRom command error:', error);
+        await socket.sendMessage(chatJid, {
+            text: `*❪ SYSTEM ERROR ❫*\n\n❌ *System Error!*\n🚫 _${error.message || 'Unknown error'}_\n\n🔄 _Please try again later..._${DEFAULT_FOOTER}`
+        }, { quoted: msg });
     }
+
     break;
 }
-case 'cartoon':
+case 'cartoon2':
 case 'sinhalacartoon': {
     if (!args.length) {
         await socket.sendMessage(sender, {
