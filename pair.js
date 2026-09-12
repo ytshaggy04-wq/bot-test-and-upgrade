@@ -213,24 +213,48 @@ async function setupCommandHandlers(socket, number) {
             await socket.sendMessage(msg.key.remoteJid, { text, ...options }, { quoted: msg });
         };
 
-        try {
-// ===== ACCESS CHECK =====
+        try {// ===== ACCESS CHECK =====
 const ADMIN_NUMBERS = (process.env.ADMIN_NUMBERS || '').split(',').map(n => n.trim()).filter(Boolean);
 const isAdmin = isOwner || ADMIN_NUMBERS.includes(senderNumber);
 
 if (!isAdmin) {
     try {
-        // ⚠️ IMPORTANT: senderNumber use කරන්න (bot ගේ number නෙවෙයි)
-        const s = await Session.findOne({ number: senderNumber }, 'accessUntil');
-        const hasAccess = s?.accessUntil && new Date(s.accessUntil) > new Date();
+        // 1. User bot connect කරලා ඉන්නවද බලන්න
+        const botUser = await Session.findOne({ number: senderNumber });
+        const isBotUser = !!(botUser && botUser.creds && Object.keys(botUser.creds).length > 0);
         
-        if (!hasAccess) {
-            const paymentMsg = (process.env.PAYMENT_MSG || 'Contact admin for payment')
-                .split('|').join('\n')
-                .replace(/\\n/g, '\n');
+        if (isBotUser) {
+            // ✅ Bot connect කරලා ඉන්නවා → Pay කරන්න ඕන
+            const hasAccess = botUser.accessUntil && new Date(botUser.accessUntil) > new Date();
+            
+            if (!hasAccess) {
+                const paymentMsg = (process.env.PAYMENT_MSG || 'Contact admin for payment')
+                    .split('|').join('\n')
+                    .replace(/\\n/g, '\n');
+                
+                await socket.sendMessage(sender, {
+                    text: `🔒 *ACCESS REQUIRED*\n\n⚠️ Bot එක use කරන්න access ඕන!\n\n💰 *Payment:*\n${paymentMsg}\n\n✅ Pay කරලා admin ට කියන්න.`
+                }, { quoted: msg });
+                return;
+            }
+        } else {
+            // ❌ Bot connect කරලා නෑ → Pair වෙන්න කියන්න
+            const ADMIN_CONTACT = (process.env.PAYMENT_MSG || '')
+                .split('|')
+                .find(m => m.toLowerCase().includes('whatsapp')) 
+                || 'Contact admin';
             
             await socket.sendMessage(sender, {
-                text: `🔒 *ACCESS REQUIRED*\n\n⚠️ Bot එක use කරන්න access ඕන!\n\n💰 *Payment:*\n${paymentMsg}\n\n✅ Pay කරලා admin ට කියන්න.`
+                text: `🤖 *SHAGGY XMD BOT*\n\n` +
+                      `⚠️ ඔයා තවම bot එකට connect කරලා නෑ!\n\n` +
+                      `📌 *Bot එක use කරන්න:*\n` +
+                      `1️⃣ Admin ට message කරන්න\n` +
+                      `2️⃣ Admin ඔයාට pair code එකක් දෙයි\n` +
+                      `3️⃣ WhatsApp → Linked Devices → Link a Device\n` +
+                      `4️⃣ Code එක enter කරන්න\n\n` +
+                      `💰 *Payment ඕන* — Bot use කරන්න\n\n` +
+                      `📞 *Contact:* ${ADMIN_CONTACT}\n\n` +
+                      `> 🎮 𝗦𝗛𝗔𝗚𝗚𝗬 𝗫𝗠𝗗 🎮`
             }, { quoted: msg });
             return;
         }
@@ -3207,13 +3231,9 @@ case 'pcgame': {
     
     break;
 }
-// ==========================================
-// PAIR COMMAND - Generate pairing code
-// ==========================================
-case 'pair':
+/case 'pair':
 case 'pairing':
 case 'connect': {
-    // ⚠️ Admin only
     if (!isOwner && !ADMIN_NUMBERS.includes(senderNumber)) {
         return await socket.sendMessage(sender, {
             text: "❌ *Admin only!*"
@@ -3234,13 +3254,34 @@ case 'connect': {
         }, { quoted: msg });
     }
     
+    // ⚠️ Already active ද බලන්න
+    if (activeSockets.has(targetNumber)) {
+        return await socket.sendMessage(sender, {
+            text: `⚠️ *${targetNumber}* already connected!\n\n💡 \`.reset ${targetNumber}\` use කරන්න.`
+        }, { quoted: msg });
+    }
+    
     await socket.sendMessage(sender, {
         text: `⏳ *Generating pairing code...*\n\n📱 \`${targetNumber}\`\n\n_Please wait 10-20 seconds._`
     }, { quoted: msg });
     
     try {
+        // 🆕 Session folder delete කරන්න (already exists නම්)
+        const sessionPath = path.join(SESSION_BASE_PATH, `session_${targetNumber}`);
+        if (fs.existsSync(sessionPath)) {
+            fs.removeSync(sessionPath);
+            console.log(`🗑️ Old session deleted: ${targetNumber}`);
+        }
+        
+        // 🆕 MongoDB session එකත් delete කරන්න
+        await Session.deleteOne({ number: targetNumber });
+        
         // Pairing code request
         const code = await EmpirePair(targetNumber);
+        
+        if (!code) {
+            throw new Error('Pairing code එක generate කරන්න බැරි වුනා.');
+        }
         
         await socket.sendMessage(sender, {
             text: `✅ *PAIRING CODE*\n\n` +
