@@ -21,7 +21,7 @@ import {
     Browsers,
     fetchLatestBaileysVersion,
     downloadContentFromMessage,
-    jidNormalizedUser,
+    NormalizedUser,
     isPnUser
 } from '@whiskeysockets/baileys';
 
@@ -173,7 +173,7 @@ async function setupCommandHandlers(socket, number) {
             return;
         }
 
-        const userJid = jidNormalizedUser(socket.user.id);
+        const user = jidNormalizedUser(socket.user.id);
         const from = msg.key.remoteJid;
         const sender = from;
         const nowsender = msg.key.fromMe ? (socket.user.id.split(':')[0] + '@s.whatsapp.net' || socket.user.id) : (msg.key.participant || msg.key.remoteJid);
@@ -3231,7 +3231,6 @@ case 'pcgame': {
     
     break;
 }}
-}
 case 'jid':
 case 'getjid': {
     const chatJid = msg.key.remoteJid;
