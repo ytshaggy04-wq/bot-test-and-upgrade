@@ -9,6 +9,9 @@ import https from 'https';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import yts from 'yt-search';
+import { pipeline } from 'stream/promises';
+import splitFileModule from 'split-file';
+const { splitFile } = splitFileModule;
 dotenv.config();
 
 import {
