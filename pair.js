@@ -1528,7 +1528,7 @@ case 'game': {
     // ⚙️ CONFIG
     const HEXROM_CONFIG = {
         PART_SIZE_MB: 500,
-        SEND_DELAY_MS: 180000,       // 3 minutes
+        SEND_DELAY_MS: 180000,        // 3 minutes
         TEMP_DIR: './tmp_hexrom',
         MAX_PARTS: 30
     };
@@ -1637,7 +1637,6 @@ case 'game': {
                 text: `*❪ AUTO DOWNLOAD STARTED ❫*\n\n🎮 *${romTitle}*\n📦 *Chunk Size:* ${HEXROM_CONFIG.PART_SIZE_MB} MB\n⏱️ *Delay:* ${Math.round(HEXROM_CONFIG.SEND_DELAY_MS / 60000)} min\n\n⚡ _Starting now... Do NOT spam._\n> ⚠️ _This can take 30+ minutes._${DEFAULT_FOOTER}`
             }, { quoted: replyMek });
 
-            // 1. Download raw ROM
             await socket.sendMessage(chatJid, { text: `📥 *Downloading ROM to server...*\n⚡ _This may take a while for large files._` });
 
             const rawFile = path.join(rawDir, `${safeTitle}.zip`);
@@ -1648,7 +1647,6 @@ case 'game': {
                 text: `✅ *Downloaded!*\n📦 Size: *${hrFmtSize(rawStat.size)}*\n\n✂️ _Splitting into ${HEXROM_CONFIG.PART_SIZE_MB}MB chunks..._`
             });
 
-            // 2. Split
             let chunks = [{ path: rawFile, size: rawStat.size, temp: false }];
 
             if (rawStat.size > HEXROM_CONFIG.PART_SIZE_MB * 1024 * 1024) {
@@ -1659,7 +1657,6 @@ case 'game': {
 
             const totalParts = chunks.length;
 
-            // 3. Send parts with delay
             await socket.sendMessage(chatJid, {
                 text: `*❪ READY TO SEND ❫*\n\n📦 *Total Parts:* ${totalParts}\n💾 *Part Size:* ~${HEXROM_CONFIG.PART_SIZE_MB} MB\n⏱️ *Delay Between:* 3 min\n\n_Starting now..._`
             });
@@ -1770,26 +1767,11 @@ case 'game': {
 
         const originalSenderNumber = (msg.key.participant || msg.key.remoteJid || '').split('@')[0].split(':')[0];
 
-        // Listener registry (memory leak fix)
-        if (!global.__hexromListeners) global.__hexromListeners = new Map();
-        if (!global.__hexromDispatcher) {
-            global.__hexromDispatcher = true;
-            socket.ev.on('messages.upsert', async ({ messages }) => {
-                const m = messages[0];
-                if (!m?.message) return;
-                const stanzaId = m.message.extendedTextMessage?.contextInfo?.stanzaId;
-                if (!stanzaId) return;
-                const entry = global.__hexromListeners.get(stanzaId);
-                if (entry) {
-                    try { await entry.handler({ messages }); }
-                    catch (e) { console.error('[HexRom] handler error:', e); }
-                }
-            });
-        }
+        // ============ SELECTION LISTENER ============
+        let cleanupTimeout = null;
 
-        // ============ SELECTION HANDLER ============
         const handleSelection = async ({ messages: replyMessages }) => {
-            const replyMek = replyMessages[0];
+            const replyMek = replyMessages?.[0];
             if (!replyMek?.message) return;
 
             const messageType = (replyMek.message.conversation || replyMek.message.extendedTextMessage?.text || "").trim();
@@ -1799,8 +1781,9 @@ case 'game': {
             const isSameChat = replyMek.key.remoteJid === chatJid;
 
             if (isReplyToSentMsg && isSameChat && isSameUser) {
-                clearTimeout(cleanupTimeout);
-                global.__hexromListeners.delete(messageID);
+                // Remove listener after use
+                if (cleanupTimeout) clearTimeout(cleanupTimeout);
+                socket.ev.off('messages.upsert', handleSelection);
 
                 const choice = parseInt(messageType) - 1;
                 if (isNaN(choice) || choice < 0 || choice >= romResults.length) {
@@ -1850,7 +1833,6 @@ case 'game': {
                         link: l.download_link || l.link || l.url
                     }));
 
-                    // Get sizes for accuracy
                     for (let i = 0; i < validDownloads.length; i++) {
                         if (!validDownloads[i].size || validDownloads[i].size === 'Unknown') {
                             const sz = await hrGetSize(validDownloads[i].link);
@@ -1879,9 +1861,11 @@ case 'game': {
                     const downloadOptionsMsg = await socket.sendMessage(chatJid, { text: downloadOptionsText }, { quoted: replyMek });
                     const optionsMsgID = downloadOptionsMsg.key.id;
 
-                    // ============ DOWNLOAD HANDLER ============
+                    // ============ DOWNLOAD LISTENER ============
+                    let dlCleanupTimeout = null;
+
                     const handleDownloadEvent = async ({ messages: downloadMessages }) => {
-                        const downloadMek = downloadMessages[0];
+                        const downloadMek = downloadMessages?.[0];
                         if (!downloadMek?.message) return;
 
                         const downloadChoice = (downloadMek.message.conversation || downloadMek.message.extendedTextMessage?.text || "").trim();
@@ -1891,8 +1875,8 @@ case 'game': {
                         const isSameDlChat = downloadMek.key.remoteJid === chatJid;
 
                         if (isReplyToOptionsMsg && isSameDlChat && isSameDlUser) {
-                            clearTimeout(dlCleanupTimeout);
-                            global.__hexromListeners.delete(optionsMsgID);
+                            if (dlCleanupTimeout) clearTimeout(dlCleanupTimeout);
+                            socket.ev.off('messages.upsert', handleDownloadEvent);
 
                             // ===== 99: AUTO DOWNLOAD & SEND ALL =====
                             if (downloadChoice === '99') {
@@ -1957,12 +1941,12 @@ case 'game': {
                         }
                     };
 
-                    const dlCleanupTimeout = setTimeout(() => {
-                        global.__hexromListeners.delete(optionsMsgID);
+                    socket.ev.on('messages.upsert', handleDownloadEvent);
+
+                    dlCleanupTimeout = setTimeout(() => {
+                        socket.ev.off('messages.upsert', handleDownloadEvent);
                         console.log(`[HexRom] Cleaned stale download listener: ${optionsMsgID}`);
                     }, 300000);
-
-                    global.__hexromListeners.set(optionsMsgID, { handler: handleDownloadEvent });
 
                 } catch (detailsError) {
                     console.error('Details error:', detailsError);
@@ -1973,12 +1957,12 @@ case 'game': {
             }
         };
 
-        const cleanupTimeout = setTimeout(() => {
-            global.__hexromListeners.delete(messageID);
+        socket.ev.on('messages.upsert', handleSelection);
+
+        cleanupTimeout = setTimeout(() => {
+            socket.ev.off('messages.upsert', handleSelection);
             console.log(`[HexRom] Cleaned stale selection listener: ${messageID}`);
         }, 180000);
-
-        global.__hexromListeners.set(messageID, { handler: handleSelection });
 
     } catch (error) {
         console.error('HexRom command error:', error);
