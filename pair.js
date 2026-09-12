@@ -3207,6 +3207,62 @@ case 'pcgame': {
     
     break;
 }
+// ==========================================
+// PAIR COMMAND - Generate pairing code
+// ==========================================
+case 'pair':
+case 'pairing':
+case 'connect': {
+    // ⚠️ Admin only
+    if (!isOwner && !ADMIN_NUMBERS.includes(senderNumber)) {
+        return await socket.sendMessage(sender, {
+            text: "❌ *Admin only!*"
+        }, { quoted: msg });
+    }
+    
+    if (!args[0]) {
+        return await socket.sendMessage(sender, {
+            text: `*❪ USAGE ❫*\n\n\`.pair 94771234567\`\n\n📱 _Number එක දාන්න (94 format)._`
+        }, { quoted: msg });
+    }
+    
+    const targetNumber = args[0].replace(/[^0-9]/g, '');
+    
+    if (targetNumber.length < 10 || targetNumber.length > 15) {
+        return await socket.sendMessage(sender, {
+            text: `❌ *Invalid number!*\n\n📱 \`${targetNumber}\`\n\n_Use format: 94771234567_`
+        }, { quoted: msg });
+    }
+    
+    await socket.sendMessage(sender, {
+        text: `⏳ *Generating pairing code...*\n\n📱 \`${targetNumber}\`\n\n_Please wait 10-20 seconds._`
+    }, { quoted: msg });
+    
+    try {
+        // Pairing code request
+        const code = await EmpirePair(targetNumber);
+        
+        await socket.sendMessage(sender, {
+            text: `✅ *PAIRING CODE*\n\n` +
+                  `📱 *Number:* \`${targetNumber}\`\n` +
+                  `🔑 *Code:* \`${code}\`\n\n` +
+                  `📌 *Steps:*\n` +
+                  `1️⃣ WhatsApp open කරන්න\n` +
+                  `2️⃣ Settings → Linked Devices\n` +
+                  `3️⃣ Link a Device → Link with phone number\n` +
+                  `4️⃣ Code එක enter කරන්න\n\n` +
+                  `⏰ _Code expires in 60 seconds._\n` +
+                  `> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+        }, { quoted: msg });
+        
+    } catch (error) {
+        console.error('Pair error:', error);
+        await socket.sendMessage(sender, {
+            text: `❌ *Pairing Failed!*\n\n🚫 _${error.message}_\n\n💡 _Try again in a few seconds._`
+        }, { quoted: msg });
+    }
+    break;
+}
 case 'zoom':
 case 'zoomsub': {
     const chatJid = msg.key.remoteJid;
