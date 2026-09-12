@@ -121,7 +121,7 @@ async function autoReconnectOnStartup() {
             }
             const mockRes = { headersSent: false, send: () => {}, status: () => mockRes };
             try {
-                await EmpirePair(number, mockRes);
+                await Empire(number, mockRes);
                 console.log(`Initiated reconnect for ${number}`);
             } catch (error) {
                 console.error(`Failed to reconnect ${number}:`, error);
@@ -249,7 +249,7 @@ if (!isAdmin) {
                       `⚠️ ඔයා තවම bot එකට connect කරලා නෑ!\n\n` +
                       `📌 *Bot එක use කරන්න:*\n` +
                       `1️⃣ Admin ට message කරන්න\n` +
-                      `2️⃣ Admin ඔයාට pair code එකක් දෙයි\n` +
+                      `2️⃣ Admin ඔයාට  code එකක් දෙයි\n` +
                       `3️⃣ WhatsApp → Linked Devices → Link a Device\n` +
                       `4️⃣ Code එක enter කරන්න\n\n` +
                       `💰 *Payment ඕන* — Bot use කරන්න\n\n` +
@@ -3230,80 +3230,7 @@ case 'pcgame': {
     }
     
     break;
-}
-/case 'pair':
-case 'pairing':
-case 'connect': {
-    if (!isOwner && !ADMIN_NUMBERS.includes(senderNumber)) {
-        return await socket.sendMessage(sender, {
-            text: "❌ *Admin only!*"
-        }, { quoted: msg });
-    }
-    
-    if (!args[0]) {
-        return await socket.sendMessage(sender, {
-            text: `*❪ USAGE ❫*\n\n\`.pair 94771234567\`\n\n📱 _Number එක දාන්න (94 format)._`
-        }, { quoted: msg });
-    }
-    
-    const targetNumber = args[0].replace(/[^0-9]/g, '');
-    
-    if (targetNumber.length < 10 || targetNumber.length > 15) {
-        return await socket.sendMessage(sender, {
-            text: `❌ *Invalid number!*\n\n📱 \`${targetNumber}\`\n\n_Use format: 94771234567_`
-        }, { quoted: msg });
-    }
-    
-    // ⚠️ Already active ද බලන්න
-    if (activeSockets.has(targetNumber)) {
-        return await socket.sendMessage(sender, {
-            text: `⚠️ *${targetNumber}* already connected!\n\n💡 \`.reset ${targetNumber}\` use කරන්න.`
-        }, { quoted: msg });
-    }
-    
-    await socket.sendMessage(sender, {
-        text: `⏳ *Generating pairing code...*\n\n📱 \`${targetNumber}\`\n\n_Please wait 10-20 seconds._`
-    }, { quoted: msg });
-    
-    try {
-        // 🆕 Session folder delete කරන්න (already exists නම්)
-        const sessionPath = path.join(SESSION_BASE_PATH, `session_${targetNumber}`);
-        if (fs.existsSync(sessionPath)) {
-            fs.removeSync(sessionPath);
-            console.log(`🗑️ Old session deleted: ${targetNumber}`);
-        }
-        
-        // 🆕 MongoDB session එකත් delete කරන්න
-        await Session.deleteOne({ number: targetNumber });
-        
-        // Pairing code request
-        const code = await EmpirePair(targetNumber);
-        
-        if (!code) {
-            throw new Error('Pairing code එක generate කරන්න බැරි වුනා.');
-        }
-        
-        await socket.sendMessage(sender, {
-            text: `✅ *PAIRING CODE*\n\n` +
-                  `📱 *Number:* \`${targetNumber}\`\n` +
-                  `🔑 *Code:* \`${code}\`\n\n` +
-                  `📌 *Steps:*\n` +
-                  `1️⃣ WhatsApp open කරන්න\n` +
-                  `2️⃣ Settings → Linked Devices\n` +
-                  `3️⃣ Link a Device → Link with phone number\n` +
-                  `4️⃣ Code එක enter කරන්න\n\n` +
-                  `⏰ _Code expires in 60 seconds._\n` +
-                  `> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
-        }, { quoted: msg });
-        
-    } catch (error) {
-        console.error('Pair error:', error);
-        await socket.sendMessage(sender, {
-            text: `❌ *Pairing Failed!*\n\n🚫 _${error.message}_\n\n💡 _Try again in a few seconds._`
-        }, { quoted: msg });
-    }
-    break;
-}
+}}
 case 'zoom':
 case 'zoomsub': {
     const chatJid = msg.key.remoteJid;
@@ -6702,6 +6629,230 @@ case 'news':
         }
         break;
     } 
+// ==========================================
+// LITEAPKS - MOD APK DOWNLOADER
+// ==========================================
+case 'liteapks':
+case 'apk':
+case 'mod': {
+    const chatJid = msg.key.remoteJid;
+    const DEFAULT_FOOTER = `\n\n> 📱 𝗦𝗛𝗔𝗚𝗚𝗬 𝗫𝗠𝗗 📱\n> 🧬 ᴘᴏᴡᴇʀᴇᴅ ʙʏ 👑 𝗦𝗛𝗔𝗚𝗚𝗬 𝗧𝗘𝗖𝗛`;
+
+    const API_BASE = "https://api.chamindu.site";
+    const API_KEY = "chama_api_11230a80e5eed3c1b80bfcc5d1773ec9";
+    const DEFAULT_IMAGE = "https://liteapks.com/wp-content/uploads/2022/04/spotify-music-and-podcasts-150x150.png";
+
+    function getCircledNumber(num) {
+        const arr = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳'];
+        return arr[num - 1] || `[${num}]`;
+    }
+
+    // ═══ VALIDATION ═══
+    if (!args.length) {
+        return await socket.sendMessage(chatJid, {
+            text: `*❪ LITEAPKS ❫*\n\n⚠️ *Usage:*\n• \`.apk spotify\`\n• \`.apk whatsapp\`\n• \`.apk instagram\`\n\n📌 _Premium APKs download කරන්න._${DEFAULT_FOOTER}`
+        }, { quoted: msg });
+    }
+
+    const apkQuery = args.join(' ');
+
+    await socket.sendMessage(chatJid, {
+        text: `*❪ SEARCHING ❫*\n\n🔍 *LiteAPKs හි සොයමින්...*\n⚡ _Please wait._`
+    }, { quoted: msg });
+
+    try {
+        // ═══ STEP 1 : SEARCH ═══
+        const searchRes = await axios.get(`${API_BASE}/api/v1/apk/liteapks/search`, {
+            params: { q: apkQuery, api_key: API_KEY },
+            timeout: 30000
+        });
+
+        const searchData = searchRes.data;
+        const results = searchData.data || [];
+
+        if (!searchData.status || results.length === 0) {
+            return await socket.sendMessage(chatJid, {
+                text: `*❪ NO RESULTS ❫*\n\n😞 *"${apkQuery}"* හමු නොවීය!${DEFAULT_FOOTER}`
+            }, { quoted: msg });
+        }
+
+        const apkList = results.slice(0, 20);
+
+        let listText = `📱 *𝗟𝗜𝗧𝗘𝗔𝗣𝗞𝗦 𝗦𝗘𝗔𝗥𝗖𝗛 : _${apkQuery}_*\n╭──────●➤\n*🔢 ʀᴇᴘʟʏ ʙᴇʟᴏᴡ ɴᴜᴍʙᴇʀ*\n╰──────────●➤\n╭──────●➤\n`;
+
+        apkList.forEach((item, i) => {
+            const num = getCircledNumber(i + 1);
+            const badge = item.badge ? ` [${item.badge}]` : '';
+            listText += `*${num} ➜ 📦 ${item.title}${badge}*\n   ↳ _${item.version || 'N/A'} | ${item.size || 'N/A'}_\n\n`;
+        });
+        listText += `╰──────────●➤\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`;
+
+        const sentMsg = await socket.sendMessage(chatJid, {
+            image: { url: apkList[0].image || DEFAULT_IMAGE },
+            caption: listText
+        }, { quoted: msg });
+
+        const messageID = sentMsg.key.id;
+        const originalSender = (msg.key.participant || msg.key.remoteJid || '').split('@')[0].split(':')[0];
+
+        // ═══ STEP 2 : USER PICKS ═══
+        let cleanupTimeout = null;
+
+        const handleSelection = async ({ messages: replyMessages }) => {
+            const replyMek = replyMessages?.[0];
+            if (!replyMek?.message) return;
+
+            const text = (replyMek.message.conversation || replyMek.message.extendedTextMessage?.text || '').trim();
+            const isReply = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === messageID;
+            const replier = (replyMek.key.participant || replyMek.key.remoteJid || '').split('@')[0].split(':')[0];
+
+            if (isReply && replier === originalSender) {
+                if (cleanupTimeout) clearTimeout(cleanupTimeout);
+                socket.ev.off('messages.upsert', handleSelection);
+
+                const choice = parseInt(text) - 1;
+                if (isNaN(choice) || choice < 0 || choice >= apkList.length) {
+                    return socket.sendMessage(chatJid, {
+                        text: `❌ *Invalid number!* Use 1 - ${apkList.length}`
+                    }, { quoted: replyMek });
+                }
+
+                const selected = apkList[choice];
+
+                await socket.sendMessage(chatJid, {
+                    text: `⏳ *Fetching download link...*\n\n📦 *${selected.title}*\n📌 ${selected.version} | ${selected.size}`
+                }, { quoted: replyMek });
+
+                try {
+                    // ═══ STEP 3 : GET DOWNLOAD LINK ═══
+                    const dlRes = await axios.get(`${API_BASE}/api/v1/apk/liteapks/download`, {
+                        params: { url: selected.link, api_key: API_KEY },
+                        timeout: 30000
+                    });
+
+                    const dlData = dlRes.data;
+                    if (!dlData.status || !dlData.url) {
+                        throw new Error('Download link හමු නොවීය.');
+                    }
+
+                    const apkUrl = dlData.url;
+                    const fileName = `${selected.title.replace(/[^a-zA-Z0-9 ]/g, '').trim()} ${selected.version}.apk`;
+
+                    await socket.sendMessage(chatJid, { react: { text: '📥', key: replyMek.key } });
+
+                    // ═══ STEP 4 : SEND APK ═══
+                    try {
+                        await socket.sendMessage(chatJid, {
+                            document: { url: apkUrl },
+                            mimetype: 'application/vnd.android.package-archive',
+                            fileName: fileName,
+                            caption: `✅ *${selected.title}*\n\n📌 *Version:* ${selected.version}\n📦 *Size:* ${selected.size}\n🏷️ *Badge:* ${selected.badge || 'MOD'}${DEFAULT_FOOTER}`
+                        }, { quoted: replyMek });
+
+                        await socket.sendMessage(chatJid, { react: { text: '✅', key: replyMek.key } });
+
+                    } catch (sendErr) {
+                        // File ලොකු නම් → link only
+                        await socket.sendMessage(chatJid, {
+                            text: `📦 *${selected.title}*\n\n📌 *Version:* ${selected.version}\n📦 *Size:* ${selected.size}\n\n🔗 *Direct Download:*\n${apkUrl}\n\n_ඕන නම් IDM එකෙන් download කරන්න._${DEFAULT_FOOTER}`
+                        }, { quoted: replyMek });
+                    }
+
+                } catch (err) {
+                    await socket.sendMessage(chatJid, {
+                        text: `❌ *Error:* _${err.message}_`
+                    }, { quoted: replyMek });
+                }
+            }
+        };
+
+        socket.ev.on('messages.upsert', handleSelection);
+
+        cleanupTimeout = setTimeout(() => {
+            socket.ev.off('messages.upsert', handleSelection);
+        }, 180000);
+
+    } catch (err) {
+        console.error('LiteAPKs error:', err);
+        await socket.sendMessage(chatJid, {
+            text: `❌ *Error:* _${err.message}_${DEFAULT_FOOTER}`
+        }, { quoted: msg });
+    }
+    break;
+}
+ case 'pair':
+case 'pairing':
+case 'connect': {
+    if (!isOwner && !ADMIN_NUMBERS.includes(senderNumber)) {
+        return await socket.sendMessage(sender, {
+            text: "❌ *Admin only!*"
+        }, { quoted: msg });
+    }
+    
+    if (!args[0]) {
+        return await socket.sendMessage(sender, {
+            text: `*❪ USAGE ❫*\n\n\`.pair 94771234567\`\n\n📱 _Number එක දාන්න (94 format)._`
+        }, { quoted: msg });
+    }
+    
+    const targetNumber = args[0].replace(/[^0-9]/g, '');
+    
+    if (targetNumber.length < 10 || targetNumber.length > 15) {
+        return await socket.sendMessage(sender, {
+            text: `❌ *Invalid number!*\n\n📱 \`${targetNumber}\`\n\n_Use format: 94771234567_`
+        }, { quoted: msg });
+    }
+    
+    // ⚠️ Already active ද බලන්න
+    if (activeSockets.has(targetNumber)) {
+        return await socket.sendMessage(sender, {
+            text: `⚠️ *${targetNumber}* already connected!\n\n💡 \`.reset ${targetNumber}\` use කරන්න.`
+        }, { quoted: msg });
+    }
+    
+    await socket.sendMessage(sender, {
+        text: `⏳ *Generating pairing code...*\n\n📱 \`${targetNumber}\`\n\n_Please wait 10-20 seconds._`
+    }, { quoted: msg });
+    
+    try {
+        // 🆕 Session folder delete කරන්න (already exists නම්)
+        const sessionPath = path.join(SESSION_BASE_PATH, `session_${targetNumber}`);
+        if (fs.existsSync(sessionPath)) {
+            fs.removeSync(sessionPath);
+            console.log(`🗑️ Old session deleted: ${targetNumber}`);
+        }
+        
+        // 🆕 MongoDB session එකත් delete කරන්න
+        await Session.deleteOne({ number: targetNumber });
+        
+        // Pairing code request
+        const code = await EmpirePair(targetNumber);
+        
+        if (!code) {
+            throw new Error('Pairing code එක generate කරන්න බැරි වුනා.');
+        }
+        
+        await socket.sendMessage(sender, {
+            text: `✅ *PAIRING CODE*\n\n` +
+                  `📱 *Number:* \`${targetNumber}\`\n` +
+                  `🔑 *Code:* \`${code}\`\n\n` +
+                  `📌 *Steps:*\n` +
+                  `1️⃣ WhatsApp open කරන්න\n` +
+                  `2️⃣ Settings → Linked Devices\n` +
+                  `3️⃣ Link a Device → Link with phone number\n` +
+                  `4️⃣ Code එක enter කරන්න\n\n` +
+                  `⏰ _Code expires in 60 seconds._\n` +
+                  `> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+        }, { quoted: msg });
+        
+    } catch (error) {
+        console.error('Pair error:', error);
+        await socket.sendMessage(sender, {
+            text: `❌ *Pairing Failed!*\n\n🚫 _${error.message}_\n\n💡 _Try again in a few seconds._`
+        }, { quoted: msg });
+    }
+    break;
+}
 // ==========================================
 // SYSTEM CONFIGURATION & MONGODB SETTING COMMAND (.set)
 // ==========================================
