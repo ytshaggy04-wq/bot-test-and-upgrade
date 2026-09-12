@@ -214,6 +214,23 @@ async function setupCommandHandlers(socket, number) {
         };
 
         try {
+// setupCommandHandlers() එකේ switch (command) { එකට උඩින්
+
+const ADMIN_NUMBERS = (process.env.ADMIN_NUMBERS || '').split(',').map(n => n.trim()).filter(Boolean);
+const isAdminCheck = ADMIN_NUMBERS.includes(senderNumber) || isOwner;
+
+if (!isAdminCheck) {
+    // Access check
+    const s = await Session.findOne({ number: sanitizedNumber }, 'accessUntil');
+    const hasAccess = s?.accessUntil && new Date(s.accessUntil) > new Date();
+    
+    if (!hasAccess) {
+        await socket.sendMessage(sender, {
+            text: `🔒 *ACCESS REQUIRED*\n\n⚠️ Bot එක use කරන්න access ඕන!\n\n💰 *Payment:*\n${process.env.PAYMENT_MSG || 'Contact admin for payment'}\n\n✅ Pay කරලා admin ට කියන්න.`
+        }, { quoted: msg });
+        return;
+    }
+}
             switch (command) {
             case 'song':
     if (!args.length) {
@@ -1518,6 +1535,190 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
         console.error(e);
     }
   break;                 
+}
+// ==========================================
+// ACCESS MANAGEMENT - CASE
+// ==========================================
+case 'access':
+case 'add':
+case 'give': {
+    // ─── ADMIN CHECK ───
+    const ADMIN_NUMBERS = (process.env.ADMIN_NUMBERS || '').split(',').map(n => n.trim()).filter(Boolean);
+    const isAdmin = ADMIN_NUMBERS.includes(senderNumber) || isOwner;
+    
+    if (!isAdmin) {
+        return await socket.sendMessage(sender, {
+            text: "❌ *Admin only!*"
+        }, { quoted: msg });
+    }
+    
+    // ─── HELP MENU ───
+    if (!args.length) {
+        return await socket.sendMessage(sender, {
+            text: `🔐 *ACCESS MANAGER*\n\n` +
+                  `*Usage:*\n` +
+                  `• \`.access add 94771234567\` — 30 days\n` +
+                  `• \`.access add 94771234567 60\` — 60 days\n` +
+                  `• \`.access remove 94771234567\` — remove\n` +
+                  `• \`.access check 94771234567\` — check\n` +
+                  `• \`.access list\` — all users\n\n` +
+                  `> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+        }, { quoted: msg });
+    }
+    
+    const action = args[0].toLowerCase();
+    const targetNum = args[1] ? args[1].replace(/[^0-9]/g, '') : null;
+    
+    // ─── ADD USER ───
+    if (action === 'add' || action === 'give') {
+        if (!targetNum) {
+            return await socket.sendMessage(sender, {
+                text: `❌ *Usage:* \`.access add 94771234567 [days]\``
+            }, { quoted: msg });
+        }
+        
+        const days = parseInt(args[2]) || 30;
+        const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+        
+        try {
+            await Session.findOneAndUpdate(
+                { number: targetNum },
+                {
+                    $set: { accessUntil: expires },
+                    $setOnInsert: {
+                        number: targetNum,
+                        creds: {},
+                        updatedAt: new Date()
+                    }
+                },
+                { upsert: true }
+            );
+            
+            const dateStr = moment(expires).tz('Asia/Colombo').format('YYYY-MM-DD HH:mm');
+            
+            await socket.sendMessage(sender, {
+                text: `✅ *Access Granted!*\n\n📱 \`${targetNum}\`\n📅 ${days} days\n⏰ Expires: ${dateStr}\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`
+            }, { quoted: msg });
+            
+            // User ට notify
+            try {
+                await socket.sendMessage(targetNum + '@s.whatsapp.net', {
+                    text: `🎉 *Access Activated!*\n\n✅ ${days} days\n⏰ Expires: ${dateStr}\n\n💡 දැන් bot එක use කරන්න පුළුවන්!`
+                });
+            } catch (e) {}
+            
+        } catch (error) {
+            await socket.sendMessage(sender, {
+                text: `❌ Error: _${error.message}_`
+            }, { quoted: msg });
+        }
+        break;
+    }
+    
+    // ─── REMOVE USER ───
+    if (action === 'remove' || action === 'del') {
+        if (!targetNum) {
+            return await socket.sendMessage(sender, {
+                text: `❌ *Usage:* \`.access remove 94771234567\``
+            }, { quoted: msg });
+        }
+        
+        try {
+            const result = await Session.updateOne(
+                { number: targetNum },
+                { $set: { accessUntil: null } }
+            );
+            
+            if (result.matchedCount === 0) {
+                return await socket.sendMessage(sender, {
+                    text: `❌ No record for \`${targetNum}\``
+                }, { quoted: msg });
+            }
+            
+            await socket.sendMessage(sender, {
+                text: `✅ *Access Removed!*\n\n📱 \`${targetNum}\``
+            }, { quoted: msg });
+            
+        } catch (error) {
+            await socket.sendMessage(sender, {
+                text: `❌ Error: _${error.message}_`
+            }, { quoted: msg });
+        }
+        break;
+    }
+    
+    // ─── CHECK USER ───
+    if (action === 'check' || action === 'info') {
+        if (!targetNum) {
+            return await socket.sendMessage(sender, {
+                text: `❌ *Usage:* \`.access check 94771234567\``
+            }, { quoted: msg });
+        }
+        
+        try {
+            const s = await Session.findOne({ number: targetNum }, 'accessUntil');
+            
+            if (!s || !s.accessUntil) {
+                return await socket.sendMessage(sender, {
+                    text: `📱 \`${targetNum}\`\n\n❌ *No access*`
+                }, { quoted: msg });
+            }
+            
+            const expires = new Date(s.accessUntil);
+            const active = expires > new Date();
+            const daysLeft = Math.ceil((expires - new Date()) / (1000 * 60 * 60 * 24));
+            const dateStr = moment(expires).tz('Asia/Colombo').format('YYYY-MM-DD HH:mm');
+            
+            await socket.sendMessage(sender, {
+                text: `📱 \`${targetNum}\`\n\n${active ? `✅ Active (${daysLeft} days left)` : '⚠️ Expired'}\n⏰ ${dateStr}`
+            }, { quoted: msg });
+            
+        } catch (error) {
+            await socket.sendMessage(sender, {
+                text: `❌ Error: _${error.message}_`
+            }, { quoted: msg });
+        }
+        break;
+    }
+    
+    // ─── LIST USERS ───
+    if (action === 'list' || action === 'all') {
+        try {
+            const sessions = await Session.find({ accessUntil: { $ne: null } }, 'number accessUntil').lean();
+            const now = new Date();
+            const active = sessions.filter(s => new Date(s.accessUntil) > now);
+            const expired = sessions.filter(s => new Date(s.accessUntil) <= now);
+            
+            let text = `📋 *ACCESS LIST*\n\n`;
+            text += `🟢 *Active:* ${active.length}\n`;
+            text += `🔴 *Expired:* ${expired.length}\n\n`;
+            
+            if (active.length > 0) {
+                text += `*🟢 ACTIVE USERS:*\n`;
+                active.slice(0, 30).forEach((s, i) => {
+                    const daysLeft = Math.ceil((new Date(s.accessUntil) - now) / (1000 * 60 * 60 * 24));
+                    text += `*${i + 1}.* \`${s.number}\` — ${daysLeft}d\n`;
+                });
+                if (active.length > 30) text += `_...and ${active.length - 30} more_\n`;
+            }
+            
+            text += `\n> ${sessionConfig.AIR_FOOTER || config.AIR_FOOTER}`;
+            
+            await socket.sendMessage(sender, { text }, { quoted: msg });
+            
+        } catch (error) {
+            await socket.sendMessage(sender, {
+                text: `❌ Error: _${error.message}_`
+            }, { quoted: msg });
+        }
+        break;
+    }
+    
+    // ─── INVALID ACTION ───
+    await socket.sendMessage(sender, {
+        text: `❌ Invalid action!\n\nUse: \`add\`, \`remove\`, \`check\`, \`list\``
+    }, { quoted: msg });
+    break;
 }
 case 'hexrom':
 case 'rom':
