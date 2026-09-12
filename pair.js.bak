@@ -43,11 +43,11 @@ const config = {
     API_KEY:'lakiya_2f3b6c382d1236ad7a08d56331fb679935d51dfc846df2c254093fd1fff9494e',
     BOT_IMAGE:'https://cdn.phototourl.com/free/2026-09-11-27d04497-58da-4a05-be4a-795301b660fc.png',
     BOT_FOOTER:"SHAGGY XMD 〽️ᴏᴠɪᴇ Bᴏᴛ ᴠ2",
-     MGROUP_LINK: 'https://chat.whatsapp.com/EeMhcQufXDFABM1MnR05Wh?s=cl&p=a&mlu=4&ilr=4',
+    MGROUP_LINK: 'https://chat.whatsapp.com/EeMhcQufXDFABM1MnR05Wh?s=cl&p=a&mlu=4&ilr=4',
     MOVIE_FOOTER:"⏤͟͟͞͞★❮ SHAGGY XMD 〽️OVIE ⏤͟͟͞͞★",
-     MOVIE_CAPTION:"🇸‌ʜᴀɢɢY-xᴍᴅ ᴍᴏᴠɪᴇ 🔥🌈",
+    MOVIE_CAPTION:"🇸‌ʜᴀɢɢY-xᴍᴅ ᴍᴏᴠɪᴇ 🔥🌈",
     PREFIX: '.',
-    OWNER_NUMBERS: ['94703830GGGG990'],
+    OWNER_NUMBERS: ['94703830000'],   // 🆕 ඔයාගේ number එක දාන්න
     BOT_NAME: "TEST-BOT",
     AIR_FOOTER: "ꜱʜᴀɢɢY-xᴍᴅ ᴠ2⚡",
     MODE: 'public',
@@ -57,6 +57,10 @@ const activeSockets = new Map();
 const socketCreationTime = new Map();
 const SESSION_BASE_PATH = './session';
 const NUMBER_LIST_PATH = './numbers.json';
+
+// ==========================================
+// MONGOOSE SCHEMAS
+// ==========================================
 const SessionSchema = new mongoose.Schema({
     number: { type: String, unique: true, required: true },
     creds: { type: Object, required: true },
@@ -64,6 +68,14 @@ const SessionSchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now }
 });
 const Session = mongoose.model('Session', SessionSchema);
+
+// 🆕 Auto Reply Schema
+const AutoReplySchema = new mongoose.Schema({
+    keyword: { type: String, unique: true, required: true, lowercase: true },
+    reply: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }
+});
+const AutoReply = mongoose.model('AutoReply', AutoReplySchema);
 
 async function connectMongoDB() {
     try {
@@ -84,6 +96,7 @@ async function connectMongoDB() {
     }
 }
 connectMongoDB();
+
 if (!fs.existsSync(SESSION_BASE_PATH)) {
     fs.mkdirSync(SESSION_BASE_PATH, { recursive: true });
 }
@@ -93,6 +106,7 @@ function initialize() {
     socketCreationTime.clear();
     console.log('Cleared active sockets and creation times on startup');
 }
+
 async function autoReconnectOnStartup() {
     try {
         let numbers = [];
@@ -135,17 +149,21 @@ async function autoReconnectOnStartup() {
 
 initialize();
 setTimeout(autoReconnectOnStartup, 5000);
+
 function formatMessage(title, content, footer) {
     return `*${title}*\n\n${content}\n\n> *${footer}*`;
 }
+
 function getSriLankaTimestamp() {
     return moment().tz('Asia/Colombo').format('YYYY-MM-DD HH:mm:ss');
 }
+
 async function downloadContent(message) {
     if (!message) throw new Error('No message content');
     const buffer = await downloadContentFromMessage(message, 'buffer');
     return buffer;
 }
+
 async function streamToBuffer(stream) {
     const chunks = [];
     for await (const chunk of stream) {
@@ -153,6 +171,51 @@ async function streamToBuffer(stream) {
     }
     return Buffer.concat(chunks);
 }
+
+// ==========================================
+// 🆕 AUTO REPLY HANDLER
+// ==========================================
+async function setupAutoReply(socket) {
+    socket.ev.on('messages.upsert', async ({ messages, type }) => {
+        try {
+            if (type !== 'notify') return;
+            
+            const msg = messages[0];
+            if (!msg?.message) return;
+            if (msg.key.remoteJid === 'status@broadcast') return;
+            if (msg.key.fromMe) return;
+            
+            let text = '';
+            if (msg.message.conversation) {
+                text = msg.message.conversation.trim();
+            } else if (msg.message.extendedTextMessage?.text) {
+                text = msg.message.extendedTextMessage.text.trim();
+            } else {
+                return;
+            }
+            
+            if (!text) return;
+            if (text.startsWith('.')) return;
+            
+            const lowerText = text.toLowerCase();
+            const found = await AutoReply.findOne({ keyword: lowerText });
+            
+            if (found) {
+                await socket.sendMessage(msg.key.remoteJid, {
+                    text: found.reply
+                }, { quoted: msg });
+                
+                console.log(`💬 Auto-reply: "${lowerText}" → ${msg.key.remoteJid.split('@')[0]}`);
+            }
+            
+        } catch (err) {
+            console.error('AutoReply error:', err.message);
+        }
+    });
+    
+    console.log('✅ Auto-reply handler ready');
+}
+
 async function setupCommandHandlers(socket, number) {
     const sanitizedNumber = number.replace(/[^0-9]/g, '');
     let sessionConfig = await loadUserConfig(sanitizedNumber);
@@ -215,6 +278,7 @@ async function setupCommandHandlers(socket, number) {
 
         try {
             switch (command) {
+                // ✅ ඔයාගේ cases ටික මෙතනට එනවා
             case 'song':
     if (!args.length) {
         await socket.sendMessage(sender, {
@@ -1446,78 +1510,215 @@ ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
     break;
 
     break;    case 'menu':
-               case 'help':     {
+case 'help': {
     try {
         const pushName = msg.pushName || 'User';
         const date = new Date();
         const slstDate = new Date(date.toLocaleString("en-US", { timeZone: "Asia/Colombo" }));
         const formattedDate = `${slstDate.getFullYear()}/${slstDate.getMonth() + 1}/${slstDate.getDate()}`;
         const formattedTime = slstDate.toLocaleTimeString();
-
         const hour = slstDate.getHours();
 
         const greetings = hour < 12 ? `Good Morning✨` :
                           hour < 15 ? `Good Afternoon🚀` :
                           hour < 18 ? `Good Evening! 🌟` : `Good Night🌙`;
-        const prefix = sessionConfig.PREFIX || config.PREFIX || '.';
 
-        // Main Menu (Number reply removed)
-        const mainMenuMsg = `*🌟 𝙃𝙚𝙮 ❟ ${pushName} ✨𝙃𝙤𝙬 𝙖𝙧𝙚 𝙮𝙤𝙪.*      
-*╭─「 ᴄᴏᴍᴍᴀɴᴅꜱ ᴘᴀɴᴇʟ」*
-*┃ \`🐸 ${greetings}\`*
-*┃ \`🧩 𝚃𝚒𝚖𝚎\` : ${formattedTime}*
-*┃ \`🦊 𝙳𝚊𝚝𝚎\` : ${formattedDate}*
-*┃ \`🤡 𝙱𝚘𝚝 𝙽𝚊𝚖𝚎:\` 𝖲ʜᴀɢɢY-xᴍᴅ ⭐*
-*┃ \`🐞 𝙿𝚕𝚊𝚝𝚏𝚘𝚛𝚖:\` Linux*
-*╰────────●●►*    
-╭─  ♡  ᴄᴏᴍᴍᴀɴᴅꜱ  ♡  ─╮
+        const mainMenuMsg =
+`*🌟 𝙃𝙚𝙮 ❟ ${pushName} ✨*
+*🍟 Wᴇʟᴄᴏᴍᴇ ᴛᴏ SHAGGY XMD 🦊*
+*╭─「 ꜱᴛᴀᴛᴜꜱ ᴘᴀɴᴇʟ」*
+*┃ \`🔮 ${greetings}\`*
+*┃ \`⏰ 𝚃𝚒𝚖𝚎\` : ${formattedTime}*
+*┃ \`📆 𝙳𝚊𝚝𝚎\` : ${formattedDate}*
+*┃ \`🎃 𝙱𝚘𝚝 𝙽𝚊𝚖𝚎:\` SHAGGY-XMD*
+*┃ \`📟 𝙿𝚕𝚊𝚝𝚏𝚘𝚛𝚖:\` Linux*
+*╰────────●●►*
+*☱ 🔢 𝚁𝙴𝙿𝙻𝚈 𝚆𝙸𝚃𝙷 𝙽𝚄𝙼𝙱𝙴𝚁 ☱*
 
-🎬  𝗠𝗼𝘃𝗶𝗲 & 𝗗𝗼𝘄𝗻𝗹𝗼𝗮𝗱
-  • .cinesubz    — Movie dl
-  • .sinhalasub  — Movie dl
-  • .cinetv      — Tv searies 
-  • .movie       — Movie dl
-  • .thinkiri    - Movie dl
-  • .dubzone     - (Fix soon)
-  • .anime       — Anime dl
-  • .pupilmovie  — Sinhala Movie dl
-  • .dinka       — Sinhala dl
-  • .cartoon    — Cartoon dl
-  • .rexporn     — Wal dl
-  • .wrestling   — Wwe dl
-  • .song        — Music dl
-  • .tiktok      — Tiktok dl
-  • .sinhalatop  - Sub zip dl
-  
-⚙️  𝗚𝗲𝗻𝗲𝗿𝗮𝗹
-  • .alive       — status
-  • .menu        — menu
-  • .help        — menu
-  • .set         — settings
-  • .system      — info
-  • .ping        — system info
-  • .bots        — active session
+*1 ❯❯  𝚂𝙴𝙰𝚁𝙲𝙷 𝙼𝙴𝙽𝚄*
+*2 ❯❯  𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳 𝙼𝙴𝙽𝚄*
+*3 ❯❯  𝙼𝙾𝚅𝙸𝙴 𝙼𝙴𝙽𝚄*
+*4 ❯❯  𝙰𝙿𝙿𝚂 & 𝙶𝙰𝙼𝙴𝚂*
+*5 ❯❯  𝙶𝙴𝙽𝙴𝚁𝙰𝙻 𝙼𝙴𝙽𝚄*
+*6 ❯❯  𝙰𝙳𝙼𝙸𝙽 𝙼𝙴𝙽𝚄*
 
-  ⚙️  𝗢𝘁𝗵𝗲𝗿
-• .ai           — Conversation 
-• .vv           — One viwe sv
-• .sdl          — Status vid dl 
-• .schedule    — custom masej
+> SHAGGY XMD ✘ ᴀɪʀ Bᴏᴛ ᴠ2
+> _Crafted by Shaggy Ofc_
+> 🐥 _Web: https://shaggytech.online`;
 
-╰─  ᴍᴏʀᴇ ᴄᴍᴅ ᴢᴏᴏɴ..⚡  ─╯
-> ${sessionConfig.BOT_FOOTER || config.BOT_FOOTER}`;
-
-        await socket.sendMessage(sender, {
-            image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE},
+        const sentMsg = await socket.sendMessage(sender, {
+            image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
             caption: mainMenuMsg
         }, { quoted: msg });
 
+        const menuMsgID = sentMsg.key.id;
+        const originalSender = (msg.key.participant || msg.key.remoteJid || '').split('@')[0].split(':')[0];
 
+        // ── Menu categories ──
+        const menus = {
+            '1': {
+                title: `*🔍 𝚂𝙴𝙰𝚁𝙲𝙷 𝙼𝙴𝙽𝚄*`,
+                body:
+`╭─「 🔍 ꜱᴇᴀʀᴄʜ ᴄᴍᴅꜱ 」*
+  • .cinesubz    — Movie search
+  • .sinhalasub  — Movie search
+  • .cinetv      — TV Series
+  • .movie       — Multi source
+  • .thinkiri    — TheNkiri
+  • .chithrapata — Chithrapata
+  • .anime       — Anime search
+  • .cartoon     — Cartoon search
+  • .dinka       — DinkaMovies
+  • .pupilmovie  — Movie search
+  • .wrestling   — WWE search
+  • .sinhalatop  — Sub search
+  • .rexporn     — Adult search
+  • .apk         — Mod APK search
+  • .rom         — Game ROM search
+╰─ ─ ─ ─ ─ ─ ─ ─ ─╯
+
+*0 ❯❯ ⬅️ 𝙱𝙰𝙲𝙺 𝚃𝙾 𝙼𝙰𝙸𝙽*`
+            },
+            '2': {
+                title: `*⬇️ 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳 𝙼𝙴𝙽𝚄*`,
+                body:
+`╭─「 ⬇️ ᴅᴏᴡɴʟᴏᴀᴅ ᴄᴍᴅꜱ 」*
+  • .song        — Music dl
+  • .tiktok      — TikTok dl
+  • .sdl         — Status vid dl
+  • .vv          — View once
+  • .ai          — AI chat
+  • .schedule    — Custom msg
+╰─ ─ ─ ─ ─ ─ ─ ─ ─╯
+
+*0 ❯❯ ⬅️ 𝙱𝙰𝙲𝙺 𝚃𝙾 𝙼𝙰𝙸𝙽*`
+            },
+            '3': {
+                title: `*🎬 𝙼𝙾𝚅𝙸𝙴 𝙼𝙴𝙽𝚄*`,
+                body:
+`╭─「 🎬 ᴍᴏᴠɪᴇ ᴄᴍᴅꜱ 」*
+  • .cinesubz    — Sinhala sub
+  • .sinhalasub  — Sinhala sub
+  • .cinetv      — TV Series
+  • .movie       — Multi source
+  • .thinkiri    — TheNkiri
+  • .chithrapata — Chithrapata
+  • .dinka       — DinkaMovies
+  • .pupilmovie  — PupilVideo
+  • .cartoon     — Cartoons.lk
+  • .anime       — AnimeHeaven
+  • .dubzone     — DubZone
+  • .wrestling   — WatchWrestling
+  • .sinhalatop  — SinhalaTop
+╰─ ─ ─ ─ ─ ─ ─ ─ ─╯
+
+*0 ❯❯ ⬅️ 𝙱𝙰𝙲𝙺 𝚃𝙾 𝙼𝙰𝙸𝙽*`
+            },
+            '4': {
+                title: `*📱 𝙰𝙿𝙿𝚂 & 𝙶𝙰𝙼𝙴𝚂*`,
+                body:
+`╭─ 「 📱 ᴀᴘᴘꜱ & ɢᴀᴍᴇꜱ 」*
+  • .apk         — Mod APK dl
+  • .rom         — Game ROM dl
+  • .hexrom      — ROM (alias)
+  • .game        — ROM (alias)
+╰─ ─ ─ ─ ─ ─ ─ ─ ─╯
+
+*0 ❯❯ ⬅️ 𝙱𝙰𝙲𝙺 𝚃𝙾 𝙼𝙰𝙸𝙽*`
+            },
+            '5': {
+                title: `*⚙️ 𝙶𝙴𝙽𝙴𝚁𝙰𝙻 𝙼𝙴𝙽𝚄*`,
+                body:
+`╭─「 ⚙️ ɢᴇɴᴇʀᴀʟ ᴄᴍᴅꜱ 」*
+  • .alive       — Bot status
+  • .menu        — Command menu
+  • .help        — Same as menu
+  • .system      — System info
+  • .ping        — Ping info
+  • .bots        — Active sessions
+  • .jid         — Get chat JID
+╰─ ─ ─ ─ ─ ─ ─ ─ ─╯
+
+*0 ❯❯ ⬅️ 𝙱𝙰𝙲𝙺 𝚃𝙾 𝙼𝙰𝙸𝙽*`
+            },
+            '6': {
+                title: `*👑 𝙰𝙳𝙼𝙸𝙽 𝙼𝙴𝙽𝚄*`,
+                body:
+`╭─「 👑 ᴀᴅᴍɪɴ ᴄᴍᴅꜱ 」*
+  • .set         — Settings panel
+  • .adauto      — Add auto reply
+  • .delauto     — Delete auto reply
+  • .autorep     — Auto reply list
+  • .pair        — Generate pair code
+  • .reset       — Reset session
+  • .restart     — Restart bot
+  • .stop        — Stop bot
+  • .sessions    — Active sessions
+╰─ ─ ─ ─ ─ ─ ─ ─ ─╯
+
+⚠️ *Admin only commands*
+
+*0 ❯❯ ⬅️ 𝙱𝙰𝙲𝙺 𝚃𝙾 𝙼𝙰𝙸𝙽*`
+            }
+        };
+
+        // ── Reply listener ──
+        const handleMenuReply = async ({ messages: replyMsgs }) => {
+            const replyMek = replyMsgs?.[0];
+            if (!replyMek?.message) return;
+
+            const text = (replyMek.message.conversation || replyMek.message.extendedTextMessage?.text || '').trim();
+            const isReply = replyMek.message.extendedTextMessage?.contextInfo?.stanzaId === menuMsgID;
+            const replier = (replyMek.key.participant || replyMek.key.remoteJid || '').split('@')[0].split(':')[0];
+
+            if (!isReply || replier !== originalSender) return;
+
+            // ─── Back to main (0) ───
+            if (text === '0') {
+                return socket.sendMessage(sender, {
+                    image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+                    caption: mainMenuMsg
+                }, { quoted: replyMek });
+            }
+
+            // ─── Main menu (6) ───
+            if (text === '6') {
+                return socket.sendMessage(sender, {
+                    image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
+                    caption: mainMenuMsg
+                }, { quoted: replyMek });
+            }
+
+            // ─── Category menu (1-5) ───
+            const menu = menus[text];
+            if (menu) {
+                // Admin check for menu 6
+                if (text === '6') {
+                    const ADMIN_NUMBERS = (process.env.ADMIN_NUMBERS || '').split(',').map(n => n.trim()).filter(Boolean);
+                    if (!isOwner && !ADMIN_NUMBERS.includes(senderNumber)) {
+                        return socket.sendMessage(sender, {
+                            text: `❌ *Admin only!*`
+                        }, { quoted: replyMek });
+                    }
+                }
+                
+                await socket.sendMessage(sender, {
+                    text: `${menu.title}\n\n${menu.body}`
+                }, { quoted: replyMek });
+            }
+        };
+
+        socket.ev.on('messages.upsert', handleMenuReply);
+
+        // ── Auto cleanup after 2 min ──
+        setTimeout(() => {
+            socket.ev.off('messages.upsert', handleMenuReply);
+        }, 120000);
 
     } catch (e) {
-        console.error(e);
+        console.error('Menu error:', e.message);
     }
-  break;                 
+    break;
 }
 case 'hexrom':
 case 'rom':
@@ -6063,17 +6264,18 @@ case 'status': {
 }
 break;
 // ==========================================
-// LITEAPKS - MOD APK DOWNLOADER
+// LITEAPKS - MOD APK DOWNLOADER (FIXED)
 // ==========================================
 case 'liteapks':
 case 'apk':
 case 'mod': {
     const chatJid = msg.key.remoteJid;
-    const DEFAULT_FOOTER = `\n\n> 📱 𝗦𝗛𝗔𝗚𝗚𝗬 𝗫𝗠𝗗 📱\n> 🧬 ᴘᴏᴡᴇʀᴇᴅ ʙʏ 👑 𝗦𝗛𝗔𝗚𝗚𝗬 𝗧𝗘𝗖𝗛`;
+    const DEFAULT_FOOTER = `\n\n> 📱 𝗦𝗛𝗔??𝗚𝗬 𝗫𝗠𝗗 📱\n> 🧬 ᴘᴏᴡᴇʀᴇᴅ ʙʏ 👑 𝗦𝗛𝗔𝗚𝗚𝗬 𝗧𝗘𝗖𝗛`;
 
     const API_BASE = "https://api.chamindu.site";
     const API_KEY = "chama_api_11230a80e5eed3c1b80bfcc5d1773ec9";
     const DEFAULT_IMAGE = "https://liteapks.com/wp-content/uploads/2022/04/spotify-music-and-podcasts-150x150.png";
+    const TEMP_DIR = './tmp_apk';
 
     function getCircledNumber(num) {
         const arr = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳'];
@@ -6169,26 +6371,78 @@ case 'mod': {
                     }
 
                     const apkUrl = dlData.url;
-                    const fileName = `${selected.title.replace(/[^a-zA-Z0-9 ]/g, '').trim()} ${selected.version}.apk`;
 
+                    // ═══ STEP 4 : DOWNLOAD & SEND ═══
                     await socket.sendMessage(chatJid, { react: { text: '📥', key: replyMek.key } });
 
-                    // ═══ STEP 4 : SEND APK ═══
+                    await socket.sendMessage(chatJid, {
+                        text: `⏳ *Downloading to server:* ${selected.title}\n📦 *Size:* ${selected.size}\n\n_කරුණාකර රැඳී සිටින්න..._`
+                    }, { quoted: replyMek });
+
+                    // Temp folder
+                    await fs.ensureDir(TEMP_DIR);
+                    const safeName = selected.title.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40);
+                    const localFile = path.join(TEMP_DIR, `${safeName}_${Date.now()}.apk`);
+
                     try {
+                        // ── 4a. Download to server ──
+                        const writer = fs.createWriteStream(localFile);
+                        const response = await axios({
+                            url: apkUrl,
+                            method: 'GET',
+                            responseType: 'stream',
+                            timeout: 0,
+                            maxContentLength: Infinity,
+                            maxBodyLength: Infinity,
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                                'Accept': '*/*',
+                                'Referer': 'https://liteapks.com/'
+                            }
+                        });
+                        response.data.pipe(writer);
+                        await new Promise((resolve, reject) => {
+                            writer.on('finish', resolve);
+                            writer.on('error', reject);
+                        });
+
+                        const stats = await fs.stat(localFile);
+                        const realSizeMB = stats.size / 1024 / 1024;
+
                         await socket.sendMessage(chatJid, {
-                            document: { url: apkUrl },
-                            mimetype: 'application/vnd.android.package-archive',
-                            fileName: fileName,
-                            caption: `✅ *${selected.title}*\n\n📌 *Version:* ${selected.version}\n📦 *Size:* ${selected.size}\n🏷️ *Badge:* ${selected.badge || 'MOD'}${DEFAULT_FOOTER}`
+                            text: `✅ *Downloaded!*\n📦 ${realSizeMB.toFixed(1)} MB\n\n📤 _Sending to WhatsApp..._`
                         }, { quoted: replyMek });
 
-                        await socket.sendMessage(chatJid, { react: { text: '✅', key: replyMek.key } });
+                        // ── 4b. Send as document ──
+                        const fileName = `${selected.title.replace(/[^a-zA-Z0-9 ]/g, '').trim()} ${selected.version}.apk`;
 
-                    } catch (sendErr) {
-                        // File ලොකු නම් → link only
+                        try {
+                            await socket.sendMessage(chatJid, {
+                                document: { url: localFile },
+                                mimetype: 'application/octet-stream',      // ✅ generic binary
+                                fileName: fileName,
+                                caption: `✅ *${selected.title}*\n\n📌 *Version:* ${selected.version}\n📦 *Size:* ${selected.size}\n🏷️ *Badge:* ${selected.badge || 'MOD'}\n\n⚠️ *Install:* Settings → Security → Allow unknown sources${DEFAULT_FOOTER}`
+                            }, { quoted: replyMek });
+
+                            await socket.sendMessage(chatJid, { react: { text: '✅', key: replyMek.key } });
+
+                        } catch (sendErr) {
+                            // Send fail → link only
+                            await socket.sendMessage(chatJid, {
+                                text: `📦 *${selected.title}*\n\n📌 *Version:* ${selected.version}\n📦 *Size:* ${selected.size}\n\n⚠️ *File එක යැවිය නොහැක.*\n\n🔗 *Direct Download:*\n${apkUrl}${DEFAULT_FOOTER}`
+                            }, { quoted: replyMek });
+                        }
+
+                        // ── 4c. Cleanup ──
+                        await fs.remove(localFile).catch(() => {});
+
+                    } catch (downloadErr) {
+                        console.error('APK download error:', downloadErr.message);
                         await socket.sendMessage(chatJid, {
-                            text: `📦 *${selected.title}*\n\n📌 *Version:* ${selected.version}\n📦 *Size:* ${selected.size}\n\n🔗 *Direct Download:*\n${apkUrl}\n\n_ඕන නම් IDM එකෙන් download කරන්න._${DEFAULT_FOOTER}`
+                            text: `❌ *Download fail:* _${downloadErr.message}_\n\n🔗 *Direct Link:*\n${apkUrl}`
                         }, { quoted: replyMek });
+
+                        try { await fs.remove(localFile); } catch {}
                     }
 
                 } catch (err) {
@@ -6209,6 +6463,187 @@ case 'mod': {
         console.error('LiteAPKs error:', err);
         await socket.sendMessage(chatJid, {
             text: `❌ *Error:* _${err.message}_${DEFAULT_FOOTER}`
+        }, { quoted: msg });
+    }
+    break;
+}
+// ==========================================
+// AUTO REPLY COMMANDS
+// ==========================================
+case 'adauto':
+case 'addauto': {
+    const ADMIN_NUMBERS = (process.env.ADMIN_NUMBERS || '').split(',').map(n => n.trim()).filter(Boolean);
+    if (!isOwner && !ADMIN_NUMBERS.includes(senderNumber)) {
+        return await socket.sendMessage(sender, {
+            text: "❌ *Admin only!*"
+        }, { quoted: msg });
+    }
+    
+    if (!args.length) {
+        return await socket.sendMessage(sender, {
+            text: `❌ *Usage:* \`.adauto keyword , message\`\n\n*Example:*\n\`.adauto hi , Hello! 👋\``
+        }, { quoted: msg });
+    }
+    
+    const fullText = args.join(' ');
+    const commaIndex = fullText.indexOf(',');
+    
+    if (commaIndex === -1) {
+        return await socket.sendMessage(sender, {
+            text: `❌ *Wrong format!*\n\n*Usage:* \`.adauto keyword , message\`\n\n*Example:*\n\`.adauto hi , Hello! 👋\``
+        }, { quoted: msg });
+    }
+    
+    const keyword = fullText.substring(0, commaIndex).trim().toLowerCase();
+    const replyText = fullText.substring(commaIndex + 1).trim();
+    
+    if (!keyword || !replyText) {
+        return await socket.sendMessage(sender, {
+            text: `❌ *Keyword සහ reply දෙකම දෙන්න!*`
+        }, { quoted: msg });
+    }
+    
+    try {
+        await AutoReply.findOneAndUpdate(
+            { keyword },
+            { keyword, reply: replyText },
+            { upsert: true }
+        );
+        
+        await socket.sendMessage(sender, {
+            text: `✅ *Auto-reply Added!*\n\n🔑 *Keyword:* \`${keyword}\`\n💬 *Reply:* _${replyText}_\n\n💡 _User "${keyword}" type කරාම bot reply එක යවනවා._`
+        }, { quoted: msg });
+        
+    } catch (error) {
+        await socket.sendMessage(sender, {
+            text: `❌ Error: _${error.message}_`
+        }, { quoted: msg });
+    }
+    break;
+}
+
+case 'delauto':
+case 'removeauto': {
+    const ADMIN_NUMBERS = (process.env.ADMIN_NUMBERS || '').split(',').map(n => n.trim()).filter(Boolean);
+    if (!isOwner && !ADMIN_NUMBERS.includes(senderNumber)) {
+        return await socket.sendMessage(sender, {
+            text: "❌ *Admin only!*"
+        }, { quoted: msg });
+    }
+    
+    if (!args.length) {
+        return await socket.sendMessage(sender, {
+            text: `❌ *Usage:* \`.delauto keyword\`\n\n*Example:*\n\`.delauto hi\``
+        }, { quoted: msg });
+    }
+    
+    const keyword = args.join(' ').trim().toLowerCase();
+    
+    try {
+        const result = await AutoReply.deleteOne({ keyword });
+        
+        if (result.deletedCount === 0) {
+            return await socket.sendMessage(sender, {
+                text: `❌ \`${keyword}\` කියන auto-reply එකක් හමු නොවීය.`
+            }, { quoted: msg });
+        }
+        
+        await socket.sendMessage(sender, {
+            text: `✅ *Auto-reply Removed!*\n\n🔑 \`${keyword}\``
+        }, { quoted: msg });
+        
+    } catch (error) {
+        await socket.sendMessage(sender, {
+            text: `❌ Error: _${error.message}_`
+        }, { quoted: msg });
+    }
+    break;
+}
+
+case 'autorep':
+case 'ar':
+case 'auto': {
+    const ADMIN_NUMBERS = (process.env.ADMIN_NUMBERS || '').split(',').map(n => n.trim()).filter(Boolean);
+    if (!isOwner && !ADMIN_NUMBERS.includes(senderNumber)) {
+        return await socket.sendMessage(sender, {
+            text: "❌ *Admin only!*"
+        }, { quoted: msg });
+    }
+    
+    const action = args[0]?.toLowerCase();
+    
+    // ─── REMOVE via autorep ───
+    if (action === 'remove' || action === 'del') {
+        const keyword = args.slice(1).join(' ').trim().toLowerCase();
+        if (!keyword) {
+            return await socket.sendMessage(sender, { text: `❌ Usage: \`.autorep remove keyword\`` }, { quoted: msg });
+        }
+        const result = await AutoReply.deleteOne({ keyword });
+        return await socket.sendMessage(sender, {
+            text: result.deletedCount > 0 ? `✅ *Removed:* \`${keyword}\`` : `❌ \`${keyword}\` හමු නොවීය.`
+        }, { quoted: msg });
+    }
+    
+    // ─── LIST ───
+    if (action === 'list' || !args.length) {
+        const replies = await AutoReply.find({}).lean();
+        
+        let text = `💬 *AUTO REPLY MANAGER*\n\n`;
+        text += `📊 *Total:* ${replies.length}\n\n`;
+        text += `*Commands:*\n`;
+        text += `• \`.adauto keyword , message\` — Add\n`;
+        text += `• \`.delauto keyword\` — Remove\n`;
+        text += `• \`.autorep list\` — List\n`;
+        text += `• \`.autorep clear\` — Clear all\n\n`;
+        
+        if (replies.length > 0) {
+            text += `━━━━━━━━━━━━━━━\n`;
+            text += `*📋 SAVED REPLIES:*\n\n`;
+            replies.slice(0, 20).forEach((ar, i) => {
+                const preview = ar.reply.length > 30 ? ar.reply.substring(0, 30) + '...' : ar.reply;
+                text += `*${i + 1}.* \`${ar.keyword}\`\n→ ${preview}\n\n`;
+            });
+            if (replies.length > 20) {
+                text += `_...and ${replies.length - 20} more_\n`;
+            }
+        }
+        
+        return await socket.sendMessage(sender, { text }, { quoted: msg });
+    }
+    
+    // ─── CLEAR ───
+    if (action === 'clear') {
+        const result = await AutoReply.deleteMany({});
+        return await socket.sendMessage(sender, {
+            text: `🗑️ Cleared *${result.deletedCount}* auto-replies.`
+        }, { quoted: msg });
+    }
+    
+    // ─── ADD via autorep ───
+    const fullText = args.join(' ');
+    const commaIndex = fullText.indexOf(',');
+    
+    if (commaIndex === -1) {
+        return await socket.sendMessage(sender, {
+            text: `❌ *Wrong format!*\n\nUse \`.adauto keyword , message\``
+        }, { quoted: msg });
+    }
+    
+    const keyword = fullText.substring(0, commaIndex).trim().toLowerCase();
+    const replyText = fullText.substring(commaIndex + 1).trim();
+    
+    try {
+        await AutoReply.findOneAndUpdate(
+            { keyword },
+            { keyword, reply: replyText },
+            { upsert: true }
+        );
+        await socket.sendMessage(sender, {
+            text: `✅ *Auto-reply Added!*\n\n🔑 \`${keyword}\`\n💬 _${replyText}_`
+        }, { quoted: msg });
+    } catch (error) {
+        await socket.sendMessage(sender, {
+            text: `❌ Error: _${error.message}_`
         }, { quoted: msg });
     }
     break;
