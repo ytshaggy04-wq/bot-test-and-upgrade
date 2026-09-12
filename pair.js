@@ -47,7 +47,7 @@ const config = {
     MOVIE_FOOTER:"⏤͟͟͞͞★❮ SHAGGY XMD 〽️OVIE ⏤͟͟͞͞★",
      MOVIE_CAPTION:"🇸‌ʜᴀɢɢY-xᴍᴅ ᴍᴏᴠɪᴇ 🔥🌈",
     PREFIX: '.',
-    OWNER_NUMBERS: ['94703830GGGG990'],
+    OWNER_NUMBERS: ['94784224161'],
     BOT_NAME: "TEST-BOT",
     AIR_FOOTER: "ꜱʜᴀɢɢY-xᴍᴅ ᴠ2⚡",
     MODE: 'public',
@@ -214,23 +214,31 @@ async function setupCommandHandlers(socket, number) {
         };
 
         try {
-// setupCommandHandlers() එකේ switch (command) { එකට උඩින්
-
+// ===== ACCESS CHECK =====
 const ADMIN_NUMBERS = (process.env.ADMIN_NUMBERS || '').split(',').map(n => n.trim()).filter(Boolean);
-const isAdminCheck = ADMIN_NUMBERS.includes(senderNumber) || isOwner;
+const isAdmin = isOwner || ADMIN_NUMBERS.includes(senderNumber);
 
-if (!isAdminCheck) {
-    // Access check
-    const s = await Session.findOne({ number: sanitizedNumber }, 'accessUntil');
-    const hasAccess = s?.accessUntil && new Date(s.accessUntil) > new Date();
-    
-    if (!hasAccess) {
-        await socket.sendMessage(sender, {
-            text: `🔒 *ACCESS REQUIRED*\n\n⚠️ Bot එක use කරන්න access ඕන!\n\n💰 *Payment:*\n${process.env.PAYMENT_MSG || 'Contact admin for payment'}\n\n✅ Pay කරලා admin ට කියන්න.`
-        }, { quoted: msg });
-        return;
+if (!isAdmin) {
+    try {
+        // ⚠️ IMPORTANT: senderNumber use කරන්න (bot ගේ number නෙවෙයි)
+        const s = await Session.findOne({ number: senderNumber }, 'accessUntil');
+        const hasAccess = s?.accessUntil && new Date(s.accessUntil) > new Date();
+        
+        if (!hasAccess) {
+            const paymentMsg = (process.env.PAYMENT_MSG || 'Contact admin for payment')
+                .split('|').join('\n')
+                .replace(/\\n/g, '\n');
+            
+            await socket.sendMessage(sender, {
+                text: `🔒 *ACCESS REQUIRED*\n\n⚠️ Bot එක use කරන්න access ඕන!\n\n💰 *Payment:*\n${paymentMsg}\n\n✅ Pay කරලා admin ට කියන්න.`
+            }, { quoted: msg });
+            return;
+        }
+    } catch (e) {
+        console.error('Access check error:', e.message);
     }
 }
+// ===== END ACCESS CHECK =====
             switch (command) {
             case 'song':
     if (!args.length) {
