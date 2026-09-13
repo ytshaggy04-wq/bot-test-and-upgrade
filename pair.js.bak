@@ -6,7 +6,7 @@ import { exec } from 'child_process';
 import mongoose from 'mongoose';
 import moment from 'moment-timezone';
 import https from 'https';
-impcort axios from 'axios';
+import axios from 'axios';
 import dotenv from 'dotenv';
 import yts from 'yt-search';
 import { pipeline } from 'stream/promises';
