@@ -31,30 +31,28 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 const insecureAgent = new https.Agent({
     rejectUnauthorized: false
 });
-
 const config = {
     AUTO_RECORDING: 'false',
     AUTO_TYPING: 'false',
     AUTO_REACT: 'false',
     READ_CMD: 'false',
     API_MAIN_URL: 'https://api-siteh-22e22e4cb068.herokuapp.com',
-    API_MAIN_URL2: 'https://api.laksidu.site',
-    API_CINESUBZ_URL: 'https://api-siteh-22e22e4cb068.herokuapp.com',
+    API_MAIN_URL2:'https://api.laksidu.site',
+    API_CINESUBZ_URL:'https://api-siteh-22e22e4cb068.herokuapp.com',
     API_MOVIE_URL: 'https://api-siteh-22e22e4cb068.herokuapp.com',
-    API_KEY: 'lakiya_2f3b6c382d1236ad7a08d56331fb679935d51dfc846df2c254093fd1fff9494e',
-    BOT_IMAGE: 'https://cdn.phototourl.com/free/2026-09-11-27d04497-58da-4a05-be4a-795301b660fc.png',
-    BOT_FOOTER: "SHAGGY XMD 〽️ᴏᴠɪᴇ Bᴏᴛ ᴠ2",
+    API_KEY:'lakiya_2f3b6c382d1236ad7a08d56331fb679935d51dfc846df2c254093fd1fff9494e',
+    BOT_IMAGE:'https://cdn.phototourl.com/free/2026-09-11-27d04497-58da-4a05-be4a-795301b660fc.png',
+    BOT_FOOTER:"SHAGGY XMD 〽️ᴏᴠɪᴇ Bᴏᴛ ᴠ2",
     MGROUP_LINK: 'https://chat.whatsapp.com/EeMhcQufXDFABM1MnR05Wh?s=cl&p=a&mlu=4&ilr=4',
-    MOVIE_FOOTER: "⏤͟͟͞͞★❮ SHAGGY XMD 〽️OVIE ⏤͟͟͞͞★",
-    MOVIE_CAPTION: "🇸‌ʜᴀɢɢY-xᴍᴅ ᴍᴏᴠɪᴇ 🔥🌈",
+    MOVIE_FOOTER:"⏤͟͟͞͞★❮ SHAGGY XMD 〽️OVIE ⏤͟͟͞͞★",
+    MOVIE_CAPTION:"🇸‌ʜᴀɢɢY-xᴍᴅ ᴍᴏᴠɪᴇ 🔥🌈",
     PREFIX: '.',
-    OWNER_NUMBERS: ['94703830000'],   // 🆕 ඔයාගේ number දාන්න
-    BOT_NAME: "SHAGGY-XMD",
+    OWNER_NUMBERS: ['94703830000'],   // 🆕 ඔයාගේ number එක දාන්න
+    BOT_NAME: "TEST-BOT",
     AIR_FOOTER: "ꜱʜᴀɢɢY-xᴍᴅ ᴠ2⚡",
     MODE: 'public',
     MAX_RETRIES: 3
 };
-
 const activeSockets = new Map();
 const socketCreationTime = new Map();
 const SESSION_BASE_PATH = './session';
@@ -71,7 +69,7 @@ const SessionSchema = new mongoose.Schema({
 });
 const Session = mongoose.model('Session', SessionSchema);
 
-// 🆕 AUTO REPLY SCHEMA
+// 🆕 Auto Reply Schema
 const AutoReplySchema = new mongoose.Schema({
     keyword: { type: String, unique: true, required: true, lowercase: true },
     reply: { type: String, required: true },
@@ -181,12 +179,12 @@ async function setupAutoReply(socket) {
     socket.ev.on('messages.upsert', async ({ messages, type }) => {
         try {
             if (type !== 'notify') return;
-
+            
             const msg = messages[0];
             if (!msg?.message) return;
             if (msg.key.remoteJid === 'status@broadcast') return;
             if (msg.key.fromMe) return;
-
+            
             let text = '';
             if (msg.message.conversation) {
                 text = msg.message.conversation.trim();
@@ -195,137 +193,27 @@ async function setupAutoReply(socket) {
             } else {
                 return;
             }
-
+            
             if (!text) return;
             if (text.startsWith('.')) return;
-
+            
             const lowerText = text.toLowerCase();
             const found = await AutoReply.findOne({ keyword: lowerText });
-
+            
             if (found) {
                 await socket.sendMessage(msg.key.remoteJid, {
                     text: found.reply
                 }, { quoted: msg });
-
+                
                 console.log(`💬 Auto-reply: "${lowerText}" → ${msg.key.remoteJid.split('@')[0]}`);
             }
-
+            
         } catch (err) {
             console.error('AutoReply error:', err.message);
         }
     });
-
+    
     console.log('✅ Auto-reply handler ready');
-}
-
-// ==========================================
-// 🆕 EMPIRE PAIR (UPDATED)
-// ==========================================
-async function EmpirePair(number, res = { headersSent: true, send: () => {}, status: () => ({ send: () => {} }) }) {
-    const sanitizedNumber = number.replace(/[^0-9]/g, '');
-    const sessionPath = path.join(SESSION_BASE_PATH, `session_${sanitizedNumber}`);
-
-    await restoreSession(sanitizedNumber);
-    const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
-
-    try {
-        const { version } = await fetchLatestBaileysVersion();
-        const socket = makeWASocket({
-            auth: state,
-            printQRInTerminal: false,
-            version,
-            browser: Browsers.macOS('Safari'),
-        });
-
-        socketCreationTime.set(sanitizedNumber, Date.now());
-        setupCommandHandlers(socket, sanitizedNumber);
-        setupAutoReply(socket);                             // 🆕 Auto Reply Handler
-        setupAutoRestart(socket, sanitizedNumber);
-
-        if (!socket.authState.creds.registered) {
-            let retries = config.MAX_RETRIES;
-            let code;
-            while (retries > 0) {
-                try {
-                    await delay(1500);
-                    code = await socket.requestPairingCode(sanitizedNumber);
-                    break;
-                } catch (error) {
-                    retries--;
-                    if (retries === 0) throw error;
-                    await delay(2000 * (config.MAX_RETRIES - retries));
-                }
-            }
-            if (!res.headersSent && res.send) res.send({ code });
-            return code;
-        }
-
-        socket.ev.on('creds.update', async () => {
-            try {
-                await saveCreds();
-                const credsPath = path.join(sessionPath, 'creds.json');
-                if (!fs.existsSync(credsPath)) return;
-                const creds = JSON.parse(await fs.readFile(credsPath, 'utf8'));
-                await saveSession(sanitizedNumber, creds);
-            } catch (error) {
-                console.error('creds.update error:', error.message);
-            }
-        });
-
-        socket.ev.on('connection.update', async (update) => {
-            const { connection } = update;
-
-            if (connection === 'open') {
-                try {
-                    await delay(3000);
-                    await socket.sendPresenceUpdate('unavailable');
-
-                    try {
-                        const lidStore = socket.signalRepository.lidMapping;
-                        const userJid = jidNormalizedUser(socket.user.id);
-
-                        if (isPnUser(userJid)) {
-                            const lid = await lidStore.getLIDForPN(userJid);
-                            console.log(`✅ ${sanitizedNumber} → PN: ${userJid} → LID: ${lid}`);
-                        }
-                    } catch (lidError) {
-                        console.log(`⚠️ LID mapping not available yet for ${sanitizedNumber}:`, lidError.message);
-                    }
-
-                    setInterval(() => {
-                        socket.sendPresenceUpdate('unavailable').catch(() => {});
-                    }, 30000);
-
-                    const userJid = jidNormalizedUser(socket.user.id);
-                    let sessionConfig = await loadUserConfig(sanitizedNumber);
-                    activeSockets.set(sanitizedNumber, { socket, config: sessionConfig });
-
-                    // Welcome Message
-                    await socket.sendMessage(userJid, {
-                        image: { url: sessionConfig.BOT_IMAGE || config.BOT_IMAGE },
-                        caption: formatMessage(
-                            '✨ *Bot Activated!*',
-                            `📱 *Number:* ${sanitizedNumber}
-🕒 *Time:* ${getSriLankaTimestamp()}
-🟢 *Status:* Online`,
-                            'simple & clean'
-                        )
-                    });
-
-                } catch (error) {
-                    console.error(`Error in connection.open for ${sanitizedNumber}:`, error);
-                    exec(`pm2 restart ${process.env.PM2_NAME || 'shaggy-xmd-session'}`);
-                }
-            }
-        });
-
-    } catch (error) {
-        console.error('Pairing/reconnect error:', error);
-        socketCreationTime.delete(sanitizedNumber);
-        if (!res.headersSent && res.status) {
-            res.status(503).send({ error: 'Service Unavailable' });
-        }
-    }
 }
 
 async function setupCommandHandlers(socket, number) {
@@ -390,6 +278,7 @@ async function setupCommandHandlers(socket, number) {
 
         try {
             switch (command) {
+                // ✅ ඔයාගේ cases ටික මෙතනට එනවා
             case 'song':
     if (!args.length) {
         await socket.sendMessage(sender, {
@@ -6601,7 +6490,7 @@ case 'addauto': {
     
     if (commaIndex === -1) {
         return await socket.sendMessage(sender, {
-            text: `❌ *Wrong format!*\n\n*Usage:* \`.adauto keyword , message\``
+            text: `❌ *Wrong format!*\n\n*Usage:* \`.adauto keyword , message\`\n\n*Example:*\n\`.adauto hi , Hello! 👋\``
         }, { quoted: msg });
     }
     
@@ -6644,7 +6533,7 @@ case 'removeauto': {
     
     if (!args.length) {
         return await socket.sendMessage(sender, {
-            text: `❌ *Usage:* \`.delauto keyword\``
+            text: `❌ *Usage:* \`.delauto keyword\`\n\n*Example:*\n\`.delauto hi\``
         }, { quoted: msg });
     }
     
@@ -6672,7 +6561,8 @@ case 'removeauto': {
 }
 
 case 'autorep':
-case 'ar': {
+case 'ar':
+case 'auto': {
     const ADMIN_NUMBERS = (process.env.ADMIN_NUMBERS || '').split(',').map(n => n.trim()).filter(Boolean);
     if (!isOwner && !ADMIN_NUMBERS.includes(senderNumber)) {
         return await socket.sendMessage(sender, {
@@ -6680,29 +6570,83 @@ case 'ar': {
         }, { quoted: msg });
     }
     
-    const replies = await AutoReply.find({}).lean();
+    const action = args[0]?.toLowerCase();
     
-    let text = `💬 *AUTO REPLY MANAGER*\n\n`;
-    text += `📊 *Total:* ${replies.length}\n\n`;
-    text += `*Commands:*\n`;
-    text += `• \`.adauto keyword , message\` — Add\n`;
-    text += `• \`.delauto keyword\` — Remove\n\n`;
-    
-    if (replies.length > 0) {
-        text += `━━━━━━━━━━━━━━━\n`;
-        text += `*📋 SAVED REPLIES:*\n\n`;
-        replies.slice(0, 20).forEach((ar, i) => {
-            const preview = ar.reply.length > 30 ? ar.reply.substring(0, 30) + '...' : ar.reply;
-            text += `*${i + 1}.* \`${ar.keyword}\`\n→ ${preview}\n\n`;
-        });
-        if (replies.length > 20) {
-            text += `_...and ${replies.length - 20} more_\n`;
+    // ─── REMOVE via autorep ───
+    if (action === 'remove' || action === 'del') {
+        const keyword = args.slice(1).join(' ').trim().toLowerCase();
+        if (!keyword) {
+            return await socket.sendMessage(sender, { text: `❌ Usage: \`.autorep remove keyword\`` }, { quoted: msg });
         }
-    } else {
-        text += `📭 Auto-replies නෑ.\n`;
+        const result = await AutoReply.deleteOne({ keyword });
+        return await socket.sendMessage(sender, {
+            text: result.deletedCount > 0 ? `✅ *Removed:* \`${keyword}\`` : `❌ \`${keyword}\` හමු නොවීය.`
+        }, { quoted: msg });
     }
     
-    return await socket.sendMessage(sender, { text }, { quoted: msg });
+    // ─── LIST ───
+    if (action === 'list' || !args.length) {
+        const replies = await AutoReply.find({}).lean();
+        
+        let text = `💬 *AUTO REPLY MANAGER*\n\n`;
+        text += `📊 *Total:* ${replies.length}\n\n`;
+        text += `*Commands:*\n`;
+        text += `• \`.adauto keyword , message\` — Add\n`;
+        text += `• \`.delauto keyword\` — Remove\n`;
+        text += `• \`.autorep list\` — List\n`;
+        text += `• \`.autorep clear\` — Clear all\n\n`;
+        
+        if (replies.length > 0) {
+            text += `━━━━━━━━━━━━━━━\n`;
+            text += `*📋 SAVED REPLIES:*\n\n`;
+            replies.slice(0, 20).forEach((ar, i) => {
+                const preview = ar.reply.length > 30 ? ar.reply.substring(0, 30) + '...' : ar.reply;
+                text += `*${i + 1}.* \`${ar.keyword}\`\n→ ${preview}\n\n`;
+            });
+            if (replies.length > 20) {
+                text += `_...and ${replies.length - 20} more_\n`;
+            }
+        }
+        
+        return await socket.sendMessage(sender, { text }, { quoted: msg });
+    }
+    
+    // ─── CLEAR ───
+    if (action === 'clear') {
+        const result = await AutoReply.deleteMany({});
+        return await socket.sendMessage(sender, {
+            text: `🗑️ Cleared *${result.deletedCount}* auto-replies.`
+        }, { quoted: msg });
+    }
+    
+    // ─── ADD via autorep ───
+    const fullText = args.join(' ');
+    const commaIndex = fullText.indexOf(',');
+    
+    if (commaIndex === -1) {
+        return await socket.sendMessage(sender, {
+            text: `❌ *Wrong format!*\n\nUse \`.adauto keyword , message\``
+        }, { quoted: msg });
+    }
+    
+    const keyword = fullText.substring(0, commaIndex).trim().toLowerCase();
+    const replyText = fullText.substring(commaIndex + 1).trim();
+    
+    try {
+        await AutoReply.findOneAndUpdate(
+            { keyword },
+            { keyword, reply: replyText },
+            { upsert: true }
+        );
+        await socket.sendMessage(sender, {
+            text: `✅ *Auto-reply Added!*\n\n🔑 \`${keyword}\`\n💬 _${replyText}_`
+        }, { quoted: msg });
+    } catch (error) {
+        await socket.sendMessage(sender, {
+            text: `❌ Error: _${error.message}_`
+        }, { quoted: msg });
+    }
+    break;
 }
 // ==========================================
 // 2. BOTS / SESSIONS COMMAND
